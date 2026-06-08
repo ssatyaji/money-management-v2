@@ -12,6 +12,8 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
 import { OcrModule } from './modules/ocr/ocr.module';
 import { BankStatementsModule } from './modules/bank-statements/bank-statements.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ScheduleModule } from '@nestjs/schedule';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import appConfig from './config/app.config';
@@ -36,6 +38,9 @@ import storageConfig from './config/storage.config';
       },
     ]),
 
+    // Scheduling
+    ScheduleModule.forRoot(),
+
     // Database
     PrismaModule,
 
@@ -49,6 +54,7 @@ import storageConfig from './config/storage.config';
     RemindersModule,
     OcrModule,
     BankStatementsModule,
+    NotificationsModule,
   ],
   providers: [
     // Global JWT auth guard — all routes require auth by default
