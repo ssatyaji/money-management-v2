@@ -74,7 +74,8 @@ export class RemindersService {
     if (dto.dueDate !== undefined) updateData.dueDate = new Date(dto.dueDate);
     if (dto.isRecurring !== undefined) updateData.isRecurring = dto.isRecurring;
     if (dto.frequency !== undefined) updateData.frequency = dto.frequency;
-    if (dto.notifyBefore !== undefined) updateData.notifyBefore = dto.notifyBefore;
+    if (dto.notifyBefore !== undefined)
+      updateData.notifyBefore = dto.notifyBefore;
 
     return this.remindersRepository.update(id, updateData);
   }
@@ -120,7 +121,10 @@ export class RemindersService {
     return this.remindersRepository.findOverdue(userId);
   }
 
-  private calculateNextDueDate(currentDate: Date, frequency: ReminderFrequency): Date {
+  private calculateNextDueDate(
+    currentDate: Date,
+    frequency: ReminderFrequency,
+  ): Date {
     const next = new Date(currentDate);
 
     switch (frequency) {
@@ -148,7 +152,7 @@ export class RemindersService {
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
   async checkAndSendPushNotifications() {
     this.logger.log('Running daily reminder push notification check...');
-    
+
     // Find all incomplete reminders
     // We fetch a wide net because we want to check notifyBefore condition
     const reminders = await this.remindersRepository.findAll({
@@ -163,8 +167,12 @@ export class RemindersService {
 
     for (const reminder of reminders) {
       const dueDate = new Date(reminder.dueDate);
-      const dueDay = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-      
+      const dueDay = new Date(
+        dueDate.getFullYear(),
+        dueDate.getMonth(),
+        dueDate.getDate(),
+      );
+
       // Calculate how many days left
       const diffTime = dueDay.getTime() - today.getTime();
       const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -173,16 +181,21 @@ export class RemindersService {
       // or if it's due today (daysLeft === 0), or overdue but we might want to remind again.
       // For simplicity, we send if daysLeft is exactly notifyBefore OR exactly 0.
       if (daysLeft === reminder.notifyBefore || daysLeft === 0) {
-        const amountStr = reminder.amount ? ` (Rp ${reminder.amount})` : '';
+        const amountStr = reminder.amount
+          ? ` (Rp ${reminder.amount.toString()})`
+          : '';
         const dayText = daysLeft === 0 ? 'hari ini' : `dalam ${daysLeft} hari`;
-        
+
         const payload = {
           title: `Pengingat: ${reminder.title}`,
           body: `Jatuh tempo ${dayText}${amountStr}. Jangan lupa untuk menyelesaikannya!`,
           url: '/reminders',
         };
 
-        await this.notificationsService.sendPushNotification(reminder.userId, payload);
+        await this.notificationsService.sendPushNotification(
+          reminder.userId,
+          payload,
+        );
         sentCount++;
       }
     }

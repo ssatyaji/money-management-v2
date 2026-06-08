@@ -10,8 +10,8 @@ import {
   Receipt,
 } from 'lucide-react';
 import {
-  AreaChart,
-  Area,
+ 
+ 
   BarChart,
   Bar,
   XAxis,
@@ -25,7 +25,7 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+
 import { formatCurrency } from '@/lib/utils/currency';
 import { useMonthlyReport } from '@/hooks/use-budgets';
 

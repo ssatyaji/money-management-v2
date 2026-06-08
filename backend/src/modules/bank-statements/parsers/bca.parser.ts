@@ -1,5 +1,10 @@
+/* eslint-disable @typescript-eslint/require-await */
 import { BankName } from '@prisma/client';
-import { BaseStatementParser, ParsedStatement, ParsedTransaction } from './base-statement.parser';
+import {
+  BaseStatementParser,
+  ParsedStatement,
+  ParsedTransaction,
+} from './base-statement.parser';
 
 /**
  * Parser for BCA (Bank Central Asia) e-statements.
@@ -23,14 +28,19 @@ export class BcaParser extends BaseStatementParser {
   }
 
   async parse(text: string): Promise<ParsedStatement> {
-    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
     const transactions: ParsedTransaction[] = [];
     let statementDate: Date | undefined;
     let accountNumber: string | undefined;
     let statementYear: number = new Date().getFullYear();
 
     // Extract account number
-    const accMatch = text.match(/(?:nomor\s*(?:rekening|akun)|no\.?\s*rek(?:ening)?)[:\s]*(\d[\d\s\-.]+\d)/i);
+    const accMatch = text.match(
+      /(?:nomor\s*(?:rekening|akun)|no\.?\s*rek(?:ening)?)[:\s]*(\d[\d\s\-.]+\d)/i,
+    );
     if (accMatch) {
       accountNumber = accMatch[1].replace(/[\s\-.]/g, '');
     }
@@ -42,7 +52,11 @@ export class BcaParser extends BaseStatementParser {
       if (yearMatch) {
         statementYear = parseInt(yearMatch[1]);
       }
-      const dateStr = periodMatch[1].trim().split(/\s*[-–]\s*/).pop() || '';
+      const dateStr =
+        periodMatch[1]
+          .trim()
+          .split(/\s*[-–]\s*/)
+          .pop() || '';
       const parsed = this.parseDate(dateStr);
       if (parsed) statementDate = parsed;
     }
@@ -50,7 +64,8 @@ export class BcaParser extends BaseStatementParser {
     let txnIndex = 0;
 
     // BCA pattern 1: "DD/MM  KETERANGAN  1.234.567,00 DB" or "CR"
-    const bcaPattern = /^(\d{1,2}[\/\-]\d{1,2})\s+(.+?)\s+([\d.,]+(?:,\d{2}))\s*(DB|CR|D|C)$/i;
+    const bcaPattern =
+      /^(\d{1,2}[/-]\d{1,2})\s+(.+?)\s+([\d.,]+(?:,\d{2}))\s*(DB|CR|D|C)$/i;
 
     for (const line of lines) {
       const match = line.match(bcaPattern);
@@ -78,7 +93,7 @@ export class BcaParser extends BaseStatementParser {
 
       // Pattern 2: full date format "DD/MM/YYYY  Description  Amount  DB/CR"
       const fullDateMatch = line.match(
-        /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+(.+?)\s+([\d.,]+)\s*(DB|CR|D|C)$/i,
+        /^(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s+(.+?)\s+([\d.,]+)\s*(DB|CR|D|C)$/i,
       );
       if (fullDateMatch) {
         const date = this.parseDate(fullDateMatch[1]);
@@ -116,14 +131,14 @@ export class BcaParser extends BaseStatementParser {
     let txnIndex = 0;
 
     // Try pattern: "DD/MM  Description  DebitAmount  CreditAmount  Balance"
-    const pattern = /^(\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?)\s+(.+)/;
+    const pattern = /^(\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)\s+(.+)/;
 
     for (const line of lines) {
       const match = line.match(pattern);
       if (!match) continue;
 
       let dateStr = match[1];
-      if (dateStr.split(/[\/\-]/).length === 2) {
+      if (dateStr.split(/[/-]/).length === 2) {
         dateStr = `${dateStr}/${year}`;
       }
 

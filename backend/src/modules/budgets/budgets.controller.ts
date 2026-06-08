@@ -21,10 +21,7 @@ export class BudgetsController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new budget' })
-  create(
-    @CurrentUser('id') userId: string,
-    @Body() dto: CreateBudgetDto,
-  ) {
+  create(@CurrentUser('id') userId: string, @Body() dto: CreateBudgetDto) {
     return this.budgetsService.create(userId, dto);
   }
 
@@ -48,10 +45,7 @@ export class BudgetsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get budget by ID' })
-  findOne(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.budgetsService.findById(userId, id);
   }
 
@@ -67,10 +61,7 @@ export class BudgetsController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a budget' })
-  remove(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.budgetsService.remove(userId, id);
   }
 }

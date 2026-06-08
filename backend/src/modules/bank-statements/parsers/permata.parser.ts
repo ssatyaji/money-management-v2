@@ -1,5 +1,10 @@
+/* eslint-disable @typescript-eslint/require-await */
 import { BankName } from '@prisma/client';
-import { BaseStatementParser, ParsedStatement, ParsedTransaction } from './base-statement.parser';
+import {
+  BaseStatementParser,
+  ParsedStatement,
+  ParsedTransaction,
+} from './base-statement.parser';
 
 /**
  * Parser for Bank Permata e-statements.
@@ -22,13 +27,18 @@ export class PermataParser extends BaseStatementParser {
   }
 
   async parse(text: string): Promise<ParsedStatement> {
-    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
     const transactions: ParsedTransaction[] = [];
     let statementDate: Date | undefined;
     let accountNumber: string | undefined;
 
     // Try to extract account number
-    const accMatch = text.match(/(?:nomor\s*(?:rekening|akun)|account\s*(?:no|number))[:\s]*(\d[\d\s\-.]+\d)/i);
+    const accMatch = text.match(
+      /(?:nomor\s*(?:rekening|akun)|account\s*(?:no|number))[:\s]*(\d[\d\s\-.]+\d)/i,
+    );
     if (accMatch) {
       accountNumber = accMatch[1].replace(/[\s\-.]/g, '');
     }
@@ -43,7 +53,8 @@ export class PermataParser extends BaseStatementParser {
 
     // Parse transaction lines
     // Pattern: DD/MM/YYYY  Description  Amount  (Debit/Credit indicator)
-    const txnPattern = /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+(.+?)\s+([\d.,]+(?:\.\d{2})?)\s*(?:(DB|CR|D|C))?\s*(?:([\d.,]+))?\s*$/i;
+    const txnPattern =
+      /^(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s+(.+?)\s+([\d.,]+(?:\.\d{2})?)\s*(?:(DB|CR|D|C))?\s*(?:([\d.,]+))?\s*$/i;
 
     let txnIndex = 0;
     for (const line of lines) {
@@ -58,7 +69,8 @@ export class PermataParser extends BaseStatementParser {
 
         if (amount <= 0) continue;
 
-        const type = indicator === 'CR' || indicator === 'C' ? 'INCOME' : 'EXPENSE';
+        const type =
+          indicator === 'CR' || indicator === 'C' ? 'INCOME' : 'EXPENSE';
 
         transactions.push({
           tempId: this.generateTempId(txnIndex++),
@@ -79,9 +91,12 @@ export class PermataParser extends BaseStatementParser {
     return { transactions, statementDate, accountNumber };
   }
 
-  private parseSimpleFormat(lines: string[], transactions: ParsedTransaction[]): void {
+  private parseSimpleFormat(
+    lines: string[],
+    transactions: ParsedTransaction[],
+  ): void {
     let txnIndex = 0;
-    const datePattern = /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/;
+    const datePattern = /^(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/;
 
     for (let i = 0; i < lines.length; i++) {
       const dateMatch = lines[i].match(datePattern);

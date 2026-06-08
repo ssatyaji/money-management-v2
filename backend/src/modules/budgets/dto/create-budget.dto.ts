@@ -36,7 +36,10 @@ export class CreateBudgetDto {
   @IsNotEmpty()
   categoryId: string;
 
-  @ApiPropertyOptional({ example: 80, description: 'Alert when spent reaches this percentage' })
+  @ApiPropertyOptional({
+    example: 80,
+    description: 'Alert when spent reaches this percentage',
+  })
   @IsOptional()
   @IsNumber()
   @Min(1)

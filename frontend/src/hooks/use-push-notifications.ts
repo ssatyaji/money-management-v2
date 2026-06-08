@@ -19,15 +19,6 @@ export const usePushNotifications = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      setIsSupported(true);
-      checkSubscription();
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
-
   const checkSubscription = async () => {
     try {
       const registration = await navigator.serviceWorker.ready;
@@ -39,6 +30,21 @@ export const usePushNotifications = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    let mounted = true;
+    const init = async () => {
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        if (mounted) setIsSupported(true);
+        await checkSubscription();
+      } else {
+        if (mounted) setIsLoading(false);
+      }
+    };
+    init();
+    return () => { mounted = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const subscribe = async () => {
     setIsLoading(true);
@@ -80,7 +86,8 @@ export const usePushNotifications = () => {
       setIsSubscribed(true);
       toast.success('Berhasil berlangganan notifikasi');
       return true;
-    } catch (error: any) {
+    } // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    catch (error: any) {
       console.error('Failed to subscribe:', error);
       toast.error('Gagal mengaktifkan notifikasi');
       return false;

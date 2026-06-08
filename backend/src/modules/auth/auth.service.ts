@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   UnauthorizedException,
@@ -57,7 +58,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -86,7 +90,10 @@ export class AuthService {
       throw new UnauthorizedException('Access denied');
     }
 
-    const isRefreshTokenValid = await bcrypt.compare(refreshToken, user.refreshToken);
+    const isRefreshTokenValid = await bcrypt.compare(
+      refreshToken,
+      user.refreshToken,
+    );
     if (!isRefreshTokenValid) {
       throw new UnauthorizedException('Access denied');
     }
@@ -118,19 +125,23 @@ export class AuthService {
   private async generateTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
 
-    const accessSecret = this.configService.get<string>('jwt.accessSecret') || 'fallback';
-    const refreshSecret = this.configService.get<string>('jwt.refreshSecret') || 'fallback';
-    const accessExp = this.configService.get<string>('jwt.accessExpiration') || '15m';
-    const refreshExp = this.configService.get<string>('jwt.refreshExpiration') || '7d';
+    const accessSecret =
+      this.configService.get<string>('jwt.accessSecret') || 'fallback';
+    const refreshSecret =
+      this.configService.get<string>('jwt.refreshSecret') || 'fallback';
+    const accessExp =
+      this.configService.get<string>('jwt.accessExpiration') || '15m';
+    const refreshExp =
+      this.configService.get<string>('jwt.refreshExpiration') || '7d';
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: accessSecret,
-        expiresIn: accessExp as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        expiresIn: accessExp as any,
       }),
       this.jwtService.signAsync(payload, {
         secret: refreshSecret,
-        expiresIn: refreshExp as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        expiresIn: refreshExp as any,
       }),
     ]);
 

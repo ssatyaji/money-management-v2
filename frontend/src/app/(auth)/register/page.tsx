@@ -64,6 +64,7 @@ export default function RegisterPage() {
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const password = watch('password', '');
   const passwordRules = [
     { met: password.length >= 8, label: 'Minimal 8 karakter' },

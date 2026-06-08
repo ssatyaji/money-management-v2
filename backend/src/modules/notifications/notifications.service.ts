@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -22,7 +23,9 @@ export class NotificationsService {
       this.isConfigured = true;
       this.logger.log('Web Push VAPID keys configured successfully.');
     } else {
-      this.logger.warn('Web Push VAPID keys are missing. Push notifications will not work.');
+      this.logger.warn(
+        'Web Push VAPID keys are missing. Push notifications will not work.',
+      );
     }
   }
 
@@ -50,7 +53,7 @@ export class NotificationsService {
         where: { endpoint },
       });
       return { success: true };
-    } catch (e) {
+    } catch {
       // Ignore if not found
       return { success: false };
     }
@@ -73,13 +76,20 @@ export class NotificationsService {
       };
 
       try {
-        await webpush.sendNotification(pushSubscription, JSON.stringify(payload));
-      } catch (error) {
+        await webpush.sendNotification(
+          pushSubscription,
+          JSON.stringify(payload),
+        );
+      } catch (error: any) {
         if (error.statusCode === 404 || error.statusCode === 410) {
-          this.logger.log(`Subscription expired or not found. Deleting endpoint: ${sub.endpoint}`);
+          this.logger.log(
+            `Subscription expired or not found. Deleting endpoint: ${sub.endpoint}`,
+          );
           await this.prisma.pushSubscription.delete({ where: { id: sub.id } });
         } else {
-          this.logger.error(`Error sending push notification: ${error.message}`);
+          this.logger.error(
+            `Error sending push notification: ${error.message}`,
+          );
         }
       }
     });

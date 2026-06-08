@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   Logger,
@@ -8,7 +9,10 @@ import { ConfigService } from '@nestjs/config';
 import { BankName } from '@prisma/client';
 import { BankStatementsRepository } from './bank-statements.repository';
 import { ParserFactory } from './parsers/parser.factory';
-import { ParsedStatement, ParsedTransaction } from './parsers/base-statement.parser';
+import {
+  ParsedStatement,
+  ParsedTransaction,
+} from './parsers/base-statement.parser';
 import { ImportTransactionsDto } from './dto/import-transactions.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PDFParse } from 'pdf-parse';
@@ -23,7 +27,6 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
   const result = await parser.getText();
   return result.text;
 }
-
 
 @Injectable()
 export class BankStatementsService {
@@ -40,17 +43,16 @@ export class BankStatementsService {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    this.uploadDir = this.configService.get<string>('storage.uploadDir', './uploads');
+    this.uploadDir = this.configService.get<string>(
+      'storage.uploadDir',
+      './uploads',
+    );
   }
 
   /**
    * Upload and parse a bank statement PDF.
    */
-  async upload(
-    userId: string,
-    bankName: BankName,
-    file: Express.Multer.File,
-  ) {
+  async upload(userId: string, bankName: BankName, file: Express.Multer.File) {
     // Ensure upload directory exists
     const statementsDir = path.join(this.uploadDir, 'statements');
     if (!fs.existsSync(statementsDir)) {
@@ -113,7 +115,10 @@ export class BankStatementsService {
         accountNumber: result.accountNumber,
       };
     } catch (error) {
-      this.logger.error(`Failed to parse statement: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to parse statement: ${error.message}`,
+        error.stack,
+      );
 
       await this.repository.updateStatus(record.id, 'FAILED', {
         errorMessage: `Gagal parsing: ${error.message}`,
@@ -146,7 +151,10 @@ export class BankStatementsService {
   /**
    * Get parsed transactions from a processed bank statement.
    */
-  async getTransactions(userId: string, id: string): Promise<ParsedTransaction[]> {
+  async getTransactions(
+    userId: string,
+    id: string,
+  ): Promise<ParsedTransaction[]> {
     const record = await this.repository.findOneByUser(userId, id);
     if (!record) {
       throw new NotFoundException('Bank statement tidak ditemukan');
@@ -204,7 +212,9 @@ export class BankStatementsService {
     );
 
     if (selectedTxns.length === 0) {
-      throw new BadRequestException('Tidak ada transaksi yang dipilih untuk diimport');
+      throw new BadRequestException(
+        'Tidak ada transaksi yang dipilih untuk diimport',
+      );
     }
 
     // Get a default category for uncategorized transactions
@@ -226,7 +236,7 @@ export class BankStatementsService {
     // Build transaction data
     const transactionData = selectedTxns.map((txn) => ({
       amount: txn.amount,
-      type: txn.type as 'INCOME' | 'EXPENSE',
+      type: txn.type,
       description: txn.description,
       date: txn.date,
       categoryId: dto.categoryMap?.[txn.tempId] || defaultCategory.id,

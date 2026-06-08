@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { User, UpdateUserDto } from '@/lib/api/users.api';
+import { User } from '@/lib/api/users.api';
 import { useUpdateUser } from '@/hooks/use-users';
 
 import {

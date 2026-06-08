@@ -25,14 +25,23 @@ export class OcrParserService {
    * Uses regex patterns common in Indonesian receipts.
    */
   parseReceiptText(rawText: string): ParsedReceipt {
-    const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = rawText
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
 
     return {
       merchant: this.extractMerchant(lines),
       date: this.extractDate(rawText),
       items: this.extractItems(lines),
-      subtotal: this.extractAmount(rawText, /sub\s*total\s*[:\s]*(?:rp\.?\s*)?([0-9.,]+)/i),
-      tax: this.extractAmount(rawText, /(?:tax|pajak|ppn)\s*[:\s]*(?:rp\.?\s*)?([0-9.,]+)/i),
+      subtotal: this.extractAmount(
+        rawText,
+        /sub\s*total\s*[:\s]*(?:rp\.?\s*)?([0-9.,]+)/i,
+      ),
+      tax: this.extractAmount(
+        rawText,
+        /(?:tax|pajak|ppn)\s*[:\s]*(?:rp\.?\s*)?([0-9.,]+)/i,
+      ),
       total: this.extractTotal(rawText),
       rawText,
     };
@@ -54,9 +63,9 @@ export class OcrParserService {
     // Common date formats in Indonesian receipts
     const patterns = [
       // DD/MM/YYYY or DD-MM-YYYY
-      /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/,
+      new RegExp('(\\d{1,2})[/-](\\d{1,2})[/-](\\d{4})'),
       // DD/MM/YY or DD-MM-YY
-      /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})\b/,
+      new RegExp('(\\d{1,2})[/-](\\d{1,2})[/-](\\d{2})\\b'),
       // DD MMM YYYY (e.g., 15 Jan 2026)
       /(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(\d{4})/i,
       // YYYY-MM-DD (ISO)
@@ -80,7 +89,8 @@ export class OcrParserService {
     //   "Nasi Goreng    25.000"
     //   "2 x Kopi       15.000"
     //   "Ayam Bakar  Rp 35,000"
-    const itemPattern = /^(.+?)\s+(?:rp\.?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?)\s*$/i;
+    const itemPattern =
+      /^(.+?)\s+(?:rp\.?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?)\s*$/i;
     const qtyPattern = /^(\d+)\s*[xX×]\s*(.+)/;
 
     for (const line of lines) {
@@ -90,7 +100,11 @@ export class OcrParserService {
         const priceStr = match[2];
 
         // Skip lines that are likely subtotal/total/tax
-        if (/(?:total|subtotal|sub total|pajak|tax|ppn|tunai|cash|kembalian|change|diskon|discount)/i.test(name)) {
+        if (
+          /(?:total|subtotal|sub total|pajak|tax|ppn|tunai|cash|kembalian|change|diskon|discount)/i.test(
+            name,
+          )
+        ) {
           continue;
         }
 

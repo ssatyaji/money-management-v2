@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User } from '@/types/auth.types';
 import { authApi, LoginInput, RegisterInput } from '@/lib/api/auth.api';
-import { setAccessToken, getAccessToken } from '@/lib/api/client';
+import { setAccessToken } from '@/lib/api/client';
 
 interface AuthContextType {
   user: User | null;

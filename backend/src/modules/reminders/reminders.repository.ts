@@ -24,7 +24,10 @@ export class RemindersRepository {
     return this.prisma.reminder.findUnique({ where: { id } });
   }
 
-  async update(id: string, data: Prisma.ReminderUncheckedUpdateInput): Promise<Reminder> {
+  async update(
+    id: string,
+    data: Prisma.ReminderUncheckedUpdateInput,
+  ): Promise<Reminder> {
     return this.prisma.reminder.update({ where: { id }, data });
   }
 

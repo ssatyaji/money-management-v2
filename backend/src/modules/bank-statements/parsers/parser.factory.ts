@@ -30,7 +30,9 @@ export class ParserFactory {
   getParser(bankName: BankName): BaseStatementParser {
     const parser = this.parsers.get(bankName);
     if (!parser) {
-      throw new BadRequestException(`Parser untuk bank ${bankName} belum tersedia`);
+      throw new BadRequestException(
+        `Parser untuk bank ${bankName} belum tersedia`,
+      );
     }
     return parser;
   }

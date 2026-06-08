@@ -23,10 +23,7 @@ export class TransactionsController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new transaction' })
-  create(
-    @CurrentUser('id') userId: string,
-    @Body() dto: CreateTransactionDto,
-  ) {
+  create(@CurrentUser('id') userId: string, @Body() dto: CreateTransactionDto) {
     return this.transactionsService.create(userId, dto);
   }
 
@@ -57,7 +54,12 @@ export class TransactionsController {
     @Query('year') year: number = new Date().getFullYear(),
     @Query('type') type: string = 'EXPENSE',
   ) {
-    return this.transactionsService.getCategoryBreakdown(userId, month, year, type);
+    return this.transactionsService.getCategoryBreakdown(
+      userId,
+      month,
+      year,
+      type,
+    );
   }
 
   @Get('daily-trend')
@@ -81,10 +83,7 @@ export class TransactionsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get transaction by ID' })
-  findOne(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.transactionsService.findById(userId, id);
   }
 
@@ -100,10 +99,7 @@ export class TransactionsController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a transaction' })
-  remove(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.transactionsService.remove(userId, id);
   }
 }

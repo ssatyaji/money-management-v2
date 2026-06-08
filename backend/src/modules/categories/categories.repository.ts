@@ -24,12 +24,12 @@ export class CategoriesRepository {
     return this.prisma.category.findUnique({ where: { id } });
   }
 
-  async findByUserAndType(userId: string | null, type?: TransactionType): Promise<Category[]> {
+  async findByUserAndType(
+    userId: string | null,
+    type?: TransactionType,
+  ): Promise<Category[]> {
     const where: Prisma.CategoryWhereInput = {
-      OR: [
-        { isDefault: true },
-        { userId },
-      ],
+      OR: [{ isDefault: true }, { userId }],
     };
 
     if (type) {
@@ -42,7 +42,10 @@ export class CategoriesRepository {
     });
   }
 
-  async update(id: string, data: Prisma.CategoryUpdateInput): Promise<Category> {
+  async update(
+    id: string,
+    data: Prisma.CategoryUpdateInput,
+  ): Promise<Category> {
     return this.prisma.category.update({ where: { id }, data });
   }
 
