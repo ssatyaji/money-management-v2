@@ -1,0 +1,213 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionSource {
+  MANUAL
+  OCR
+  BANK_IMPORT
+}
+
+enum BudgetPeriod {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum ReminderFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum BankName {
+  PERMATA
+  JAGO
+  SEABANK
+  BCA
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ============================================================================
+// MODELS
+// ============================================================================
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  password        String
+  name            String
+  role            Role     @default(USER)
+  avatar          String?
+  isEmailVerified Boolean  @default(false)
+  refreshToken    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  transactions      Transaction[]
+  categories        Category[]
+  budgets           Budget[]
+  reminders         Reminder[]
+  bankStatements    BankStatement[]
+  pushSubscriptions PushSubscription[]
+
+  @@map("users")
+}
+
+model Category {
+  id        String          @id @default(uuid())
+  name      String
+  icon      String?
+  color     String?
+  type      TransactionType
+  isDefault Boolean         @default(false)
+  userId    String?
+  user      User?           @relation(fields: [userId], references: [id])
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@unique([name, userId])
+  @@map("categories")
+}
+
+model Transaction {
+  id          String            @id @default(uuid())
+  amount      Decimal           @db.Decimal(15, 2)
+  type        TransactionType
+  description String?
+  note        String?
+  date        DateTime
+  receipt     String?
+  source      TransactionSource @default(MANUAL)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bankStatementId String?
+  bankStatement   BankStatement? @relation(fields: [bankStatementId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@index([userId, type])
+  @@index([userId, categoryId])
+  @@map("transactions")
+}
+
+model Budget {
+  id        String       @id @default(uuid())
+  amount    Decimal      @db.Decimal(15, 2)
+  spent     Decimal      @default(0) @db.Decimal(15, 2)
+  period    BudgetPeriod
+  startDate DateTime
+  endDate   DateTime
+  alertAt   Int          @default(80)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, categoryId, startDate, endDate])
+  @@index([userId, period])
+  @@map("budgets")
+}
+
+model Reminder {
+  id           String              @id @default(uuid())
+  title        String
+  description  String?
+  amount       Decimal?            @db.Decimal(15, 2)
+  dueDate      DateTime
+  isRecurring  Boolean             @default(false)
+  frequency    ReminderFrequency?
+  isCompleted  Boolean             @default(false)
+  notifyBefore Int                 @default(1)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, dueDate])
+  @@index([userId, isCompleted])
+  @@map("reminders")
+}
+
+model BankStatement {
+  id            String           @id @default(uuid())
+  fileName      String
+  filePath      String
+  bankName      BankName
+  statementDate DateTime?
+  status        ProcessingStatus @default(PENDING)
+  errorMessage  String?
+  processedAt   DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@map("bank_statements")
+}
+
+model PushSubscription {
+  id       String @id @default(uuid())
+  endpoint String @unique
+  p256dh   String
+  auth     String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
