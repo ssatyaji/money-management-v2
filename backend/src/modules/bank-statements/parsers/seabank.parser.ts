@@ -1,5 +1,9 @@
 import { BankName } from '@prisma/client';
-import { BaseStatementParser, ParsedStatement, ParsedTransaction } from './base-statement.parser';
+import {
+  BaseStatementParser,
+  ParsedStatement,
+  ParsedTransaction,
+} from './base-statement.parser';
 
 /**
  * Parser for SeaBank e-statements.
@@ -21,14 +25,20 @@ export class SeabankParser extends BaseStatementParser {
     return keywords.some((kw) => lowerText.includes(kw));
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async parse(text: string): Promise<ParsedStatement> {
-    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
     const transactions: ParsedTransaction[] = [];
     let statementDate: Date | undefined;
     let accountNumber: string | undefined;
 
     // Extract account number
-    const accMatch = text.match(/(?:nomor\s*(?:rekening|akun)|account)[:\s]*(\d[\d\s\-.]+\d)/i);
+    const accMatch = text.match(
+      /(?:nomor\s*(?:rekening|akun)|account)[:\s]*(\d[\d\s\-.]+\d)/i,
+    );
     if (accMatch) {
       accountNumber = accMatch[1].replace(/[\s\-.]/g, '');
     }
@@ -36,7 +46,12 @@ export class SeabankParser extends BaseStatementParser {
     // Extract period
     const periodMatch = text.match(/(?:periode|period)[:\s]*(.+?)(?:\n|$)/i);
     if (periodMatch) {
-      const parsed = this.parseDate(periodMatch[1].trim().split(/\s*[-–]\s*/).pop() || '');
+      const parsed = this.parseDate(
+        periodMatch[1]
+          .trim()
+          .split(/\s*[-–]\s*/)
+          .pop() || '',
+      );
       if (parsed) statementDate = parsed;
     }
 
@@ -45,7 +60,10 @@ export class SeabankParser extends BaseStatementParser {
     // SeaBank pattern: Date  Description  Amount(+/-)
     // "01/06/2026  Transfer dari USER  +500.000"
     // "02/06/2026  Pembayaran QRIS  -75.000"
-    const pattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+(.+?)\s+([+-])\s*(?:Rp\.?\s*)?([\d.,]+)/i;
+    const pattern = new RegExp(
+      '(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})\\s+(.+?)\\s+([+-])\\s*(?:Rp\\.?\\s*)?([\\d.,]+)',
+      'i',
+    );
 
     for (const line of lines) {
       const match = line.match(pattern);
@@ -72,7 +90,10 @@ export class SeabankParser extends BaseStatementParser {
       // Alternative pattern without explicit sign
       // "01/06/2026  QRIS Payment  75,000  Keluar"
       const altMatch = line.match(
-        /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+(.+?)\s+([\d.,]+)\s*(masuk|keluar|in|out|kredit|debit)/i,
+        new RegExp(
+          '(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})\\s+(.+?)\\s+([\\d.,]+)\\s*(masuk|keluar|in|out|kredit|debit)',
+          'i',
+        ),
       );
       if (altMatch) {
         const date = this.parseDate(altMatch[1]);
@@ -104,9 +125,12 @@ export class SeabankParser extends BaseStatementParser {
     return { transactions, statementDate, accountNumber };
   }
 
-  private parseFallback(lines: string[], transactions: ParsedTransaction[]): void {
+  private parseFallback(
+    lines: string[],
+    transactions: ParsedTransaction[],
+  ): void {
     let txnIndex = 0;
-    const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/;
+    const datePattern = new RegExp('(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})');
 
     for (const line of lines) {
       const dateMatch = line.match(datePattern);

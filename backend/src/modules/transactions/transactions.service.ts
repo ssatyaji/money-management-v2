@@ -12,7 +12,9 @@ import { PaginatedResult } from '../../common/interfaces/pagination.interface';
 
 @Injectable()
 export class TransactionsService {
-  constructor(private readonly transactionsRepository: TransactionsRepository) {}
+  constructor(
+    private readonly transactionsRepository: TransactionsRepository,
+  ) {}
 
   async create(userId: string, dto: CreateTransactionDto) {
     return this.transactionsRepository.create({
@@ -27,7 +29,10 @@ export class TransactionsService {
     });
   }
 
-  async findAll(userId: string, filters: FilterTransactionDto): Promise<PaginatedResult<any>> {
+  async findAll(
+    userId: string,
+    filters: FilterTransactionDto,
+  ): Promise<PaginatedResult<any>> {
     const where: Prisma.TransactionWhereInput = { userId };
 
     if (filters.type) {
@@ -108,7 +113,9 @@ export class TransactionsService {
     const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
     const summary = await this.transactionsRepository.getSummaryByDateRange(
-      userId, startDate, endDate,
+      userId,
+      startDate,
+      endDate,
     );
 
     let totalIncome = 0;
@@ -128,12 +135,20 @@ export class TransactionsService {
     };
   }
 
-  async getCategoryBreakdown(userId: string, month: number, year: number, type: string) {
+  async getCategoryBreakdown(
+    userId: string,
+    month: number,
+    year: number,
+    type: string,
+  ) {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
     return this.transactionsRepository.getCategoryBreakdown(
-      userId, startDate, endDate, type,
+      userId,
+      startDate,
+      endDate,
+      type,
     );
   }
 
@@ -141,7 +156,11 @@ export class TransactionsService {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
-    return this.transactionsRepository.getDailyTrend(userId, startDate, endDate);
+    return this.transactionsRepository.getDailyTrend(
+      userId,
+      startDate,
+      endDate,
+    );
   }
 
   async getRecentTransactions(userId: string, limit: number = 5) {

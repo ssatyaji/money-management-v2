@@ -1,5 +1,10 @@
+/* eslint-disable @typescript-eslint/require-await */
 import { BankName } from '@prisma/client';
-import { BaseStatementParser, ParsedStatement, ParsedTransaction } from './base-statement.parser';
+import {
+  BaseStatementParser,
+  ParsedStatement,
+  ParsedTransaction,
+} from './base-statement.parser';
 
 /**
  * Parser for Bank Jago e-statements.
@@ -22,21 +27,33 @@ export class JagoParser extends BaseStatementParser {
   }
 
   async parse(text: string): Promise<ParsedStatement> {
-    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
     const transactions: ParsedTransaction[] = [];
     let statementDate: Date | undefined;
     let accountNumber: string | undefined;
 
     // Extract account number
-    const accMatch = text.match(/(?:nomor\s*(?:rekening|akun)|account)[:\s]*(\d[\d\s\-.]+\d)/i);
+    const accMatch = text.match(
+      /(?:nomor\s*(?:rekening|akun)|account)[:\s]*(\d[\d\s\-.]+\d)/i,
+    );
     if (accMatch) {
       accountNumber = accMatch[1].replace(/[\s\-.]/g, '');
     }
 
     // Extract statement period
-    const periodMatch = text.match(/(?:periode|period|bulan)[:\s]*(.+?)(?:\n|$)/i);
+    const periodMatch = text.match(
+      /(?:periode|period|bulan)[:\s]*(.+?)(?:\n|$)/i,
+    );
     if (periodMatch) {
-      const parsed = this.parseDate(periodMatch[1].trim().split(/\s*[-–]\s*/).pop() || '');
+      const parsed = this.parseDate(
+        periodMatch[1]
+          .trim()
+          .split(/\s*[-–]\s*/)
+          .pop() || '',
+      );
       if (parsed) statementDate = parsed;
     }
 
@@ -45,9 +62,11 @@ export class JagoParser extends BaseStatementParser {
     let txnIndex = 0;
 
     // Pattern 1: "DD MMM YYYY  Description  -Rp 1.234.567" or "+Rp 1.234.567"
-    const pattern1 = /(\d{1,2}\s+\w+\s+\d{4})\s+(.+?)\s+([+-]?)\s*(?:Rp\.?\s*)?([\d.,]+)/i;
+    const pattern1 =
+      /(\d{1,2}\s+\w+\s+\d{4})\s+(.+?)\s+([+-]?)\s*(?:Rp\.?\s*)?([\d.,]+)/i;
     // Pattern 2: "DD/MM/YYYY  Description  Amount  Type"
-    const pattern2 = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+(.+?)\s+([\d.,]+)\s*(masuk|keluar|kredit|debit|cr|db)/i;
+    const pattern2 =
+      /(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s+(.+?)\s+([\d.,]+)\s*(masuk|keluar|kredit|debit|cr|db)/i;
 
     for (const line of lines) {
       let match = line.match(pattern1);
@@ -102,9 +121,12 @@ export class JagoParser extends BaseStatementParser {
     return { transactions, statementDate, accountNumber };
   }
 
-  private parseFallback(lines: string[], transactions: ParsedTransaction[]): void {
+  private parseFallback(
+    lines: string[],
+    transactions: ParsedTransaction[],
+  ): void {
     let txnIndex = 0;
-    const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/;
+    const datePattern = /(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/;
 
     for (const line of lines) {
       const dateMatch = line.match(datePattern);

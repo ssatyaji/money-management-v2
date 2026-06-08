@@ -9,6 +9,8 @@ export class UploadStatementDto {
     example: 'BCA',
   })
   @IsNotEmpty({ message: 'Nama bank harus dipilih' })
-  @IsEnum(BankName, { message: 'Nama bank tidak valid. Pilih: PERMATA, JAGO, SEABANK, atau BCA' })
+  @IsEnum(BankName, {
+    message: 'Nama bank tidak valid. Pilih: PERMATA, JAGO, SEABANK, atau BCA',
+  })
   bankName: BankName;
 }

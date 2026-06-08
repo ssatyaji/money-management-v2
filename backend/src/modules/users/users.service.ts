@@ -20,15 +20,24 @@ export class UsersService {
     return user;
   }
 
-  async create(data: { email: string; password: string; name: string }): Promise<User> {
+  async create(data: {
+    email: string;
+    password: string;
+    name: string;
+  }): Promise<User> {
     return this.usersRepository.create(data);
   }
 
-  async updateRefreshToken(id: string, refreshToken: string | null): Promise<void> {
+  async updateRefreshToken(
+    id: string,
+    refreshToken: string | null,
+  ): Promise<void> {
     await this.usersRepository.update(id, { refreshToken });
   }
 
-  async findAll(paginationDto: PaginationDto): Promise<PaginatedResult<Partial<User>>> {
+  async findAll(
+    paginationDto: PaginationDto,
+  ): Promise<PaginatedResult<Partial<User>>> {
     const { data, total } = await this.usersRepository.findAll({
       skip: paginationDto.skip,
       take: paginationDto.limit,
@@ -47,7 +56,10 @@ export class UsersService {
     };
   }
 
-  async update(id: string, data: { name?: string; role?: Role }): Promise<User> {
+  async update(
+    id: string,
+    data: { name?: string; role?: Role },
+  ): Promise<User> {
     await this.findById(id); // Throws if not found
     return this.usersRepository.update(id, data);
   }

@@ -36,7 +36,11 @@ export class BankStatementsController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary', description: 'PDF e-statement (max 20MB)' },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'PDF e-statement (max 20MB)',
+        },
         bankName: {
           type: 'string',
           enum: ['PERMATA', 'JAGO', 'SEABANK', 'BCA'],
@@ -71,10 +75,7 @@ export class BankStatementsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get bank statement detail' })
-  async findOne(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  async findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.bankStatementsService.findOne(userId, id);
   }
 

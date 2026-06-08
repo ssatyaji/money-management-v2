@@ -12,7 +12,7 @@ export class AdminService {
       totalBudgets,
       totalReminders,
       totalIncomeData,
-      totalExpenseData
+      totalExpenseData,
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.transaction.count(),
@@ -25,7 +25,7 @@ export class AdminService {
       this.prisma.transaction.aggregate({
         where: { type: 'EXPENSE' },
         _sum: { amount: true },
-      })
+      }),
     ]);
 
     return {
@@ -33,8 +33,12 @@ export class AdminService {
       transactions: totalTransactions,
       budgets: totalBudgets,
       reminders: totalReminders,
-      totalIncome: totalIncomeData._sum.amount ? Number(totalIncomeData._sum.amount) : 0,
-      totalExpense: totalExpenseData._sum.amount ? Number(totalExpenseData._sum.amount) : 0,
+      totalIncome: totalIncomeData._sum.amount
+        ? Number(totalIncomeData._sum.amount)
+        : 0,
+      totalExpense: totalExpenseData._sum.amount
+        ? Number(totalExpenseData._sum.amount)
+        : 0,
     };
   }
 }

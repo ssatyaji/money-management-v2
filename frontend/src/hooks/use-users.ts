@@ -28,6 +28,7 @@ export const useUpdateUser = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(variables.id) });
       toast.success('Pengguna berhasil diperbarui');
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Gagal memperbarui pengguna';
       toast.error(message);
@@ -44,6 +45,7 @@ export const useDeleteUser = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
       toast.success('Pengguna berhasil dihapus');
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Gagal menghapus pengguna';
       toast.error(message);

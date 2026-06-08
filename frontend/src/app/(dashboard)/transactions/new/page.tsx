@@ -54,6 +54,7 @@ export default function NewTransactionPage() {
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedCategoryId = watch('categoryId');
 
   const onTypeChange = (type: 'INCOME' | 'EXPENSE') => {

@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma, Transaction } from '@prisma/client';
+import { Prisma, Transaction, TransactionType } from '@prisma/client';
 
 @Injectable()
 export class TransactionsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: Prisma.TransactionUncheckedCreateInput): Promise<Transaction> {
+  async create(
+    data: Prisma.TransactionUncheckedCreateInput,
+  ): Promise<Transaction> {
     return this.prisma.transaction.create({
       data,
       include: { category: true },
@@ -35,14 +37,22 @@ export class TransactionsRepository {
     return { data, total };
   }
 
-  async findById(id: string): Promise<(Transaction & { category: { name: string; icon: string | null; color: string | null } }) | null> {
+  async findById(id: string): Promise<
+    | (Transaction & {
+        category: { name: string; icon: string | null; color: string | null };
+      })
+    | null
+  > {
     return this.prisma.transaction.findUnique({
       where: { id },
       include: { category: true },
     });
   }
 
-  async update(id: string, data: Prisma.TransactionUncheckedUpdateInput): Promise<Transaction> {
+  async update(
+    id: string,
+    data: Prisma.TransactionUncheckedUpdateInput,
+  ): Promise<Transaction> {
     return this.prisma.transaction.update({
       where: { id },
       data,
@@ -68,12 +78,17 @@ export class TransactionsRepository {
     return result;
   }
 
-  async getCategoryBreakdown(userId: string, startDate: Date, endDate: Date, type: string) {
+  async getCategoryBreakdown(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    type: string,
+  ) {
     const result = await this.prisma.transaction.groupBy({
       by: ['categoryId'],
       where: {
         userId,
-        type: type as any,
+        type: type as TransactionType,
         date: { gte: startDate, lte: endDate },
       },
       _sum: { amount: true },

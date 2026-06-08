@@ -1,4 +1,10 @@
-import { IsArray, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ImportTransactionsDto {
@@ -14,7 +20,10 @@ export class ImportTransactionsDto {
 
   @ApiPropertyOptional({
     description: 'Mapping of tempId to categoryId for each transaction',
-    example: { 'txn-1234-0': 'category-uuid-1', 'txn-1234-1': 'category-uuid-2' },
+    example: {
+      'txn-1234-0': 'category-uuid-1',
+      'txn-1234-1': 'category-uuid-2',
+    },
   })
   @IsOptional()
   @IsObject()

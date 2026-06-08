@@ -113,7 +113,10 @@ export class ReportsRepository {
       orderBy: { date: 'asc' },
     });
 
-    const monthlyMap = new Map<number, { income: number; expense: number; count: number }>();
+    const monthlyMap = new Map<
+      number,
+      { income: number; expense: number; count: number }
+    >();
     for (let m = 1; m <= 12; m++) {
       monthlyMap.set(m, { income: 0, expense: 0, count: 0 });
     }
@@ -156,8 +159,18 @@ export class ReportsRepository {
     `;
 
     const monthNames = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
 
     const months = Array.from(monthlyMap.entries()).map(([m, v]) => ({

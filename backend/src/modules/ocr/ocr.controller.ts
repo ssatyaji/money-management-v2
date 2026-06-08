@@ -11,7 +11,13 @@ import {
   FileTypeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { OcrService } from './ocr.service';
 import { UploadReceiptDto } from './dto/upload-receipt.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -29,7 +35,11 @@ export class OcrController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary', description: 'Receipt image (JPG/PNG, max 10MB)' },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Receipt image (JPG/PNG, max 10MB)',
+        },
         description: { type: 'string', description: 'Optional description' },
       },
       required: ['file'],
@@ -54,19 +64,13 @@ export class OcrController {
 
   @Get('receipt/:id/status')
   @ApiOperation({ summary: 'Get OCR processing status' })
-  async getStatus(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  async getStatus(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.ocrService.getStatus(userId, id);
   }
 
   @Get('receipt/:id/result')
   @ApiOperation({ summary: 'Get OCR result' })
-  async getResult(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  async getResult(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.ocrService.getResult(userId, id);
   }
 }

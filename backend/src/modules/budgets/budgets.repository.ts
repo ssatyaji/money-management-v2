@@ -31,7 +31,10 @@ export class BudgetsRepository {
     });
   }
 
-  async update(id: string, data: Prisma.BudgetUncheckedUpdateInput): Promise<Budget> {
+  async update(
+    id: string,
+    data: Prisma.BudgetUncheckedUpdateInput,
+  ): Promise<Budget> {
     return this.prisma.budget.update({
       where: { id },
       data,
@@ -55,7 +58,12 @@ export class BudgetsRepository {
     });
   }
 
-  async calculateSpent(userId: string, categoryId: string, startDate: Date, endDate: Date): Promise<number> {
+  async calculateSpent(
+    userId: string,
+    categoryId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<number> {
     const result = await this.prisma.transaction.aggregate({
       where: {
         userId,

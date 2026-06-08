@@ -35,7 +35,7 @@ import storageConfig from './config/storage.config';
     ThrottlerModule.forRoot([
       {
         ttl: 60000, // 1 minute
-        limit: 60,  // 60 requests per minute
+        limit: 60, // 60 requests per minute
       },
     ]),
 
@@ -76,4 +76,4 @@ import storageConfig from './config/storage.config';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

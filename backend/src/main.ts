@@ -16,7 +16,10 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port', 3001);
-  const corsOrigin = configService.get<string>('app.corsOrigin', 'http://localhost:3000');
+  const corsOrigin = configService.get<string>(
+    'app.corsOrigin',
+    'http://localhost:3000',
+  );
 
   // Global prefix
   app.setGlobalPrefix('api/v1');
@@ -49,7 +52,10 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter(), new PrismaExceptionFilter());
 
   // Global interceptors
-  app.useGlobalInterceptors(new LoggingInterceptor(), new TransformInterceptor());
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new TransformInterceptor(),
+  );
 
   // Swagger
   const swaggerConfig = new DocumentBuilder()
@@ -81,4 +87,4 @@ async function bootstrap() {
   logger.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);
 }
 
-bootstrap();
+void bootstrap();

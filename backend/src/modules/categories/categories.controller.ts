@@ -8,7 +8,12 @@ import {
   Param,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { TransactionType } from '@prisma/client';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -39,10 +44,7 @@ export class CategoriesController {
 
   @Post()
   @ApiOperation({ summary: 'Create a custom category' })
-  create(
-    @CurrentUser('id') userId: string,
-    @Body() dto: CreateCategoryDto,
-  ) {
+  create(@CurrentUser('id') userId: string, @Body() dto: CreateCategoryDto) {
     return this.categoriesService.create(userId, dto);
   }
 
@@ -58,10 +60,7 @@ export class CategoriesController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a custom category' })
-  remove(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.categoriesService.remove(userId, id);
   }
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   Logger,
@@ -20,7 +21,10 @@ export class OcrService {
     private readonly configService: ConfigService,
     private readonly ocrParser: OcrParserService,
   ) {
-    this.uploadDir = this.configService.get<string>('storage.uploadDir', './uploads');
+    this.uploadDir = this.configService.get<string>(
+      'storage.uploadDir',
+      './uploads',
+    );
   }
 
   /**
@@ -55,7 +59,7 @@ export class OcrService {
       const { data } = await worker.recognize(filePath);
       rawText = data.text;
       await worker.terminate();
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`OCR processing failed: ${error.message}`, error.stack);
       // Clean up file on failure
       if (fs.existsSync(filePath)) {
@@ -139,7 +143,7 @@ export class OcrService {
         processedAt: record.processedAt,
         result: data.result as ParsedReceipt,
       };
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof BadRequestException) throw error;
       throw new BadRequestException('Gagal membaca hasil OCR');
     }

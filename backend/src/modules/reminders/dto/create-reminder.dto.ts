@@ -36,17 +36,26 @@ export class CreateReminderDto {
   @IsNotEmpty()
   dueDate: string;
 
-  @ApiPropertyOptional({ example: true, description: 'Is this a recurring reminder?' })
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Is this a recurring reminder?',
+  })
   @IsOptional()
   @IsBoolean()
   isRecurring?: boolean;
 
-  @ApiPropertyOptional({ enum: ReminderFrequency, example: ReminderFrequency.MONTHLY })
+  @ApiPropertyOptional({
+    enum: ReminderFrequency,
+    example: ReminderFrequency.MONTHLY,
+  })
   @IsOptional()
   @IsEnum(ReminderFrequency)
   frequency?: ReminderFrequency;
 
-  @ApiPropertyOptional({ example: 3, description: 'Notify X days before due date' })
+  @ApiPropertyOptional({
+    example: 3,
+    description: 'Notify X days before due date',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)

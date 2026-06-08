@@ -94,13 +94,17 @@ export abstract class BaseStatementParser {
     const cleaned = dateStr.trim();
 
     // DD/MM/YYYY
-    let match = cleaned.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    let match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
     if (match) {
-      return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+      return new Date(
+        parseInt(match[3]),
+        parseInt(match[2]) - 1,
+        parseInt(match[1]),
+      );
     }
 
     // DD/MM/YY
-    match = cleaned.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})$/);
+    match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2})$/);
     if (match) {
       const year = parseInt(match[3]) + 2000;
       return new Date(year, parseInt(match[2]) - 1, parseInt(match[1]));
@@ -108,10 +112,33 @@ export abstract class BaseStatementParser {
 
     // DD MMM YYYY (e.g., "15 Jan 2026")
     const monthMap: Record<string, number> = {
-      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, mei: 4, jun: 5,
-      jul: 6, aug: 7, agu: 7, sep: 8, oct: 9, okt: 9, nov: 10, dec: 11, des: 11,
-      januari: 0, februari: 1, maret: 2, april: 3, juni: 5,
-      juli: 6, agustus: 7, september: 8, oktober: 9, november: 10, desember: 11,
+      jan: 0,
+      feb: 1,
+      mar: 2,
+      apr: 3,
+      may: 4,
+      mei: 4,
+      jun: 5,
+      jul: 6,
+      aug: 7,
+      agu: 7,
+      sep: 8,
+      oct: 9,
+      okt: 9,
+      nov: 10,
+      dec: 11,
+      des: 11,
+      januari: 0,
+      februari: 1,
+      maret: 2,
+      april: 3,
+      juni: 5,
+      juli: 6,
+      agustus: 7,
+      september: 8,
+      oktober: 9,
+      november: 10,
+      desember: 11,
     };
 
     match = cleaned.match(/^(\d{1,2})\s+(\w+)\s+(\d{4})$/i);
@@ -125,7 +152,11 @@ export abstract class BaseStatementParser {
     // YYYY-MM-DD (ISO)
     match = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (match) {
-      return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+      return new Date(
+        parseInt(match[1]),
+        parseInt(match[2]) - 1,
+        parseInt(match[3]),
+      );
     }
 
     return null;

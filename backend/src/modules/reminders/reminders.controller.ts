@@ -8,7 +8,12 @@ import {
   Param,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { RemindersService } from './reminders.service';
 import { CreateReminderDto } from './dto/create-reminder.dto';
 import { UpdateReminderDto } from './dto/update-reminder.dto';
@@ -22,16 +27,17 @@ export class RemindersController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new reminder' })
-  create(
-    @CurrentUser('id') userId: string,
-    @Body() dto: CreateReminderDto,
-  ) {
+  create(@CurrentUser('id') userId: string, @Body() dto: CreateReminderDto) {
     return this.remindersService.create(userId, dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all reminders (filterable by status)' })
-  @ApiQuery({ name: 'filter', required: false, enum: ['upcoming', 'overdue', 'completed'] })
+  @ApiQuery({
+    name: 'filter',
+    required: false,
+    enum: ['upcoming', 'overdue', 'completed'],
+  })
   findAll(
     @CurrentUser('id') userId: string,
     @Query('filter') filter?: 'upcoming' | 'overdue' | 'completed',
@@ -53,10 +59,7 @@ export class RemindersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get reminder by ID' })
-  findOne(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.remindersService.findById(userId, id);
   }
 
@@ -71,20 +74,16 @@ export class RemindersController {
   }
 
   @Patch(':id/complete')
-  @ApiOperation({ summary: 'Mark a reminder as complete (auto-creates next if recurring)' })
-  markComplete(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  @ApiOperation({
+    summary: 'Mark a reminder as complete (auto-creates next if recurring)',
+  })
+  markComplete(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.remindersService.markComplete(userId, id);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a reminder' })
-  remove(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.remindersService.remove(userId, id);
   }
 }

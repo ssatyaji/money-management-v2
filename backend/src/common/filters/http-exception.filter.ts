@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {
   ExceptionFilter,
   Catch,
@@ -23,12 +24,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
       success: false,
       error: {
         code: this.getErrorCode(status),
-        message: typeof exceptionResponse === 'string'
-          ? exceptionResponse
-          : (exceptionResponse as any).message || exception.message,
-        details: typeof exceptionResponse === 'object'
-          ? (exceptionResponse as any).message
-          : undefined,
+        message:
+          typeof exceptionResponse === 'string'
+            ? exceptionResponse
+            : (exceptionResponse as any).message || exception.message,
+        details:
+          typeof exceptionResponse === 'object'
+            ? (exceptionResponse as any).message
+            : undefined,
         statusCode: status,
         timestamp: new Date().toISOString(),
         path: request.url,
