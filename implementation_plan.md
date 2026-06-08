@@ -217,6 +217,45 @@ Pengerjaan dibagi ke **8 Phase** sesuai prompt. Berikut detail Phase 1 & 2 yang 
 | 6 | Push Notifications + PWA | ~10 files |
 | 7 | Admin Panel | ~10 files |
 | 8 | Testing + Polish | ~20 files |
+| 9 | DevOps & Deployment | ~10 files |
+
+---
+
+### Phase 9: DevOps & Deployment
+
+This phase focuses on containerization, CI/CD pipelines, and creating environment configurations to prepare the application for a stable production release.
+
+#### 1. Dockerization
+- **Backend Dockerfile** (`backend/Dockerfile`):
+  - Multi-stage build for NestJS to ensure a slim production image.
+  - Generates Prisma client during the build process.
+- **Frontend Dockerfile** (`frontend/Dockerfile`):
+  - Multi-stage build leveraging Next.js `standalone` output mode to drastically reduce image size.
+- **Docker Compose** (`docker-compose.yml`):
+  - Orchestrate local deployment or single-VM setup containing PostgreSQL, Backend, and Frontend containers.
+  - Setup `.env` mappings for secure configurations.
+
+#### 2. CI/CD Pipelines (GitHub Actions)
+- **CI Pipeline** (`.github/workflows/ci.yml`):
+  - Triggers on PR and pushes to `main`.
+  - Runs ESLint, TypeScript compilation (`npm run build`), and tests for both backend and frontend.
+- **CD Pipeline** (`.github/workflows/cd.yml`) *(Optional based on user infra)*:
+  - Automates Docker image builds and pushes to a container registry (e.g., Docker Hub or GitHub Container Registry).
+
+#### 3. Production Configurations
+- **Environment Variables**:
+  - `backend/.env.production.example` & `frontend/.env.production.example`.
+- **Database Migrations**:
+  - Script for running `npx prisma migrate deploy` prior to spinning up the backend container.
+- **Next.js Standalone**:
+  - Update `next.config.js` to enable `output: 'standalone'`.
+
+#### 4. System Logging & Optimization
+- **PM2 Configuration** (`ecosystem.config.js`) *(Alternative to Docker)*:
+  - Provide a PM2 setup script if deployment is directly on an Ubuntu/Debian server without Docker.
+
+> [!IMPORTANT] 
+> User Input Needed: Do you prefer deploying via Docker (using `docker-compose`) on a VPS (like DigitalOcean/AWS EC2) or deploying to PaaS platforms like Vercel (Frontend) and Render/Railway (Backend)? The current plan focuses on **Docker** for maximum control and portability.
 
 ---
 
