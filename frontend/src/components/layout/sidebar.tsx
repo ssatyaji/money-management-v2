@@ -36,7 +36,8 @@ const menuItems = [
 ];
 
 const adminItems = [
-  { label: 'Admin Panel', href: '/admin/users', icon: Shield },
+  { label: 'Admin Panel', href: '/admin', icon: Shield, exact: true },
+  { label: 'Manajemen Pengguna', href: '/admin/users', icon: Shield, exact: false },
 ];
 
 export function AppSidebar({ isOpen, onToggle }: SidebarProps) {
@@ -92,7 +93,7 @@ export function AppSidebar({ isOpen, onToggle }: SidebarProps) {
           <>
             <div className="h-px bg-border my-3" />
             {adminItems.map((item) => {
-              const isActive = pathname.startsWith(item.href);
+              const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
