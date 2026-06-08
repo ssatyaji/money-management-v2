@@ -29,4 +29,14 @@ export const queryKeys = {
     chart: ['dashboard', 'chart'] as const,
     categoryBreakdown: ['dashboard', 'category-breakdown'] as const,
   },
+  ocr: {
+    status: (id: string) => ['ocr', 'status', id] as const,
+    result: (id: string) => ['ocr', 'result', id] as const,
+  },
+  bankStatements: {
+    all: ['bank-statements'] as const,
+    detail: (id: string) => ['bank-statements', 'detail', id] as const,
+    transactions: (id: string) => ['bank-statements', 'transactions', id] as const,
+  },
 } as const;
+

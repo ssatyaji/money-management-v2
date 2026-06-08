@@ -10,6 +10,8 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
+import { OcrModule } from './modules/ocr/ocr.module';
+import { BankStatementsModule } from './modules/bank-statements/bank-statements.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import appConfig from './config/app.config';
@@ -45,6 +47,8 @@ import storageConfig from './config/storage.config';
     BudgetsModule,
     ReportsModule,
     RemindersModule,
+    OcrModule,
+    BankStatementsModule,
   ],
   providers: [
     // Global JWT auth guard — all routes require auth by default
@@ -64,4 +68,4 @@ import storageConfig from './config/storage.config';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }
