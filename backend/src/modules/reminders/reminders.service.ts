@@ -2,15 +2,23 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { ReminderFrequency } from '@prisma/client';
 import { RemindersRepository } from './reminders.repository';
 import { CreateReminderDto } from './dto/create-reminder.dto';
 import { UpdateReminderDto } from './dto/update-reminder.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class RemindersService {
-  constructor(private readonly remindersRepository: RemindersRepository) {}
+  private readonly logger = new Logger(RemindersService.name);
+
+  constructor(
+    private readonly remindersRepository: RemindersRepository,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(userId: string, dto: CreateReminderDto) {
     return this.remindersRepository.create({
@@ -131,5 +139,54 @@ export class RemindersService {
     }
 
     return next;
+  }
+
+  /**
+   * Daily cron job to check for upcoming reminders and send push notifications.
+   * Runs at 09:00 AM every day.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_9AM)
+  async checkAndSendPushNotifications() {
+    this.logger.log('Running daily reminder push notification check...');
+    
+    // Find all incomplete reminders
+    // We fetch a wide net because we want to check notifyBefore condition
+    const reminders = await this.remindersRepository.findAll({
+      where: { isCompleted: false },
+    });
+
+    const now = new Date();
+    // Reset time for comparison (only care about dates)
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    let sentCount = 0;
+
+    for (const reminder of reminders) {
+      const dueDate = new Date(reminder.dueDate);
+      const dueDay = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+      
+      // Calculate how many days left
+      const diffTime = dueDay.getTime() - today.getTime();
+      const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Notify if today is exactly (notifyBefore) days before the due date,
+      // or if it's due today (daysLeft === 0), or overdue but we might want to remind again.
+      // For simplicity, we send if daysLeft is exactly notifyBefore OR exactly 0.
+      if (daysLeft === reminder.notifyBefore || daysLeft === 0) {
+        const amountStr = reminder.amount ? ` (Rp ${reminder.amount})` : '';
+        const dayText = daysLeft === 0 ? 'hari ini' : `dalam ${daysLeft} hari`;
+        
+        const payload = {
+          title: `Pengingat: ${reminder.title}`,
+          body: `Jatuh tempo ${dayText}${amountStr}. Jangan lupa untuk menyelesaikannya!`,
+          url: '/reminders',
+        };
+
+        await this.notificationsService.sendPushNotification(reminder.userId, payload);
+        sentCount++;
+      }
+    }
+
+    this.logger.log(`Sent ${sentCount} reminder push notifications.`);
   }
 }

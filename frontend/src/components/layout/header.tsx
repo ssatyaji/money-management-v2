@@ -3,8 +3,9 @@
 import { useAuth } from '@/providers/auth-provider';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
-import { Menu, Sun, Moon, LogOut, User, Settings } from 'lucide-react';
+import { Menu, Sun, Moon, LogOut, User, Settings, Bell, BellOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
 
 interface HeaderProps {
   onMenuToggle: () => void;
@@ -14,6 +15,7 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
+  const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications();
 
   const handleLogout = async () => {
     await logout();
@@ -33,6 +35,20 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
+          {/* Notifications toggle */}
+          {isSupported && (
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={isLoading}
+              onClick={isSubscribed ? unsubscribe : subscribe}
+              className="rounded-lg text-muted-foreground hover:text-foreground"
+              title={isSubscribed ? "Matikan Notifikasi" : "Nyalakan Notifikasi"}
+            >
+              {isSubscribed ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+            </Button>
+          )}
+
           {/* Theme toggle */}
           <Button
             variant="ghost"
