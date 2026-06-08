@@ -9,6 +9,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { RemindersModule } from './modules/reminders/reminders.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import appConfig from './config/app.config';
@@ -43,6 +44,7 @@ import storageConfig from './config/storage.config';
     TransactionsModule,
     BudgetsModule,
     ReportsModule,
+    RemindersModule,
   ],
   providers: [
     // Global JWT auth guard — all routes require auth by default
