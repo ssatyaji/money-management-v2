@@ -40,8 +40,8 @@ export class ReportsRepository {
         t."type",
         CAST(SUM(t."amount") AS DOUBLE PRECISION) AS "total",
         COUNT(*)::bigint AS "count"
-      FROM "Transaction" t
-      JOIN "Category" c ON t."categoryId" = c."id"
+      FROM "transactions" t
+      JOIN "categories" c ON t."categoryId" = c."id"
       WHERE t."userId" = ${userId}
         AND t."date" >= ${startDate}
         AND t."date" <= ${endDate}
@@ -149,8 +149,8 @@ export class ReportsRepository {
         t."type",
         CAST(SUM(t."amount") AS DOUBLE PRECISION) AS "total",
         COUNT(*)::bigint AS "count"
-      FROM "Transaction" t
-      JOIN "Category" c ON t."categoryId" = c."id"
+      FROM "transactions" t
+      JOIN "categories" c ON t."categoryId" = c."id"
       WHERE t."userId" = ${userId}
         AND t."date" >= ${startDate}
         AND t."date" <= ${endDate}

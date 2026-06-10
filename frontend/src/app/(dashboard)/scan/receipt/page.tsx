@@ -2,16 +2,9 @@
 
 import { useState, useCallback, useRef } from 'react';
 import {
-  Upload,
-  FileText,
-  Camera,
-  History,
   CheckCircle2,
   XCircle,
   Loader2,
-  ArrowDownToLine,
-  ImageIcon,
-  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -119,69 +112,108 @@ function ScanReceiptTab() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Upload Area */}
+      {/* Viewfinder Area */}
       <div className="space-y-4">
         <div
           className={cn(
-            'relative rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer',
-            'flex flex-col items-center justify-center min-h-[300px] p-6',
-            dragActive
-              ? 'border-emerald-500 bg-emerald-500/5'
-              : 'border-border hover:border-emerald-500/50 hover:bg-card/50',
-            previewUrl && 'border-solid',
+            'relative overflow-hidden rounded-3xl transition-all duration-300',
+            'flex flex-col items-center justify-center w-full min-h-[480px] bg-black text-white shadow-xl',
+            dragActive && 'border-4 border-emerald-500'
           )}
           onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
           onDragLeave={() => setDragActive(false)}
           onDrop={handleDrop}
-          onClick={() => !previewUrl && fileInputRef.current?.click()}
         >
+          {uploadMutation.isPending && (
+            <div className="absolute inset-0 z-20 pointer-events-none flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+              {/* Scanning animation line */}
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,1)] animate-scan-line" />
+              <div className="w-16 h-16 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin mb-4" />
+              <p className="text-white font-medium animate-pulse">Menganalisis Struk...</p>
+            </div>
+          )}
+
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/jpg"
+            accept="image/*"
+            capture="environment"
             className="hidden"
             onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
           />
 
           {previewUrl ? (
-            <div className="w-full">
+            <>
               <img
                 src={previewUrl}
                 alt="Preview struk"
-                className="w-full max-h-[400px] object-contain rounded-lg"
+                className="absolute inset-0 w-full h-full object-cover opacity-90"
               />
-              <div className="flex gap-2 mt-4 justify-center">
+              <div className="absolute bottom-6 left-0 w-full px-6 flex justify-between items-center z-10">
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="secondary"
+                  size="icon"
+                  className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30"
                   onClick={(e) => { e.stopPropagation(); handleClear(); }}
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Hapus
+                  <span className="material-symbols-outlined">close</span>
                 </Button>
                 <Button
-                  size="sm"
+                  size="lg"
                   onClick={(e) => { e.stopPropagation(); handleProcess(); }}
                   disabled={uploadMutation.isPending}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg px-8 h-12 font-semibold"
                 >
-                  {uploadMutation.isPending ? (
-                    <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Memproses...</>
-                  ) : (
-                    <><Camera className="h-4 w-4 mr-1" /> Proses OCR</>
-                  )}
+                  <span className="material-symbols-outlined mr-2">document_scanner</span>
+                  Proses OCR
                 </Button>
               </div>
-            </div>
+            </>
           ) : (
             <>
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
-                <ImageIcon className="h-8 w-8 text-emerald-500" />
+              {/* Corner brackets */}
+              <div className="absolute top-8 left-8 w-12 h-12 border-t-4 border-l-4 border-white/50 rounded-tl-xl" />
+              <div className="absolute top-8 right-8 w-12 h-12 border-t-4 border-r-4 border-white/50 rounded-tr-xl" />
+              <div className="absolute bottom-28 left-8 w-12 h-12 border-b-4 border-l-4 border-white/50 rounded-bl-xl" />
+              <div className="absolute bottom-28 right-8 w-12 h-12 border-b-4 border-r-4 border-white/50 rounded-br-xl" />
+
+              {/* Top controls */}
+              <div className="absolute top-6 w-full px-6 flex justify-between items-center z-10">
+                <button className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-white/80 hover:text-white transition-colors">
+                  <span className="material-symbols-outlined">flash_off</span>
+                </button>
+                <Badge variant="outline" className="bg-black/40 text-white border-white/20 backdrop-blur-md">
+                  Mode Struk
+                </Badge>
+                <button className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-white/80 hover:text-white transition-colors">
+                  <span className="material-symbols-outlined">flip_camera_ios</span>
+                </button>
               </div>
-              <p className="font-medium text-foreground">Drag & drop foto struk di sini</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                atau klik untuk memilih file (JPG, PNG, WebP, maks 10MB)
-              </p>
+
+              {/* Center text */}
+              <div className="text-center mt-[-40px]">
+                <p className="text-white/80 font-medium tracking-wide">Posisikan struk di dalam kotak</p>
+              </div>
+
+              {/* Bottom controls */}
+              <div className="absolute bottom-8 w-full px-8 flex justify-center items-center z-10">
+                {/* Shutter Button */}
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-20 h-20 rounded-full border-[6px] border-white/50 flex items-center justify-center group transition-transform active:scale-95"
+                >
+                  <div className="w-[60px] h-[60px] rounded-full bg-white group-hover:bg-gray-200 transition-colors" />
+                </button>
+              </div>
+              
+              <div className="absolute bottom-10 right-8">
+                 <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-12 h-12 rounded-full bg-black/40 flex items-center justify-center text-white border border-white/20 hover:bg-black/60 transition-colors"
+                >
+                  <span className="material-symbols-outlined">imagesmode</span>
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -277,10 +309,13 @@ function ScanReceiptTab() {
         )}
 
         {!ocrResult && !uploadMutation.isPending && (
-          <div className="rounded-xl border border-border bg-card p-12 text-center">
-            <Camera className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-muted-foreground">
-              Upload foto struk untuk mulai scan
+          <div className="rounded-2xl border border-border bg-card p-12 text-center shadow-[0px_4px_12px_rgba(26,43,60,0.05)] h-full flex flex-col items-center justify-center min-h-[480px]">
+            <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-4xl text-emerald-500">receipt_long</span>
+            </div>
+            <h3 className="font-semibold text-lg text-foreground">Arahkan Kamera ke Struk</h3>
+            <p className="text-muted-foreground mt-2 max-w-[250px]">
+              Foto struk belanja Anda untuk mengekstrak data transaksi secara otomatis.
             </p>
           </div>
         )}
@@ -429,7 +464,7 @@ function ImportStatementTab() {
               {uploadMutation.isPending ? (
                 <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Memproses...</>
               ) : (
-                <><Upload className="h-4 w-4 mr-1" /> Upload & Parse</>
+                <><span className="material-symbols-outlined text-[18px] mr-1">upload</span> Upload & Parse</>
               )}
             </Button>
             {uploadedStatementId && (
@@ -469,7 +504,7 @@ function ImportStatementTab() {
                 {importMutation.isPending ? (
                   <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Importing...</>
                 ) : (
-                  <><ArrowDownToLine className="h-4 w-4 mr-1" /> Import ({selectedTxnIds.size})</>
+                  <><span className="material-symbols-outlined text-[18px] mr-1">download</span> Import ({selectedTxnIds.size})</>
                 )}
               </Button>
             </div>
@@ -542,7 +577,7 @@ function ImportStatementTab() {
 
       {parsedTransactions && parsedTransactions.length === 0 && (
         <div className="rounded-xl border border-border bg-card p-12 text-center">
-          <FileText className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+          <span className="material-symbols-outlined text-4xl text-muted-foreground/50 mb-3 block">description</span>
           <p className="font-medium">Tidak ada transaksi ditemukan</p>
           <p className="text-sm text-muted-foreground mt-1">
             PDF mungkin tidak mengandung data transaksi yang dapat diparse.
@@ -571,7 +606,7 @@ function UploadHistoryTab() {
   if (!statements || statements.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-card p-12 text-center">
-        <History className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+        <span className="material-symbols-outlined text-4xl text-muted-foreground/50 mb-3 block">history</span>
         <p className="font-medium">Belum ada riwayat upload</p>
         <p className="text-sm text-muted-foreground mt-1">
           Upload struk atau e-statement bank untuk mulai.
@@ -591,7 +626,7 @@ function UploadHistoryTab() {
             className="rounded-xl border border-border bg-card p-4 flex items-center gap-4 hover:bg-muted/20 transition-colors"
           >
             <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
-              <FileText className="h-5 w-5 text-muted-foreground" />
+              <span className="material-symbols-outlined text-[20px] text-muted-foreground">description</span>
             </div>
 
             <div className="flex-1 min-w-0">
@@ -644,16 +679,16 @@ export default function ScanReceiptPage() {
 
       <Tabs defaultValue="scan" className="space-y-6">
         <TabsList className="bg-muted/50">
-          <TabsTrigger value="scan" className="gap-2">
-            <Camera className="h-4 w-4" />
+          <TabsTrigger value="scan" className="gap-2 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <span className="material-symbols-outlined text-[18px]">camera</span>
             Scan Struk
           </TabsTrigger>
-          <TabsTrigger value="import" className="gap-2">
-            <FileText className="h-4 w-4" />
-            Import Bank Statement
+          <TabsTrigger value="import" className="gap-2 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <span className="material-symbols-outlined text-[18px]">upload_file</span>
+            Import PDF
           </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2">
-            <History className="h-4 w-4" />
+          <TabsTrigger value="history" className="gap-2 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <span className="material-symbols-outlined text-[18px]">history</span>
             Riwayat
           </TabsTrigger>
         </TabsList>

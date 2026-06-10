@@ -10,7 +10,7 @@ import {
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { FilterUserDto } from './dto/filter-user.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RoleEnum } from '../../common/constants/roles.enum';
 
@@ -23,8 +23,8 @@ export class UsersController {
 
   @Get()
   @ApiOperation({ summary: 'Get all users (Admin only)' })
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.usersService.findAll(paginationDto);
+  findAll(@Query() filterDto: FilterUserDto) {
+    return this.usersService.findAll(filterDto);
   }
 
   @Get(':id')

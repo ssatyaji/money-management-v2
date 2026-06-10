@@ -48,27 +48,15 @@ async function main() {
 
   const allCategories = [...expenseCategories, ...incomeCategories];
 
-  for (const category of allCategories) {
-    await prisma.category.upsert({
-      where: {
-        name_userId: {
-          name: category.name,
-          userId: '', // system default uses empty string trick - we handle null below
-        },
-      },
-      update: {},
-      create: {
-        name: category.name,
-        icon: category.icon,
-        color: category.color,
-        type: category.type,
-        isDefault: true,
-        userId: null,
-      },
-    });
-  }
+  // Clean up existing default categories to prevent duplicates when running seed multiple times
+  await prisma.category.deleteMany({
+    where: {
+      userId: null,
+      isDefault: true,
+    },
+  });
 
-  // Since upsert with null composite key doesn't work well, use createMany with skipDuplicates
+  // Re-create default categories cleanly
   await prisma.category.createMany({
     data: allCategories.map((cat) => ({
       name: cat.name,
@@ -81,7 +69,51 @@ async function main() {
     skipDuplicates: true,
   });
 
-  console.log(`✅ ${allCategories.length} default categories created`);
+  // Fetch categories to use their IDs
+  const dbCategories = await prisma.category.findMany();
+  const incomeCats = dbCategories.filter((c) => c.type === 'INCOME');
+  const expenseCats = dbCategories.filter((c) => c.type === 'EXPENSE');
+
+  // Clear existing transactions for admin to avoid duplicates on re-seed
+  await prisma.transaction.deleteMany({
+    where: { userId: admin.id },
+  });
+
+  const dummyTransactions = [];
+  const now = new Date();
+
+  // Create about 120 transactions over the last 90 days
+  for (let i = 0; i < 120; i++) {
+    const isIncome = Math.random() > 0.7; // 30% income, 70% expense
+    const category = isIncome
+      ? incomeCats[Math.floor(Math.random() * incomeCats.length)]
+      : expenseCats[Math.floor(Math.random() * expenseCats.length)];
+
+    // random date within last 90 days
+    const randomDaysAgo = Math.floor(Math.random() * 90);
+    const date = new Date(now);
+    date.setDate(now.getDate() - randomDaysAgo);
+
+    const amount = isIncome
+      ? Math.floor(Math.random() * 5000000) + 1000000 // 1jt - 6jt
+      : Math.floor(Math.random() * 500000) + 15000; // 15rb - 515rb
+
+    dummyTransactions.push({
+      userId: admin.id,
+      categoryId: category.id,
+      amount,
+      type: category.type,
+      date,
+      description: `Dummy ${category.name} transaction`,
+      source: 'MANUAL' as const,
+    });
+  }
+
+  await prisma.transaction.createMany({
+    data: dummyTransactions,
+  });
+
+  console.log(`✅ ${dummyTransactions.length} dummy transactions created for admin over the last 3 months`);
   console.log('🎉 Seeding completed!');
 }
 

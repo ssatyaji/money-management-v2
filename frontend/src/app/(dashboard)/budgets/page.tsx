@@ -1,13 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Plus,
-  PiggyBank,
-  AlertTriangle,
-  TrendingDown,
-  Trash2,
-} from 'lucide-react';
+
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,8 +80,8 @@ export default function BudgetsPage() {
         </div>
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
+            <Button className="gap-2 rounded-full px-5">
+              <span className="material-symbols-outlined text-[20px]">add</span>
               <span className="hidden sm:inline">Tambah Budget</span>
             </Button>
           </DialogTrigger>
@@ -164,34 +158,34 @@ export default function BudgetsPage() {
       {/* Summary Cards */}
       {!isLoading && summary && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 rounded-lg bg-blue-500/10">
-                <PiggyBank className="w-5 h-5 text-blue-500" />
+          <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-md p-5 shadow-[0px_4px_12px_rgba(26,43,60,0.05)] card-hover flex flex-col justify-between">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-blue-500 text-xl">savings</span>
               </div>
-              <span className="text-sm text-muted-foreground">Total Budget</span>
+              <span className="text-body-sm font-medium text-muted-foreground">Total Budget</span>
             </div>
-            <p className="text-2xl font-bold">{formatCurrency(summary.totalBudget)}</p>
+            <p className="text-numeric-lg tracking-tight">{formatCurrency(summary.totalBudget)}</p>
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 rounded-lg bg-red-500/10">
-                <TrendingDown className="w-5 h-5 text-red-500" />
+          <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-md p-5 shadow-[0px_4px_12px_rgba(26,43,60,0.05)] card-hover flex flex-col justify-between">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-red-500 text-xl">trending_down</span>
               </div>
-              <span className="text-sm text-muted-foreground">Total Terpakai</span>
+              <span className="text-body-sm font-medium text-muted-foreground">Total Terpakai</span>
             </div>
-            <p className="text-2xl font-bold">{formatCurrency(summary.totalSpent)}</p>
+            <p className="text-numeric-lg tracking-tight">{formatCurrency(summary.totalSpent)}</p>
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 rounded-lg bg-amber-500/10">
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
+          <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-md p-5 shadow-[0px_4px_12px_rgba(26,43,60,0.05)] card-hover flex flex-col justify-between">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-amber-500 text-xl">warning</span>
               </div>
-              <span className="text-sm text-muted-foreground">Peringatan</span>
+              <span className="text-body-sm font-medium text-muted-foreground">Peringatan</span>
             </div>
-            <p className="text-2xl font-bold">
+            <p className="text-numeric-lg tracking-tight">
               {summary.overBudgetCount > 0 && (
                 <span className="text-red-500">{summary.overBudgetCount} Over</span>
               )}
@@ -219,9 +213,11 @@ export default function BudgetsPage() {
           ))}
         </div>
       ) : budgets.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-12 text-center">
-          <div className="text-4xl mb-3">🎯</div>
-          <p className="font-medium">Belum ada budget</p>
+        <div className="rounded-2xl border border-border bg-card p-12 text-center shadow-[0px_4px_12px_rgba(26,43,60,0.05)]">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-3xl text-primary">track_changes</span>
+          </div>
+          <p className="font-semibold text-lg">Belum ada budget</p>
           <p className="text-sm text-muted-foreground mt-1">
             Buat budget pertama untuk mengontrol pengeluaran Anda
           </p>
@@ -232,33 +228,35 @@ export default function BudgetsPage() {
             <div
               key={budget.id}
               className={cn(
-                'rounded-xl border bg-card p-5 transition-all',
+                'rounded-2xl border bg-card p-5 transition-all shadow-[0px_4px_12px_rgba(26,43,60,0.05)] card-hover',
                 budget.isOverBudget
-                  ? 'border-red-500/50'
+                  ? 'border-red-500/50 bg-red-500/5'
                   : budget.isNearLimit
-                    ? 'border-amber-500/50'
+                    ? 'border-amber-500/50 bg-amber-500/5'
                     : 'border-border',
               )}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{budget.category?.icon || '📦'}</span>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-surface-container-low flex items-center justify-center text-2xl">
+                    {budget.category?.icon || '📦'}
+                  </div>
                   <div>
-                    <p className="font-medium">{budget.category?.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="font-semibold">{budget.category?.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {formatCurrency(budget.spent)} / {formatCurrency(budget.amount)}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span
                     className={cn(
-                      'text-sm font-semibold',
+                      'text-sm font-bold bg-background px-2.5 py-1 rounded-full border',
                       budget.isOverBudget
-                        ? 'text-red-500'
+                        ? 'text-red-500 border-red-500/20'
                         : budget.isNearLimit
-                          ? 'text-amber-500'
-                          : 'text-emerald-500',
+                          ? 'text-amber-500 border-amber-500/20'
+                          : 'text-emerald-500 border-emerald-500/20',
                     )}
                   >
                     {budget.percentage}%
@@ -266,10 +264,10 @@ export default function BudgetsPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
                     onClick={() => handleDelete(budget.id)}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <span className="material-symbols-outlined text-[20px]">delete</span>
                   </Button>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { User, Role } from '@prisma/client';
 import { UsersRepository } from './users.repository';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { FilterUserDto } from './dto/filter-user.dto';
 import { PaginatedResult } from '../../common/interfaces/pagination.interface';
 
 @Injectable()
@@ -36,11 +36,20 @@ export class UsersService {
   }
 
   async findAll(
-    paginationDto: PaginationDto,
+    filterDto: FilterUserDto,
   ): Promise<PaginatedResult<Partial<User>>> {
+    const where: Prisma.UserWhereInput = {};
+    if (filterDto.search) {
+      where.OR = [
+        { name: { contains: filterDto.search, mode: 'insensitive' } },
+        { email: { contains: filterDto.search, mode: 'insensitive' } },
+      ];
+    }
+
     const { data, total } = await this.usersRepository.findAll({
-      skip: paginationDto.skip,
-      take: paginationDto.limit,
+      skip: filterDto.skip,
+      take: filterDto.limit,
+      where,
       orderBy: { createdAt: 'desc' },
     });
 
@@ -48,10 +57,10 @@ export class UsersService {
       success: true,
       data,
       meta: {
-        page: paginationDto.page,
-        limit: paginationDto.limit,
+        page: filterDto.page,
+        limit: filterDto.limit,
         total,
-        totalPages: Math.ceil(total / paginationDto.limit),
+        totalPages: Math.ceil(total / filterDto.limit),
       },
     };
   }
