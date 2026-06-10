@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { MoreHorizontal, Edit, Trash2, Search, User as UserIcon } from 'lucide-react';
+import { Search } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,7 +71,75 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="rounded-md border bg-card">
+      {/* Mobile View (Card List) */}
+      <div className="md:hidden grid grid-cols-1 gap-4">
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">Memuat data pengguna...</div>
+        ) : !data?.data || data.data.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">Tidak ada pengguna ditemukan.</div>
+        ) : (
+          data.data.map((user) => (
+            <div key={user.id} className="rounded-2xl border border-border bg-card p-5 shadow-[0px_4px_12px_rgba(26,43,60,0.05)] flex flex-col gap-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined">person</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-semibold">{user.name}</span>
+                    <span className="text-xs text-muted-foreground">{user.email}</span>
+                  </div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
+                      <span className="sr-only">Open menu</span>
+                      <span className="material-symbols-outlined">more_vert</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => handleEdit(user)}>
+                      <span className="material-symbols-outlined mr-2 text-[18px]">edit</span>
+                      Edit Pengguna
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => handleDelete(user.id)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <span className="material-symbols-outlined mr-2 text-[18px]">delete</span>
+                      Hapus Pengguna
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                <div className="flex gap-2">
+                  <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'} className="text-[10px] px-2 py-0">
+                    {user.role}
+                  </Badge>
+                  {user.isVerified ? (
+                    <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/10 text-[10px] px-2 py-0">
+                      Verified
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-amber-500 border-amber-500/20 bg-amber-500/10 text-[10px] px-2 py-0">
+                      Unverified
+                    </Badge>
+                  )}
+                </div>
+                <span className="text-muted-foreground text-xs">
+                  {format(new Date(user.createdAt), 'dd MMM yyyy', { locale: id })}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop View (Table) */}
+      <div className="hidden md:block rounded-xl border border-border bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -89,19 +157,19 @@ export default function AdminUsersPage() {
                   Memuat data pengguna...
                 </TableCell>
               </TableRow>
-            ) : data?.data.length === 0 ? (
+            ) : !data?.data || data.data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   Tidak ada pengguna ditemukan.
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((user) => (
+              data.data.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                        <UserIcon className="w-4 h-4" />
+                        <span className="material-symbols-outlined text-[18px]">person</span>
                       </div>
                       <div className="flex flex-col">
                         <span className="font-medium">{user.name}</span>
@@ -131,15 +199,15 @@ export default function AdminUsersPage() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                        <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
                           <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="material-symbols-outlined text-[18px]">more_horiz</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => handleEdit(user)}>
-                          <Edit className="mr-2 h-4 w-4" />
+                          <span className="material-symbols-outlined mr-2 text-[18px]">edit</span>
                           Edit Pengguna
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -147,7 +215,7 @@ export default function AdminUsersPage() {
                           onClick={() => handleDelete(user.id)}
                           className="text-destructive focus:text-destructive"
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
+                          <span className="material-symbols-outlined mr-2 text-[18px]">delete</span>
                           Hapus Pengguna
                         </DropdownMenuItem>
                       </DropdownMenuContent>

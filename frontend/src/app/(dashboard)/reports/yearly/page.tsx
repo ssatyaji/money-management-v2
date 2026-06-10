@@ -1,14 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  TrendingDown,
-  Wallet,
-  BarChart3,
-} from 'lucide-react';
+
 import {
   BarChart,
   Bar,
@@ -55,10 +48,10 @@ export default function YearlyReportPage() {
     }));
 
   const stats = [
-    { label: 'Total Pemasukan', value: report?.totalIncome ?? 0, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Total Pengeluaran', value: report?.totalExpense ?? 0, icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-500/10' },
-    { label: 'Saldo Tahunan', value: report?.balance ?? 0, icon: Wallet, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { label: 'Rata-rata/bulan', value: report?.avgMonthlyExpense ?? 0, icon: BarChart3, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: 'Total Pemasukan', value: report?.totalIncome ?? 0, icon: 'trending_up', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Total Pengeluaran', value: report?.totalExpense ?? 0, icon: 'trending_down', color: 'text-red-500', bg: 'bg-red-500/10' },
+    { label: 'Saldo Tahunan', value: report?.balance ?? 0, icon: 'account_balance_wallet', color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Rata-rata/bulan', value: report?.avgMonthlyExpense ?? 0, icon: 'bar_chart', color: 'text-purple-500', bg: 'bg-purple-500/10' },
   ];
 
   return (
@@ -70,12 +63,12 @@ export default function YearlyReportPage() {
           <p className="text-muted-foreground mt-1">Perbandingan keuangan per bulan</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setYear(year - 1)}>
-            <ChevronLeft className="w-4 h-4" />
+          <Button variant="outline" size="icon" className="rounded-full w-10 h-10 border-border bg-card" onClick={() => setYear(year - 1)}>
+            <span className="material-symbols-outlined text-lg">chevron_left</span>
           </Button>
-          <span className="text-sm font-medium min-w-[60px] text-center">{year}</span>
-          <Button variant="outline" size="icon" onClick={() => setYear(year + 1)}>
-            <ChevronRight className="w-4 h-4" />
+          <span className="text-h3 min-w-[60px] text-center">{year}</span>
+          <Button variant="outline" size="icon" className="rounded-full w-10 h-10 border-border bg-card" onClick={() => setYear(year + 1)}>
+            <span className="material-symbols-outlined text-lg">chevron_right</span>
           </Button>
         </div>
       </div>
@@ -84,18 +77,20 @@ export default function YearlyReportPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {stats.map((stat) =>
           isLoading ? (
-            <div key={stat.label} className="rounded-xl border border-border bg-card p-4">
-              <Skeleton className="w-8 h-8 rounded-lg mb-2" />
-              <Skeleton className="w-24 h-6 mb-1" />
-              <Skeleton className="w-16 h-3" />
+            <div key={stat.label} className="rounded-2xl border border-border bg-card p-5 shadow-[0px_4px_12px_rgba(26,43,60,0.05)]">
+              <Skeleton className="w-10 h-10 rounded-full mb-3" />
+              <Skeleton className="w-24 h-8 mb-2" />
+              <Skeleton className="w-16 h-4" />
             </div>
           ) : (
-            <div key={stat.label} className="rounded-xl border border-border bg-card p-4">
-              <div className={`p-2 rounded-lg ${stat.bg} w-fit mb-2`}>
-                <stat.icon className={`w-4 h-4 ${stat.color}`} />
+            <div key={stat.label} className="rounded-2xl border border-border bg-card p-5 card-hover shadow-[0px_4px_12px_rgba(26,43,60,0.05)] flex flex-col justify-between">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${stat.bg} mb-4`}>
+                <span className={`material-symbols-outlined text-xl ${stat.color}`}>{stat.icon}</span>
               </div>
-              <p className="text-lg font-bold">{formatCurrency(stat.value)}</p>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
+              <div>
+                <p className="text-numeric-lg text-foreground tracking-tight">{formatCurrency(stat.value)}</p>
+                <p className="text-body-sm text-muted-foreground mt-1">{stat.label}</p>
+              </div>
             </div>
           ),
         )}
@@ -108,17 +103,21 @@ export default function YearlyReportPage() {
           <Skeleton className="w-full h-72" />
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyChart}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-              <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`} />
+            <BarChart data={monthlyChart} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  fontSize: '12px',
+                  backgroundColor: 'var(--card)',
+                  border: 'none',
+                  borderRadius: '12px',
+                  boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--foreground)'
                 }}
+                itemStyle={{ color: 'var(--foreground)' }}
                 formatter={(value) => formatCurrency(Number(value))}
               />
               <Bar dataKey="Pemasukan" fill="#10b981" radius={[3, 3, 0, 0]} />
@@ -135,17 +134,21 @@ export default function YearlyReportPage() {
           <Skeleton className="w-full h-48" />
         ) : (
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={monthlyChart}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-              <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`} />
+            <LineChart data={monthlyChart} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  fontSize: '12px',
+                  backgroundColor: 'var(--card)',
+                  border: 'none',
+                  borderRadius: '12px',
+                  boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--foreground)'
                 }}
+                itemStyle={{ color: 'var(--foreground)' }}
                 formatter={(value) => formatCurrency(Number(value))}
               />
               <Line type="monotone" dataKey="Saldo" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 4 }} />
@@ -182,11 +185,15 @@ export default function YearlyReportPage() {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px',
+                    backgroundColor: 'var(--card)',
+                    border: 'none',
+                    borderRadius: '12px',
+                    boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: 'var(--foreground)'
                   }}
+                  itemStyle={{ color: 'var(--foreground)' }}
                   formatter={(value) => formatCurrency(Number(value))}
                 />
               </PieChart>
