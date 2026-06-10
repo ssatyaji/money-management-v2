@@ -56,7 +56,9 @@ apiClient.interceptors.response.use(
         // Refresh failed — clear token and redirect to login
         setAccessToken(null);
         if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+          if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
+            window.location.href = '/login';
+          }
         }
         return Promise.reject(refreshError);
       }

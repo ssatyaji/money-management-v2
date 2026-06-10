@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   },
   description: 'Aplikasi manajemen keuangan pribadi untuk keluarga',
   keywords: ['money management', 'keuangan', 'budgeting', 'finance'],
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
