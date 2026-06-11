@@ -39,6 +39,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
 import { formatCurrency, formatNumber } from '@/lib/utils/currency';
 import {
   useReminders,
@@ -261,14 +265,41 @@ export default function RemindersPage() {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reminder-due">Jatuh Tempo *</Label>
-                  <Input
-                    id="reminder-due"
-                    type="date"
-                    value={form.dueDate}
-                    onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-                  />
+                <div className="space-y-2 flex flex-col">
+                  <Label>Jatuh Tempo *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          'w-full pl-3 text-left font-normal h-9 bg-background border-input hover:bg-accent/50 justify-start',
+                          !form.dueDate && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="truncate">
+                          {form.dueDate ? (
+                            format(new Date(form.dueDate), 'EEEE, dd MMMM yyyy', { locale: id })
+                          ) : (
+                            <span>Pilih Tanggal</span>
+                          )}
+                        </span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={form.dueDate ? new Date(form.dueDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            const formattedDate = format(date, 'yyyy-MM-dd');
+                            setForm({ ...form, dueDate: formattedDate });
+                          }
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 

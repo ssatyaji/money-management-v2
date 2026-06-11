@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 import {
  
@@ -84,42 +85,58 @@ export default function MonthlyReportPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with month picker */}
-      <div className="flex items-center justify-between">
+      {/* Header with month picker and switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Laporan Bulanan</h1>
           <p className="text-muted-foreground mt-1">Analisis keuangan detail per bulan</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="rounded-full w-10 h-10 border-border bg-card" onClick={handlePrev}>
-            <span className="material-symbols-outlined text-lg">chevron_left</span>
-          </Button>
-          <span className="text-h3 min-w-[140px] text-center">{monthName}</span>
-          <Button variant="outline" size="icon" className="rounded-full w-10 h-10 border-border bg-card" onClick={handleNext}>
-            <span className="material-symbols-outlined text-lg">chevron_right</span>
-          </Button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Segmented Switcher */}
+          <div className="flex bg-muted p-1 rounded-xl shrink-0 self-start sm:self-auto">
+            <Link
+              href="/reports/monthly"
+              className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-card shadow-sm text-foreground"
+            >
+              Bulanan
+            </Link>
+            <Link
+              href="/reports/yearly"
+              className="px-4 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground"
+            >
+              Tahunan
+            </Link>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" className="rounded-full w-10 h-10 border-border bg-card" onClick={handlePrev}>
+              <span className="material-symbols-outlined text-lg">chevron_left</span>
+            </Button>
+            <span className="text-h3 min-w-[140px] text-center">{monthName}</span>
+            <Button variant="outline" size="icon" className="rounded-full w-10 h-10 border-border bg-card" onClick={handleNext}>
+              <span className="material-symbols-outlined text-lg">chevron_right</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {stats.map((stat) =>
           isLoading ? (
-            <div key={stat.label} className="rounded-2xl border border-border bg-card p-5 shadow-[0px_4px_12px_rgba(26,43,60,0.05)]">
-              <Skeleton className="w-10 h-10 rounded-full mb-3" />
-              <Skeleton className="w-24 h-8 mb-2" />
-              <Skeleton className="w-16 h-4" />
+            <div key={stat.label} className="rounded-2xl border border-border bg-card p-3 sm:p-5 shadow-[0px_4px_12px_rgba(26,43,60,0.05)]">
+              <Skeleton className="w-8 h-8 sm:w-10 sm:h-10 rounded-full mb-2 sm:mb-3" />
+              <Skeleton className="w-16 sm:w-24 h-6 sm:h-8 mb-1 sm:mb-2" />
+              <Skeleton className="w-10 sm:w-16 h-3 sm:h-4" />
             </div>
           ) : (
-            <div key={stat.label} className="rounded-2xl border border-border bg-card p-5 card-hover shadow-[0px_4px_12px_rgba(26,43,60,0.05)] flex flex-col justify-between">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${stat.bg} mb-4`}>
-                <span className={`material-symbols-outlined text-xl ${stat.color}`}>{stat.icon}</span>
+            <div key={stat.label} className="rounded-2xl border border-border bg-card p-3 sm:p-5 card-hover shadow-[0px_4px_12px_rgba(26,43,60,0.05)] flex flex-col justify-between min-w-0">
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${stat.bg} mb-2 sm:mb-4`}>
+                <span className={`material-symbols-outlined text-lg sm:text-xl ${stat.color}`}>{stat.icon}</span>
               </div>
-              <div>
-                <p className="text-numeric-lg text-foreground tracking-tight">
+              <div className="min-w-0">
+                <p className="text-base sm:text-numeric-lg font-bold text-foreground tracking-tight truncate">
                   {stat.isCurrency === false ? stat.value : formatCurrency(stat.value)}
                 </p>
-                <p className="text-body-sm text-muted-foreground mt-1">{stat.label}</p>
+                <p className="text-xs sm:text-body-sm text-muted-foreground mt-0.5 sm:mt-1 truncate">{stat.label}</p>
               </div>
             </div>
           ),

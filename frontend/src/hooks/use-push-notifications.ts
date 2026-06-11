@@ -47,6 +47,10 @@ export const usePushNotifications = () => {
   }, []);
 
   const subscribe = async () => {
+    if (!isSupported) {
+      toast.error('Notifikasi push memerlukan koneksi aman (HTTPS) atau aplikasi diinstal sebagai PWA di layar utama iOS.');
+      return false;
+    }
     setIsLoading(true);
     try {
       const permission = await Notification.requestPermission();
@@ -97,6 +101,10 @@ export const usePushNotifications = () => {
   };
 
   const unsubscribe = async () => {
+    if (!isSupported) {
+      toast.error('Notifikasi tidak didukung di browser ini.');
+      return false;
+    }
     setIsLoading(true);
     try {
       const registration = await navigator.serviceWorker.ready;

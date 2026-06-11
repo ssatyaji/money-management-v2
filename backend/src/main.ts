@@ -29,8 +29,12 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // CORS
+  const origins = corsOrigin.includes(',')
+    ? corsOrigin.split(',').map((o) => o.trim())
+    : corsOrigin;
+
   app.enableCors({
-    origin: corsOrigin,
+    origin: origins,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -82,8 +86,8 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(port);
-  logger.log(`🚀 Application running on http://localhost:${port}`);
+  await app.listen(port, '0.0.0.0');
+  logger.log(`🚀 Application running on http://localhost:${port} and network interfaces`);
   logger.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);
 }
 
