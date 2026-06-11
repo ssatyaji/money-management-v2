@@ -30,6 +30,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 const transactionSchema = z.object({
   amount: z.number().min(1, 'Jumlah harus lebih dari 0'),
@@ -179,39 +183,39 @@ export default function NewTransactionPage() {
                   type="button"
                   onClick={() => onTypeChange('INCOME')}
                   className={cn(
-                    'flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all font-medium text-sm',
+                    'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-4 sm:py-3 rounded-lg border-2 transition-all font-medium text-xs sm:text-sm',
                     selectedType === 'INCOME'
                       ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600'
                       : 'border-border text-muted-foreground hover:border-emerald-500/50',
                   )}
                 >
-                  <TrendingUp className="w-4 h-4" />
+                  <TrendingUp className="w-4 h-4 shrink-0" />
                   Pemasukan
                 </button>
                 <button
                   type="button"
                   onClick={() => onTypeChange('EXPENSE')}
                   className={cn(
-                    'flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all font-medium text-sm',
+                    'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-4 sm:py-3 rounded-lg border-2 transition-all font-medium text-xs sm:text-sm',
                     selectedType === 'EXPENSE'
                       ? 'border-red-500 bg-red-500/10 text-red-600'
                       : 'border-border text-muted-foreground hover:border-red-500/50',
                   )}
                 >
-                  <TrendingDown className="w-4 h-4" />
+                  <TrendingDown className="w-4 h-4 shrink-0" />
                   Pengeluaran
                 </button>
                 <button
                   type="button"
                   onClick={() => onTypeChange('TRANSFER')}
                   className={cn(
-                    'flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all font-medium text-sm',
+                    'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-4 sm:py-3 rounded-lg border-2 transition-all font-medium text-xs sm:text-sm',
                     selectedType === 'TRANSFER'
                       ? 'border-indigo-500 bg-indigo-500/10 text-indigo-600'
                       : 'border-border text-muted-foreground hover:border-indigo-500/50',
                   )}
                 >
-                  <ArrowLeftRight className="w-4 h-4" />
+                  <ArrowLeftRight className="w-4 h-4 shrink-0" />
                   Transfer
                 </button>
               </div>
@@ -392,17 +396,51 @@ export default function NewTransactionPage() {
             )}
 
             {/* Date */}
-            <div className="space-y-2">
-              <Label htmlFor="date">Tanggal</Label>
-              <div className="relative">
-                <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="date"
-                  type="date"
-                  className={cn('pl-10', errors.date && 'border-destructive')}
-                  {...register('date')}
-                />
-              </div>
+            <div className="space-y-2 flex flex-col">
+              <Label>Tanggal</Label>
+              <Controller
+                name="date"
+                control={control}
+                render={({ field }) => {
+                  const dateValue = field.value ? new Date(field.value) : new Date();
+                  return (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            'w-full pl-3 text-left font-normal h-9 bg-background border-input hover:bg-accent/50 justify-start',
+                            !field.value && 'text-muted-foreground',
+                            errors.date && 'border-destructive'
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="truncate">
+                            {field.value ? (
+                              format(dateValue, 'EEEE, dd MMMM yyyy', { locale: id })
+                            ) : (
+                              <span>Pilih Tanggal</span>
+                            )}
+                          </span>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={dateValue}
+                          onSelect={(date) => {
+                            if (date) {
+                              const formattedDate = format(date, 'yyyy-MM-dd');
+                              field.onChange(formattedDate);
+                            }
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  );
+                }}
+              />
               {errors.date && (
                 <p className="text-sm text-destructive">{errors.date.message}</p>
               )}

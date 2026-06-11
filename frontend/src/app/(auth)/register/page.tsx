@@ -97,7 +97,7 @@ export default function RegisterPage() {
           {/* Brand & Heading Section */}
           <header className="w-full text-center space-y-4 animate-in fade-in zoom-in duration-500">
             <div className="flex flex-col items-center gap-1">
-              <span className="text-h2 font-bold text-primary tracking-tight">Steward Finance</span>
+              <span className="text-h2 font-bold text-primary tracking-tight">Zayn Finance</span>
               <div className="h-1 w-8 bg-secondary rounded-full"></div>
             </div>
             <div className="space-y-1">
