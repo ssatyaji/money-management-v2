@@ -63,7 +63,7 @@ export default function DashboardPage() {
           <span className="font-body-md text-sm uppercase tracking-wider font-semibold">Total Balance</span>
           <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
         </div>
-        <div className="font-numeric-lg text-[32px] md:text-[40px] font-bold tracking-tight z-10">
+        <div className="text-2xl sm:text-3xl md:text-[40px] font-bold tracking-tight z-10 truncate">
           {loadingSummary ? <Skeleton className="w-48 h-10 bg-primary-foreground/20" /> : formatCurrency(balance)}
         </div>
         <div className="flex items-center gap-1 opacity-90 mt-2 z-10">
@@ -121,7 +121,7 @@ export default function DashboardPage() {
               <span className="font-body-sm font-semibold">Income</span>
             </div>
           </div>
-          <div className="text-3xl font-heading font-bold text-foreground">
+          <div className="text-xl sm:text-2xl md:text-3xl font-heading font-bold text-foreground truncate">
             {loadingSummary ? <Skeleton className="w-32 h-8" /> : formatCurrency(summary?.totalIncome ?? 0)}
           </div>
           <p className="text-sm text-muted-foreground mt-2">Total income this month</p>
@@ -137,7 +137,7 @@ export default function DashboardPage() {
               <span className="font-body-sm font-semibold">Expense</span>
             </div>
           </div>
-          <div className="text-3xl font-heading font-bold text-foreground">
+          <div className="text-xl sm:text-2xl md:text-3xl font-heading font-bold text-foreground truncate">
             {loadingSummary ? <Skeleton className="w-32 h-8" /> : formatCurrency(summary?.totalExpense ?? 0)}
           </div>
           <p className="text-sm text-muted-foreground mt-2">Total expense this month</p>

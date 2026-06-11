@@ -46,14 +46,14 @@ export default function SettingsPage() {
       </div>
 
       {/* User Header Profile */}
-      <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-md p-6 shadow-[0px_4px_12px_rgba(26,43,60,0.05)] flex items-center gap-6">
+      <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-md p-4 sm:p-6 shadow-[0px_4px_12px_rgba(26,43,60,0.05)] flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 text-center sm:text-left">
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 border-4 border-background shadow-sm">
           <span className="material-symbols-outlined text-4xl">account_circle</span>
         </div>
-        <div className="flex-1">
-          <h2 className="text-xl font-bold">{user.name}</h2>
-          <p className="text-muted-foreground">{user.email}</p>
-          <div className="flex items-center gap-2 mt-2">
+        <div className="flex-1 min-w-0 w-full">
+          <h2 className="text-xl font-bold truncate">{user.name}</h2>
+          <p className="text-muted-foreground text-sm truncate">{user.email}</p>
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
             <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-500 border border-emerald-500/20">
               {user.role}
             </span>
@@ -67,16 +67,16 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="bg-muted/50 rounded-full p-1 border border-border/50">
-          <TabsTrigger value="profile" className="gap-2 rounded-full px-6 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+        <TabsList className="bg-muted/50 rounded-full p-1 border border-border/50 flex w-full overflow-x-auto hide-scrollbar justify-start sm:justify-center">
+          <TabsTrigger value="profile" className="gap-2 rounded-full px-4 sm:px-6 data-[state=active]:bg-card data-[state=active]:shadow-sm whitespace-nowrap">
             <span className="material-symbols-outlined text-[18px]">person</span>
             Profil
           </TabsTrigger>
-          <TabsTrigger value="preferences" className="gap-2 rounded-full px-6 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+          <TabsTrigger value="preferences" className="gap-2 rounded-full px-4 sm:px-6 data-[state=active]:bg-card data-[state=active]:shadow-sm whitespace-nowrap">
             <span className="material-symbols-outlined text-[18px]">palette</span>
             Preferensi
           </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2 rounded-full px-6 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+          <TabsTrigger value="security" className="gap-2 rounded-full px-4 sm:px-6 data-[state=active]:bg-card data-[state=active]:shadow-sm whitespace-nowrap">
             <span className="material-symbols-outlined text-[18px]">lock</span>
             Keamanan
           </TabsTrigger>
@@ -117,9 +117,9 @@ export default function SettingsPage() {
           <div className="rounded-2xl border border-border bg-card p-6 shadow-[0px_4px_12px_rgba(26,43,60,0.05)]">
             <h3 className="text-lg font-semibold mb-4">Tampilan Aplikasi</h3>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
+                  <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0">
                     <span className="material-symbols-outlined text-xl">light_mode</span>
                   </div>
                   <div>
@@ -130,26 +130,26 @@ export default function SettingsPage() {
                 <Button 
                   variant={theme === 'light' ? 'default' : 'outline'} 
                   onClick={() => setTheme('light')}
-                  className="rounded-full"
+                  className="rounded-full w-full sm:w-auto"
                 >
                   {theme === 'light' ? 'Aktif' : 'Pilih'}
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                  <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0">
                     <span className="material-symbols-outlined text-xl">dark_mode</span>
                   </div>
                   <div>
                     <p className="font-medium">Mode Gelap</p>
-                    <p className="text-sm text-muted-foreground">Tampilan nyaman untuk mata di tempat gelap</p>
+                    <p className="text-sm text-muted-foreground">Tampilan nyaman di tempat gelap</p>
                   </div>
                 </div>
                 <Button 
                   variant={theme === 'dark' ? 'default' : 'outline'} 
                   onClick={() => setTheme('dark')}
-                  className="rounded-full"
+                  className="rounded-full w-full sm:w-auto"
                 >
                   {theme === 'dark' ? 'Aktif' : 'Pilih'}
                 </Button>
