@@ -4,6 +4,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  StreamableFile,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -27,9 +28,14 @@ export class TransformInterceptor<T> implements NestInterceptor<
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<ApiResponse<T>> {
+  ): Observable<any> {
     return next.handle().pipe(
       map((data) => {
+        // If data is a StreamableFile, return it directly to avoid response corruption
+        if (data instanceof StreamableFile) {
+          return data;
+        }
+
         // If data already has success property, pass through (for paginated responses)
         if (data && typeof data === 'object' && 'success' in data) {
           return data;

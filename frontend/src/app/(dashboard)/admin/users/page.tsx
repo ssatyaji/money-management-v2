@@ -24,6 +24,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -31,10 +39,11 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const { data, isLoading } = useUsers({ page, limit: 10, search });
-  const { mutate: deleteUser } = useDeleteUser();
+  const { mutate: deleteUser, isPending: isDeleting } = useDeleteUser();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const handleEdit = (user: User) => {
     setSelectedUser(user);
@@ -42,9 +51,13 @@ export default function AdminUsersPage() {
   };
 
   const handleDelete = (userId: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus pengguna ini? Semua data terkait (transaksi, budget, dsb) akan ikut terhapus!')) {
-      deleteUser(userId);
-    }
+    setDeleteConfirmId(userId);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteConfirmId) return;
+    deleteUser(deleteConfirmId);
+    setDeleteConfirmId(null);
   };
 
   return (
@@ -260,6 +273,24 @@ export default function AdminUsersPage() {
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
       />
+
+      {/* Delete User Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus Pengguna</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus pengguna ini? Semua data terkait (transaksi, budget, dsb) akan ikut terhapus permanen!
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Batal</Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
+              {isDeleting ? 'Menghapus...' : 'Hapus Pengguna'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

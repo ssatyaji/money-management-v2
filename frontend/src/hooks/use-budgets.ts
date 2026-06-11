@@ -20,10 +20,10 @@ export function useActiveBudgets() {
   });
 }
 
-export function useBudgetSummary() {
+export function useBudgetSummary(date?: string) {
   return useQuery({
-    queryKey: queryKeys.budgets.summary,
-    queryFn: budgetsApi.getSummary,
+    queryKey: date ? [...queryKeys.budgets.summary, date] : queryKeys.budgets.summary,
+    queryFn: () => budgetsApi.getSummary(date),
   });
 }
 

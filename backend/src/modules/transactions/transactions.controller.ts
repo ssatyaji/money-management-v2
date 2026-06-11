@@ -7,7 +7,10 @@ import {
   Body,
   Param,
   Query,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -79,6 +82,39 @@ export class TransactionsController {
     @Query('limit') limit: number = 5,
   ) {
     return this.transactionsService.getRecentTransactions(userId, limit);
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'Export transactions to Excel or PDF' })
+  async exportTransactions(
+    @CurrentUser('id') userId: string,
+    @Res({ passthrough: true }) res: Response,
+    @Query('format') format: string = 'excel',
+    @Query('period') period: string = 'monthly',
+    @Query('month') month: number = new Date().getMonth() + 1,
+    @Query('year') year: number = new Date().getFullYear(),
+  ) {
+    const buffer = await this.transactionsService.exportTransactions(
+      userId,
+      format,
+      period,
+      Number(month),
+      Number(year),
+    );
+
+    if (format === 'excel') {
+      res.set({
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="Laporan-Transaksi-${period}-${year}.xlsx"`,
+      });
+    } else if (format === 'pdf') {
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="Laporan-Transaksi-${period}-${year}.pdf"`,
+      });
+    }
+
+    return new StreamableFile(buffer);
   }
 
   @Get(':id')

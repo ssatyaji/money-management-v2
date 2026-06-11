@@ -39,4 +39,14 @@ export class CreateTransactionDto {
   @IsString()
   @IsNotEmpty()
   categoryId: string;
+
+  @ApiPropertyOptional({ example: 'uuid-of-account' })
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @ApiPropertyOptional({ example: 'uuid-of-destination-account' })
+  @IsOptional()
+  @IsString()
+  destinationAccountId?: string;
 }

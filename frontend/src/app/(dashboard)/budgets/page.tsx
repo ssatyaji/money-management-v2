@@ -14,15 +14,31 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/utils/currency';
+import { formatCurrency, formatNumber } from '@/lib/utils/currency';
 import { useBudgetSummary, useCreateBudget, useDeleteBudget } from '@/hooks/use-budgets';
 import { useCategories } from '@/hooks/use-transactions';
 
 export default function BudgetsPage() {
   const [showCreate, setShowCreate] = useState(false);
-  const { data: summary, isLoading } = useBudgetSummary();
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const year = selectedDate.getFullYear();
+  const month = selectedDate.getMonth();
+  
+  // Timezone-safe local dates
+  const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+  const { data: summary, isLoading } = useBudgetSummary(startDate);
   const { data: categories = [] } = useCategories('EXPENSE');
   const createMutation = useCreateBudget();
   const deleteMutation = useDeleteBudget();
@@ -33,9 +49,13 @@ export default function BudgetsPage() {
     alertAt: '80',
   });
 
-  const now = new Date();
-  const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  const handleMonthChange = (direction: number) => {
+    setSelectedDate((prev) => {
+      const nextDate = new Date(prev);
+      nextDate.setMonth(nextDate.getMonth() + direction);
+      return nextDate;
+    });
+  };
 
   const handleCreate = async () => {
     if (!form.amount || !form.categoryId) {
@@ -59,12 +79,19 @@ export default function BudgetsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
     try {
-      await deleteMutation.mutateAsync(id);
-      toast.success('Budget dihapus');
+      await deleteMutation.mutateAsync(deleteConfirmId);
+      toast.success('Budget berhasil dihapus 🗑️');
     } catch {
       toast.error('Gagal menghapus budget');
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -73,18 +100,42 @@ export default function BudgetsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Budget</h1>
           <p className="text-muted-foreground mt-1">Atur anggaran pengeluaran per kategori</p>
         </div>
-        <Dialog open={showCreate} onOpenChange={setShowCreate}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 rounded-full px-5">
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              <span className="hidden sm:inline">Tambah Budget</span>
+        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+          {/* Month Navigation */}
+          <div className="flex items-center bg-card border border-border rounded-full p-1 shadow-sm">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => handleMonthChange(-1)}
+            >
+              <span className="material-symbols-outlined text-[18px]">chevron_left</span>
             </Button>
-          </DialogTrigger>
+            <span className="text-xs sm:text-sm font-semibold px-2 sm:px-4 min-w-[100px] sm:min-w-[120px] text-center capitalize">
+              {selectedDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => handleMonthChange(1)}
+            >
+              <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+            </Button>
+          </div>
+
+          <Dialog open={showCreate} onOpenChange={setShowCreate}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 rounded-full px-5">
+                <span className="material-symbols-outlined text-[20px]">add</span>
+                <span className="hidden sm:inline">Tambah Budget</span>
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Buat Budget Baru</DialogTitle>
@@ -118,11 +169,14 @@ export default function BudgetsPage() {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
                   <Input
                     id="budget-amount"
-                    type="number"
+                    type="text"
                     placeholder="500000"
                     className="pl-10"
-                    value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    value={form.amount ? formatNumber(Number(form.amount)) : ''}
+                    onChange={(e) => {
+                      const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                      setForm({ ...form, amount: rawValue });
+                    }}
                   />
                 </div>
               </div>
@@ -153,6 +207,7 @@ export default function BudgetsPage() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -296,6 +351,24 @@ export default function BudgetsPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus anggaran ini?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Batal</Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? 'Menghapus...' : 'Hapus'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

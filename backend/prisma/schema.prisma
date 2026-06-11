@@ -22,6 +22,7 @@ enum Role {
 enum TransactionType {
   INCOME
   EXPENSE
+  TRANSFER
 }
 
 enum TransactionSource {
@@ -70,6 +71,7 @@ model User {
   avatar          String?
   isEmailVerified Boolean  @default(false)
   refreshToken    String?
+  startingBalance Decimal  @default(0) @db.Decimal(15, 2)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -79,6 +81,7 @@ model User {
   reminders         Reminder[]
   bankStatements    BankStatement[]
   pushSubscriptions PushSubscription[]
+  accounts          Account[]
 
   @@map("users")
 }
@@ -117,6 +120,12 @@ model Transaction {
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accountId String?
+  account   Account? @relation("SourceAccountTransactions", fields: [accountId], references: [id], onDelete: Cascade)
+
+  destinationAccountId String?
+  destinationAccount   Account? @relation("DestinationAccountTransactions", fields: [destinationAccountId], references: [id], onDelete: Cascade)
 
   bankStatementId String?
   bankStatement   BankStatement? @relation(fields: [bankStatementId], references: [id])
@@ -210,4 +219,21 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+model Account {
+  id              String   @id @default(uuid())
+  name            String
+  color           String?  @default("#3b82f6")
+  startingBalance Decimal  @default(0) @db.Decimal(15, 2)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  transactions            Transaction[] @relation("SourceAccountTransactions")
+  destinationTransactions Transaction[] @relation("DestinationAccountTransactions")
+
+  @@unique([name, userId])
+  @@map("accounts")
 }

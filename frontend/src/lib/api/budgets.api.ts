@@ -59,8 +59,10 @@ export const budgetsApi = {
     return response.data.data;
   },
 
-  getSummary: async (): Promise<BudgetSummary> => {
-    const response = await apiClient.get<ApiResponse<BudgetSummary>>('/budgets/summary');
+  getSummary: async (date?: string): Promise<BudgetSummary> => {
+    const response = await apiClient.get<ApiResponse<BudgetSummary>>('/budgets/summary', {
+      params: date ? { date } : {},
+    });
     return response.data.data;
   },
 

@@ -10,16 +10,34 @@ import {
   TrendingDown,
   ChevronLeft,
   ChevronRight,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatTransactionDate } from '@/lib/utils/date';
 import { useTransactions } from '@/hooks/use-transactions';
-import type { TransactionFilters } from '@/lib/api/transactions.api';
+import { transactionsApi, type TransactionFilters } from '@/lib/api/transactions.api';
 
 export default function TransactionsPage() {
   const [filters, setFilters] = useState<TransactionFilters>({
@@ -28,6 +46,14 @@ export default function TransactionsPage() {
   });
   const [searchInput, setSearchInput] = useState('');
   const [activeType, setActiveType] = useState<string | undefined>();
+
+  // Export states
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'excel' | 'pdf'>('excel');
+  const [exportPeriod, setExportPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [exportMonth, setExportMonth] = useState(new Date().getMonth() + 1);
+  const [exportYear, setExportYear] = useState(new Date().getFullYear());
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data, isLoading } = useTransactions(filters);
   const transactions = data?.data || [];
@@ -46,6 +72,30 @@ export default function TransactionsPage() {
     setFilters((prev) => ({ ...prev, page }));
   };
 
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const blob = await transactionsApi.export(exportFormat, exportPeriod, exportMonth, exportYear);
+      
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Laporan-Transaksi-${exportPeriod}-${exportYear}${exportPeriod === 'monthly' ? `-${exportMonth}` : ''}.${exportFormat === 'excel' ? 'xlsx' : 'pdf'}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Laporan berhasil diunduh');
+      setIsExportDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast.error('Gagal mengunduh laporan');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -54,12 +104,18 @@ export default function TransactionsPage() {
           <h1 className="text-2xl font-bold">Transaksi</h1>
           <p className="text-muted-foreground mt-1">Kelola pemasukan dan pengeluaran Anda</p>
         </div>
-        <Link href="/transactions/new">
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Tambah Transaksi</span>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => setIsExportDialogOpen(true)}>
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Unduh Laporan</span>
           </Button>
-        </Link>
+          <Link href="/transactions/new">
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Tambah Transaksi</span>
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -144,11 +200,11 @@ export default function TransactionsPage() {
               <Link
                 key={tx.id}
                 href={`/transactions/${tx.id}`}
-                className="flex items-center justify-between px-4 py-3.5 hover:bg-accent/50 transition-colors"
+                className="flex items-center justify-between px-4 py-3.5 hover:bg-accent/50 transition-colors gap-4"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
+                    className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
                     style={{
                       backgroundColor: tx.category?.color
                         ? `${tx.category.color}15`
@@ -157,28 +213,43 @@ export default function TransactionsPage() {
                   >
                     {tx.category?.icon || '📦'}
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
                       {tx.description || tx.category?.name || 'Transaksi'}
                     </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
                         {formatTransactionDate(tx.date)}
                       </span>
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                        {tx.category?.name}
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
+                        {tx.type === 'TRANSFER' ? 'Transfer' : tx.category?.name}
                       </Badge>
+                      {tx.type === 'TRANSFER' ? (
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
+                            {tx.account?.name || 'Saldo Utama'}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">➔</span>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
+                            {tx.destinationAccount?.name || 'Saldo Utama'}
+                          </Badge>
+                        </div>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-muted/60 text-muted-foreground border-none whitespace-nowrap">
+                          {tx.account?.name || 'Saldo Utama'}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 <span
                   className={cn(
-                    'text-sm font-semibold whitespace-nowrap',
-                    tx.type === 'INCOME' ? 'text-emerald-500' : 'text-red-500',
+                    'text-sm font-semibold whitespace-nowrap shrink-0 text-right',
+                    tx.type === 'INCOME' ? 'text-emerald-500' : (tx.type === 'EXPENSE' ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'),
                   )}
                 >
-                  {tx.type === 'INCOME' ? '+' : '-'}
+                  {tx.type === 'INCOME' ? '+' : (tx.type === 'EXPENSE' ? '-' : '')}
                   {formatCurrency(Number(tx.amount))}
                 </span>
               </Link>
@@ -215,6 +286,97 @@ export default function TransactionsPage() {
           </div>
         )}
       </div>
+
+      {/* Export Dialog */}
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Unduh Laporan Transaksi</DialogTitle>
+            <DialogDescription>
+              Pilih format dan periode laporan yang ingin Anda unduh.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Format File</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={exportFormat === 'excel' ? 'default' : 'outline'}
+                  onClick={() => setExportFormat('excel')}
+                  className={cn(exportFormat === 'excel' && "bg-emerald-600 hover:bg-emerald-700 text-white")}
+                >
+                  Excel (.xlsx)
+                </Button>
+                <Button
+                  type="button"
+                  variant={exportFormat === 'pdf' ? 'default' : 'outline'}
+                  onClick={() => setExportFormat('pdf')}
+                  className={cn(exportFormat === 'pdf' && "bg-red-600 hover:bg-red-700 text-white")}
+                >
+                  PDF (.pdf)
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Periode</Label>
+              <Select value={exportPeriod} onValueChange={(v: 'monthly' | 'yearly') => setExportPeriod(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Periode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Bulanan</SelectItem>
+                  <SelectItem value="yearly">Tahunan</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {exportPeriod === 'monthly' && (
+              <div className="space-y-2">
+                <Label>Bulan</Label>
+                <Select value={exportMonth.toString()} onValueChange={(v) => setExportMonth(parseInt(v))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Bulan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }).map((_, i) => (
+                      <SelectItem key={i + 1} value={(i + 1).toString()}>
+                        {new Date(2000, i, 1).toLocaleString('id-ID', { month: 'long' })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Tahun</Label>
+              <Select value={exportYear.toString()} onValueChange={(v) => setExportYear(parseInt(v))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Tahun" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const year = new Date().getFullYear() - i;
+                    return (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExportDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleExport} disabled={isExporting}>
+              {isExporting ? 'Mengunduh...' : 'Download Sekarang'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

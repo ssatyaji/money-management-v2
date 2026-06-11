@@ -42,6 +42,7 @@ export interface TransactionSummary {
   totalIncome: number;
   totalExpense: number;
   balance: number;
+  allTimeBalance?: number;
   month: number;
   year: number;
 }
@@ -117,5 +118,18 @@ export const transactionsApi = {
       params: { limit },
     });
     return response.data.data;
+  },
+
+  export: async (
+    format: 'excel' | 'pdf',
+    period: 'monthly' | 'yearly',
+    month: number,
+    year: number,
+  ): Promise<Blob> => {
+    const response = await apiClient.get('/transactions/export', {
+      params: { format, period, month, year },
+      responseType: 'blob',
+    });
+    return response.data;
   },
 };

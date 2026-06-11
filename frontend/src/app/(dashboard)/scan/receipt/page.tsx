@@ -196,20 +196,22 @@ function ScanReceiptTab() {
               </div>
 
               {/* Bottom controls */}
-              <div className="absolute bottom-8 w-full px-8 flex justify-center items-center z-10">
+              <div className="absolute bottom-6 left-0 w-full px-8 flex justify-between items-center z-10 gap-4">
+                {/* Placeholder to balance the gallery button on the right */}
+                <div className="w-12 text-transparent select-none pointer-events-none">_</div>
+
                 {/* Shutter Button */}
                 <button 
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-20 h-20 rounded-full border-[6px] border-white/50 flex items-center justify-center group transition-transform active:scale-95"
+                  className="w-18 h-18 sm:w-20 sm:h-20 rounded-full border-[6px] border-white/50 flex items-center justify-center group transition-transform active:scale-95 shrink-0"
                 >
-                  <div className="w-[60px] h-[60px] rounded-full bg-white group-hover:bg-gray-200 transition-colors" />
+                  <div className="w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] rounded-full bg-white group-hover:bg-gray-200 transition-colors" />
                 </button>
-              </div>
-              
-              <div className="absolute bottom-10 right-8">
-                 <button 
+
+                {/* Gallery Button */}
+                <button 
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-12 h-12 rounded-full bg-black/40 flex items-center justify-center text-white border border-white/20 hover:bg-black/60 transition-colors"
+                  className="w-12 h-12 rounded-full bg-black/40 flex items-center justify-center text-white border border-white/20 hover:bg-black/60 transition-colors shrink-0"
                 >
                   <span className="material-symbols-outlined">imagesmode</span>
                 </button>
@@ -486,20 +488,20 @@ function ImportStatementTab() {
 
       {parsedTransactions && parsedTransactions.length > 0 && (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="p-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3 justify-between sm:justify-start w-full sm:w-auto">
               <h3 className="font-semibold">Transaksi Ditemukan</h3>
               <Badge variant="secondary">{parsedTransactions.length} transaksi</Badge>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
                 {selectedTxnIds.size} dipilih
               </span>
               <Button
                 size="sm"
                 onClick={handleImport}
                 disabled={selectedTxnIds.size === 0 || importMutation.isPending}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-emerald-600 hover:bg-emerald-700 shrink-0"
               >
                 {importMutation.isPending ? (
                   <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Importing...</>
@@ -623,33 +625,35 @@ function UploadHistoryTab() {
         return (
           <div
             key={stmt.id}
-            className="rounded-xl border border-border bg-card p-4 flex items-center gap-4 hover:bg-muted/20 transition-colors"
+            className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/20 transition-colors"
           >
-            <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-[20px] text-muted-foreground">description</span>
-            </div>
+            <div className="flex items-center gap-4 min-w-0 w-full sm:w-auto">
+              <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-[20px] text-muted-foreground">description</span>
+              </div>
 
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{stmt.fileName}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className="text-xs">
-                  {BANK_LABELS[stmt.bankName] || stmt.bankName}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(stmt.createdAt).toLocaleDateString('id-ID', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">{stmt.fileName}</p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <Badge variant="outline" className="text-xs whitespace-nowrap">
+                    {BANK_LABELS[stmt.bankName] || stmt.bankName}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(stmt.createdAt).toLocaleDateString('id-ID', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0 w-full sm:w-auto border-t border-border/50 sm:border-0 pt-2 sm:pt-0">
               {stmt._count && stmt._count.transactions > 0 && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {stmt._count.transactions} transaksi
                 </span>
               )}
@@ -678,16 +682,16 @@ export default function ScanReceiptPage() {
       </div>
 
       <Tabs defaultValue="scan" className="space-y-6">
-        <TabsList className="bg-muted/50">
-          <TabsTrigger value="scan" className="gap-2 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm">
+        <TabsList className="bg-muted/50 rounded-full p-1 border border-border/50 flex w-full overflow-x-auto hide-scrollbar justify-start">
+          <TabsTrigger value="scan" className="gap-2 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap flex-1 sm:flex-initial">
             <span className="material-symbols-outlined text-[18px]">camera</span>
             Scan Struk
           </TabsTrigger>
-          <TabsTrigger value="import" className="gap-2 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="import" className="gap-2 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap flex-1 sm:flex-initial">
             <span className="material-symbols-outlined text-[18px]">upload_file</span>
             Import PDF
           </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="history" className="gap-2 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap flex-1 sm:flex-initial">
             <span className="material-symbols-outlined text-[18px]">history</span>
             Riwayat
           </TabsTrigger>
