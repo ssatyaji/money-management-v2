@@ -1,4 +1,4 @@
-export type TransactionType = 'INCOME' | 'EXPENSE';
+export type TransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 export type TransactionSource = 'MANUAL' | 'OCR' | 'BANK_IMPORT';
 
 export interface Transaction {
@@ -12,6 +12,10 @@ export interface Transaction {
   source: TransactionSource;
   categoryId: string;
   category: Category;
+  accountId: string | null;
+  account?: { id: string; name: string; color: string | null } | null;
+  destinationAccountId?: string | null;
+  destinationAccount?: { id: string; name: string; color: string | null } | null;
   userId: string;
   bankStatementId: string | null;
   createdAt: string;
@@ -34,4 +38,6 @@ export interface CreateTransactionInput {
   note?: string;
   date: string;
   categoryId: string;
+  accountId?: string;
+  destinationAccountId?: string;
 }

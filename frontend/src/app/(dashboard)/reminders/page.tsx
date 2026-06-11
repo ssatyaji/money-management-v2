@@ -28,6 +28,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -37,7 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/utils/currency';
+import { formatCurrency, formatNumber } from '@/lib/utils/currency';
 import {
   useReminders,
   useCreateReminder,
@@ -75,6 +77,7 @@ export default function RemindersPage() {
   const [activeTab, setActiveTab] = useState<string>('upcoming');
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [form, setForm] = useState<CreateReminderInput>({ ...defaultForm });
 
   const filterMap: Record<string, ReminderFilter | undefined> = {
@@ -136,12 +139,19 @@ export default function RemindersPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
     try {
-      await deleteMutation.mutateAsync(id);
-      toast.success('Reminder dihapus');
+      await deleteMutation.mutateAsync(deleteConfirmId);
+      toast.success('Reminder berhasil dihapus 🗑️');
     } catch {
       toast.error('Gagal menghapus reminder');
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -237,16 +247,17 @@ export default function RemindersPage() {
                     </span>
                     <Input
                       id="reminder-amount"
-                      type="number"
+                      type="text"
                       placeholder="350000"
                       className="pl-10"
-                      value={form.amount ?? ''}
-                      onChange={(e) =>
+                      value={form.amount !== undefined && form.amount !== null ? formatNumber(Number(form.amount)) : ''}
+                      onChange={(e) => {
+                        const rawValue = e.target.value.replace(/[^0-9]/g, '');
                         setForm({
                           ...form,
-                          amount: e.target.value ? Number(e.target.value) : undefined,
-                        })
-                      }
+                          amount: rawValue ? Number(rawValue) : undefined,
+                        });
+                      }}
                     />
                   </div>
                 </div>
@@ -397,6 +408,24 @@ export default function RemindersPage() {
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus pengingat (reminder) ini?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Batal</Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? 'Menghapus...' : 'Hapus'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

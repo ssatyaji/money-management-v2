@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { BudgetsService } from './budgets.service';
@@ -39,8 +40,12 @@ export class BudgetsController {
 
   @Get('summary')
   @ApiOperation({ summary: 'Get budget summary with totals' })
-  getSummary(@CurrentUser('id') userId: string) {
-    return this.budgetsService.getSummary(userId);
+  getSummary(
+    @CurrentUser('id') userId: string,
+    @Query('date') dateString?: string,
+  ) {
+    const date = dateString ? new Date(dateString) : new Date();
+    return this.budgetsService.getSummary(userId, date);
   }
 
   @Get(':id')

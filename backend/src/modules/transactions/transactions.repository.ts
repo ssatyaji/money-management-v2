@@ -29,7 +29,7 @@ export class TransactionsRepository {
         take,
         where,
         orderBy: orderBy || { date: 'desc' },
-        include: { category: true },
+        include: { category: true, account: true, destinationAccount: true },
       }),
       this.prisma.transaction.count({ where }),
     ]);
@@ -40,12 +40,14 @@ export class TransactionsRepository {
   async findById(id: string): Promise<
     | (Transaction & {
         category: { name: string; icon: string | null; color: string | null };
+        account: { id: string; name: string; color: string | null } | null;
+        destinationAccount: { id: string; name: string; color: string | null } | null;
       })
     | null
   > {
     return this.prisma.transaction.findUnique({
       where: { id },
-      include: { category: true },
+      include: { category: true, account: true, destinationAccount: true },
     });
   }
 
@@ -134,7 +136,7 @@ export class TransactionsRepository {
 
       if (tx.type === 'INCOME') {
         existing.income += Number(tx.amount);
-      } else {
+      } else if (tx.type === 'EXPENSE') {
         existing.expense += Number(tx.amount);
       }
 
@@ -153,7 +155,36 @@ export class TransactionsRepository {
       where: { userId },
       orderBy: { date: 'desc' },
       take: limit,
-      include: { category: true },
+      include: { category: true, account: true, destinationAccount: true },
     });
+  }
+
+  async getAllTimeBalance(userId: string): Promise<number> {
+    const allTimeSummary = await this.prisma.transaction.groupBy({
+      by: ['type'],
+      where: { userId },
+      _sum: { amount: true },
+    });
+
+    let allTimeIncome = 0;
+    let allTimeExpense = 0;
+    allTimeSummary.forEach((s) => {
+      if (s.type === 'INCOME') allTimeIncome = Number(s._sum.amount) || 0;
+      if (s.type === 'EXPENSE') allTimeExpense = Number(s._sum.amount) || 0;
+    });
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { startingBalance: true },
+    });
+    const userStartingBalance = Number(user?.startingBalance) || 0;
+
+    const wallets = await this.prisma.account.findMany({
+      where: { userId },
+      select: { startingBalance: true },
+    });
+    const walletsStartingBalance = wallets.reduce((sum, w) => sum + (Number(w.startingBalance) || 0), 0);
+
+    return userStartingBalance + walletsStartingBalance + allTimeIncome - allTimeExpense;
   }
 }

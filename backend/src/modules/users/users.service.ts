@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { User, Role } from '@prisma/client';
+import { User, Role, Prisma } from '@prisma/client';
 import { UsersRepository } from './users.repository';
 import { FilterUserDto } from './dto/filter-user.dto';
 import { PaginatedResult } from '../../common/interfaces/pagination.interface';
@@ -67,7 +67,7 @@ export class UsersService {
 
   async update(
     id: string,
-    data: { name?: string; role?: Role },
+    data: { name?: string; role?: Role; startingBalance?: number },
   ): Promise<User> {
     await this.findById(id); // Throws if not found
     return this.usersRepository.update(id, data);

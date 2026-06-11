@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsNumber } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
@@ -12,4 +12,9 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(Role)
   role?: Role;
+
+  @ApiPropertyOptional({ example: 1000000 })
+  @IsOptional()
+  @IsNumber()
+  startingBalance?: number;
 }

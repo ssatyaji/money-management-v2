@@ -45,8 +45,8 @@ export class BudgetsService {
     );
   }
 
-  async findActiveBudgets(userId: string): Promise<EnrichedBudget[]> {
-    const budgets = await this.budgetsRepository.findActiveBudgets(userId);
+  async findActiveBudgets(userId: string, date: Date = new Date()): Promise<EnrichedBudget[]> {
+    const budgets = await this.budgetsRepository.findActiveBudgets(userId, date);
 
     return Promise.all(
       budgets.map((budget) => this.enrichBudgetWithSpent(userId, budget)),
@@ -91,8 +91,8 @@ export class BudgetsService {
     return this.budgetsRepository.delete(id);
   }
 
-  async getSummary(userId: string) {
-    const activeBudgets = await this.findActiveBudgets(userId);
+  async getSummary(userId: string, date: Date = new Date()) {
+    const activeBudgets = await this.findActiveBudgets(userId, date);
 
     const totalBudget = activeBudgets.reduce(
       (sum, b) => sum + Number(b.amount),

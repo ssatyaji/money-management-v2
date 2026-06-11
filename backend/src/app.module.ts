@@ -14,6 +14,7 @@ import { OcrModule } from './modules/ocr/ocr.module';
 import { BankStatementsModule } from './modules/bank-statements/bank-statements.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { AccountsModule } from './modules/accounts/accounts.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -57,6 +58,7 @@ import storageConfig from './config/storage.config';
     BankStatementsModule,
     NotificationsModule,
     AdminModule,
+    AccountsModule,
   ],
   providers: [
     // Global JWT auth guard — all routes require auth by default

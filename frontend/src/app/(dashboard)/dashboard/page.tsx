@@ -23,6 +23,7 @@ import {
   useDailyTrend,
   useRecentTransactions,
 } from '@/hooks/use-transactions';
+import { useAccounts } from '@/hooks/use-accounts';
 
 const COLORS = [
   '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6',
@@ -38,6 +39,7 @@ export default function DashboardPage() {
   const { data: breakdown, isLoading: loadingBreakdown } = useCategoryBreakdown(month, year);
   const { data: dailyTrend, isLoading: loadingTrend } = useDailyTrend(month, year);
   const { data: recentTx, isLoading: loadingRecent } = useRecentTransactions(7);
+  const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
 
   const pieData = (breakdown || []).map((item, idx) => ({
     name: item.category?.name || 'Lainnya',
@@ -52,7 +54,7 @@ export default function DashboardPage() {
     Pengeluaran: d.expense,
   }));
 
-  const balance = summary?.balance ?? 0;
+  const balance = summary?.allTimeBalance ?? summary?.balance ?? 0;
   const isPositive = balance >= 0;
 
   return (
@@ -79,6 +81,37 @@ export default function DashboardPage() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-secondary opacity-20 rounded-full blur-2xl translate-y-1/3 -translate-x-1/3"></div>
       </div>
+
+      {/* Wallets / Accounts Section */}
+      {!loadingAccounts && accounts.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dompet Saya</h3>
+            <Link href="/settings" className="text-xs font-semibold text-primary hover:underline">
+              Kelola
+            </Link>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
+            {accounts.map((acc) => (
+              <div
+                key={acc.id}
+                className="min-w-[180px] sm:min-w-[220px] rounded-2xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between relative overflow-hidden shrink-0"
+              >
+                <div
+                  className="absolute left-0 top-0 bottom-0 w-1.5"
+                  style={{ backgroundColor: acc.color || '#3b82f6' }}
+                />
+                <div className="pl-1.5 space-y-1">
+                  <p className="text-xs text-muted-foreground truncate font-medium">{acc.name}</p>
+                  <p className="text-lg font-bold text-foreground truncate">
+                    {formatCurrency(acc.balance)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions Bento */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
@@ -288,27 +321,27 @@ export default function DashboardPage() {
                 <Link
                   key={tx.id}
                   href={`/transactions/${tx.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-[16px] transition-colors group"
+                  className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-[16px] transition-colors group gap-4"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 min-w-0">
                     <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-sm border border-border/50 group-hover:scale-105 transition-transform"
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-sm border border-border/50 group-hover:scale-105 transition-transform shrink-0"
                       style={{
                         backgroundColor: tx.category?.color ? `${tx.category.color}15` : 'var(--muted)',
                       }}
                     >
                       {tx.category?.icon || '📦'}
                     </div>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-foreground text-sm md:text-base">
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-semibold text-foreground text-sm md:text-base truncate">
                         {tx.description || tx.category?.name || 'Transaction'}
                       </span>
-                      <span className="text-xs text-muted-foreground mt-0.5 font-medium">
+                      <span className="text-xs text-muted-foreground mt-0.5 font-medium truncate">
                         {tx.category?.name} • {formatTransactionDate(tx.date)}
                       </span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end">
+                  <div className="flex flex-col items-end shrink-0 text-right">
                     <span
                       className={cn(
                         'font-bold text-sm md:text-base',

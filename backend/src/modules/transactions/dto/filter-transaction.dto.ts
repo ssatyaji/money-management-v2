@@ -34,4 +34,9 @@ export class FilterTransactionDto extends PaginationDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ description: 'Account ID' })
+  @IsOptional()
+  @IsString()
+  accountId?: string;
 }

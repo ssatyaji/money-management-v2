@@ -5,6 +5,7 @@ export interface User {
   role: 'ADMIN' | 'USER';
   avatar: string | null;
   isEmailVerified: boolean;
+  startingBalance: number;
   createdAt: string;
 }
 
