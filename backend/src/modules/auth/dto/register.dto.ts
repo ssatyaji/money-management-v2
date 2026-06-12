@@ -4,14 +4,26 @@ import {
   IsString,
   MinLength,
   Matches,
+  IsOptional,
+  IsNumber,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RegisterDto {
-  @ApiProperty({ example: 'John Doe' })
+  @ApiPropertyOptional({ example: 'John Doe' })
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @ApiProperty({ example: 'John' })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  firstName: string;
+
+  @ApiProperty({ example: 'Doe' })
+  @IsString()
+  @IsNotEmpty()
+  lastName: string;
 
   @ApiProperty({ example: 'john@example.com' })
   @IsEmail()
@@ -30,4 +42,30 @@ export class RegisterDto {
       'Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character',
   })
   password: string;
+
+  @ApiPropertyOptional({ example: 'Software Engineer' })
+  @IsString()
+  @IsOptional()
+  occupation?: string;
+
+  @ApiPropertyOptional({ example: '08123456789' })
+  @IsString()
+  @IsOptional()
+  phoneNumber?: string;
+
+  @ApiPropertyOptional({ example: 5000000 })
+  @IsNumber()
+  @IsOptional()
+  monthlyIncome?: number;
+
+  @ApiPropertyOptional({ example: 1000000 })
+  @IsNumber()
+  @IsOptional()
+  startingBalance?: number;
+
+  @ApiPropertyOptional({ example: 'Menabung' })
+  @IsString()
+  @IsOptional()
+  financialGoal?: string;
 }
+

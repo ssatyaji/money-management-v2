@@ -234,16 +234,20 @@ export class BankStatementsService {
     }
 
     // Build transaction data
-    const transactionData = selectedTxns.map((txn) => ({
-      amount: txn.amount,
-      type: txn.type,
-      description: txn.description,
-      date: txn.date,
-      categoryId: dto.categoryMap?.[txn.tempId] || defaultCategory.id,
-      userId,
-      bankStatementId: id,
-      source: 'BANK_IMPORT' as const,
-    }));
+    const transactionData = selectedTxns.map((txn) => {
+      const mappedAccountId = dto.accountMap?.[txn.tempId] || dto.accountId;
+      return {
+        amount: txn.amount,
+        type: txn.type,
+        description: txn.description,
+        date: txn.date,
+        categoryId: dto.categoryMap?.[txn.tempId] || defaultCategory.id,
+        accountId: mappedAccountId === 'main' ? null : (mappedAccountId || null),
+        userId,
+        bankStatementId: id,
+        source: 'BANK_IMPORT' as const,
+      };
+    });
 
     // Batch create
     const result = await this.repository.createTransactions(transactionData);

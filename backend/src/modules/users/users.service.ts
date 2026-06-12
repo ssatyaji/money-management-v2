@@ -24,6 +24,15 @@ export class UsersService {
     email: string;
     password: string;
     name: string;
+    firstName?: string;
+    lastName?: string;
+    occupation?: string;
+    phoneNumber?: string;
+    monthlyIncome?: number;
+    startingBalance?: number;
+    financialGoal?: string;
+    avatar?: string | null;
+    isEmailVerified?: boolean;
   }): Promise<User> {
     return this.usersRepository.create(data);
   }
@@ -67,7 +76,20 @@ export class UsersService {
 
   async update(
     id: string,
-    data: { name?: string; role?: Role; startingBalance?: number },
+    data: {
+      name?: string;
+      password?: string;
+      firstName?: string;
+      lastName?: string;
+      occupation?: string;
+      phoneNumber?: string;
+      monthlyIncome?: number;
+      startingBalance?: number;
+      financialGoal?: string;
+      role?: Role;
+      isEmailVerified?: boolean;
+      avatar?: string | null;
+    },
   ): Promise<User> {
     await this.findById(id); // Throws if not found
     return this.usersRepository.update(id, data);

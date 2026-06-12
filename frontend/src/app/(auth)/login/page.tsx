@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -16,9 +16,15 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, googleSignIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -34,6 +40,56 @@ export default function LoginPage() {
     },
   });
 
+  const handleGoogleSignIn = async (credential: string) => {
+    setIsLoading(true);
+    try {
+      await googleSignIn(credential);
+      toast.success('Login dengan Google berhasil! 🎉');
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Gagal masuk dengan Google. Silakan coba lagi.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Load Google GIS script dynamically
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      if (window.google) {
+        const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '17811954369-dummy.apps.googleusercontent.com';
+        
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (response: any) => {
+            handleGoogleSignIn(response.credential);
+          },
+        });
+
+        const btnElement = document.getElementById('google-signin-btn');
+        if (btnElement) {
+          window.google.accounts.id.renderButton(btnElement, {
+            theme: 'filled_blue',
+            size: 'large',
+            width: btnElement.clientWidth || 320,
+            text: 'signin_with',
+            shape: 'rectangular',
+          });
+        }
+      }
+    };
+
+    return () => {
+      // Clean up script if desired
+    };
+  }, []);
+
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
@@ -41,8 +97,8 @@ export default function LoginPage() {
       toast.success('Login berhasil!');
       router.push('/dashboard');
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { error?: { message?: string } } } };
-      toast.error(err.response?.data?.error?.message || 'Login gagal. Periksa email dan password Anda.');
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || 'Login gagal. Periksa email dan password Anda.');
     } finally {
       setIsLoading(false);
     }
@@ -51,17 +107,17 @@ export default function LoginPage() {
   return (
     <>
       <main className="min-h-screen flex flex-col items-center justify-center px-4 md:px-8">
-        <div className="w-full max-w-sm flex flex-col items-center space-y-8">
+        <div className="w-full max-w-sm flex flex-col items-center space-y-8 bg-card/40 backdrop-blur-md border border-border p-8 rounded-2xl shadow-xl">
           
           {/* Brand & Heading Section */}
           <header className="w-full text-center space-y-4 animate-in fade-in zoom-in duration-500">
             <div className="flex flex-col items-center gap-1">
               <span className="text-h2 font-bold text-primary tracking-tight">Zayn Finance</span>
-              <div className="h-1 w-8 bg-secondary rounded-full"></div>
+              <div className="h-1 w-8 bg-emerald-500 rounded-full"></div>
             </div>
             <div className="space-y-1">
               <h1 className="text-h1 text-primary">Sign In</h1>
-              <p className="text-body-md text-muted-foreground">Secure access to your wealth management dashboard.</p>
+              <p className="text-body-md text-muted-foreground">Kelola keuangan Anda secara cerdas dan terarah.</p>
             </div>
           </header>
 
@@ -71,18 +127,18 @@ export default function LoginPage() {
               
               {/* Email Field */}
               <div className="space-y-1">
-                <label className="text-label-caps text-muted-foreground uppercase tracking-widest" htmlFor="email">
-                  Email Address
+                <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="email">
+                  Alamat Email
                 </label>
                 <div className="relative group">
                   <input
                     id="email"
                     type="email"
-                    placeholder="name@example.com"
+                    placeholder="nama@email.com"
                     autoComplete="email"
                     autoFocus
                     {...register('email')}
-                    className={`w-full h-14 px-4 bg-muted border border-transparent rounded-lg text-body-md text-foreground transition-all duration-200 outline-none focus:border-primary focus:bg-card focus:ring-0 ${errors.email ? 'border-destructive' : ''}`}
+                    className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.email ? 'border-destructive' : ''}`}
                   />
                 </div>
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
@@ -90,13 +146,13 @@ export default function LoginPage() {
 
               {/* Password Field */}
               <div className="space-y-1">
-                <div className="flex justify-between items-end">
-                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest" htmlFor="password">
-                    Password
+                <div className="flex justify-between items-end mb-1">
+                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="password">
+                    Kata Sandi
                   </label>
-                  <a className="text-body-sm text-primary font-semibold hover:underline transition-all" href="#">
-                    Forgot Password?
-                  </a>
+                  <Link className="text-body-sm text-emerald-500 font-semibold hover:underline transition-all" href="/forgot-password">
+                    Lupa Sandi?
+                  </Link>
                 </div>
                 <div className="relative group">
                   <input
@@ -105,7 +161,7 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     autoComplete="current-password"
                     {...register('password')}
-                    className={`w-full h-14 px-4 pr-12 bg-muted border border-transparent rounded-lg text-body-md text-foreground transition-all duration-200 outline-none focus:border-primary focus:bg-card focus:ring-0 ${errors.password ? 'border-destructive' : ''}`}
+                    className={`w-full h-12 px-4 pr-12 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.password ? 'border-destructive' : ''}`}
                   />
                   <button
                     type="button"
@@ -125,17 +181,17 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-14 bg-primary text-primary-foreground rounded-lg text-h3 font-bold shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
+                  className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
                 >
                   {isLoading ? (
                     <span className="flex items-center gap-2">
-                      <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Memproses...
                     </span>
                   ) : (
                     <>
-                      Sign In
-                      <span className="material-symbols-outlined">arrow_forward</span>
+                      Masuk
+                      <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                     </>
                   )}
                 </button>
@@ -145,30 +201,22 @@ export default function LoginPage() {
             {/* Divider */}
             <div className="relative flex items-center py-2">
               <div className="flex-grow border-t border-border"></div>
-              <span className="flex-shrink mx-4 text-label-caps text-muted-foreground uppercase tracking-widest">OR</span>
+              <span className="flex-shrink mx-4 text-label-caps text-muted-foreground uppercase tracking-widest text-xs">ATAU</span>
               <div className="flex-grow border-t border-border"></div>
             </div>
 
             {/* Social Logins */}
-            <div className="grid grid-cols-1 gap-4">
-              <button type="button" className="w-full h-14 bg-card border border-border rounded-lg flex items-center justify-center gap-4 hover:bg-muted transition-colors duration-200 group">
-                <svg className="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.16v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.16C1.43 8.55 1 10.22 1 12s.43 3.45 1.16 4.93l3.68-2.84z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.16 7.07l3.68 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-                <span className="text-body-md text-foreground font-semibold">Continue with Google</span>
-              </button>
+            <div className="flex justify-center w-full min-h-[44px]">
+              <div id="google-signin-btn" className="w-full flex justify-center" />
             </div>
           </section>
 
           {/* Footer Signup */}
-          <footer className="w-full text-center pt-4">
+          <footer className="w-full text-center pt-2">
             <p className="text-body-md text-muted-foreground">
-              Don&apos;t have an account?{' '}
-              <Link href="/register" className="text-primary font-bold hover:underline transition-all">
-                Sign Up
+              Belum punya akun?{' '}
+              <Link href="/register" className="text-emerald-500 font-bold hover:underline transition-all">
+                Daftar
               </Link>
             </p>
           </footer>
@@ -177,8 +225,8 @@ export default function LoginPage() {
 
       {/* Ambient Visual Elements */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary opacity-10 blur-[120px] rounded-full"></div>
-        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-secondary opacity-10 blur-[120px] rounded-full"></div>
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-emerald-500/10 opacity-10 blur-[120px] rounded-full"></div>
+        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-indigo-500/10 opacity-10 blur-[120px] rounded-full"></div>
       </div>
     </>
   );

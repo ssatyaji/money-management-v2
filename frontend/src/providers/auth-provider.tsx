@@ -11,7 +11,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (data: LoginInput) => Promise<void>;
   register: (data: RegisterInput) => Promise<void>;
+  googleSignIn: (token: string) => Promise<void>;
+  verifyEmail: (code: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUserContext: (updatedUser: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,6 +58,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(response.user);
   }, []);
 
+  const googleSignIn = useCallback(async (token: string) => {
+    const response = await authApi.googleSignIn({ token });
+    setAccessToken(response.accessToken);
+    setUser(response.user);
+  }, []);
+
+  const verifyEmail = useCallback(async (code: string) => {
+    await authApi.verifyEmail({ code });
+    setUser((prev) => (prev ? { ...prev, isEmailVerified: true } : null));
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -66,6 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const updateUserContext = useCallback((updatedUser: User) => {
+    setUser(updatedUser);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -74,7 +92,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
         login,
         register,
+        googleSignIn,
+        verifyEmail,
         logout,
+        updateUserContext,
       }}
     >
       {children}

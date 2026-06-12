@@ -29,8 +29,8 @@ npm-debug.log*
 coverage/
 
 # Uploads
-uploads/*
-!uploads/.gitkeep
+**/uploads/*
+!**/uploads/.gitkeep
 
 # Prisma
 backend/prisma/migrations/**/migration_lock.toml

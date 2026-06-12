@@ -43,6 +43,13 @@ export interface UpdateUserDto {
   role?: 'USER' | 'ADMIN';
   isVerified?: boolean;
   startingBalance?: number;
+  firstName?: string;
+  lastName?: string;
+  occupation?: string;
+  phoneNumber?: string;
+  monthlyIncome?: number;
+  financialGoal?: string;
+  avatar?: string | null;
 }
 
 export const updateUser = async (id: string, data: UpdateUserDto): Promise<User> => {

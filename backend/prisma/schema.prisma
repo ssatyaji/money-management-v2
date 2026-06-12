@@ -67,6 +67,12 @@ model User {
   email           String   @unique
   password        String
   name            String
+  firstName       String   @default("")
+  lastName        String   @default("")
+  occupation      String?
+  phoneNumber     String?
+  monthlyIncome   Decimal? @db.Decimal(15, 2)
+  financialGoal   String?
   role            Role     @default(USER)
   avatar          String?
   isEmailVerified Boolean  @default(false)
@@ -236,4 +242,16 @@ model Account {
 
   @@unique([name, userId])
   @@map("accounts")
+}
+
+model OtpVerification {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  purpose   String   // "REGISTER" | "FORGOT_PASSWORD"
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email, code])
+  @@map("otp_verifications")
 }

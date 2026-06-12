@@ -1,282 +1,164 @@
-# Money Management App - Full-Stack Implementation Plan
+# Zayn Finance - Phase 2: User Expansion & OCR/E-Statement Enhancements
 
-> [!IMPORTANT]
-> Ini adalah project berskala besar (~200+ file) yang akan dikerjakan secara bertahap mengikuti 8 phase. Setiap phase menghasilkan deliverable yang bisa dijalankan dan dites. Karena skala project yang sangat besar, saya akan mengerjakan **Phase 1 + Phase 2** terlebih dahulu (foundation + authentication), lalu melanjutkan phase berikutnya secara iteratif.
+Rencana ini menjelaskan langkah-langkah detail untuk mengimplementasikan Phase 2 dari aplikasi Zayn Finance. Rencana ini mencakup perbaikan alur registrasi, fitur OTP verifikasi email, lupa password, pembaruan menu profil, integrasi Google Sign-In, verifikasi manual hasil scan struk OCR, serta pemetaan kategori dan dompet pada saat impor e-statement PDF bank.
 
-## Ringkasan Arsitektur
-
-```mermaid
-graph TB
-    subgraph "Frontend - Next.js 15"
-        A[App Router Pages] --> B[Components - Shadcn UI]
-        A --> C[Hooks - TanStack Query]
-        C --> D[API Client - Axios]
-        B --> E[Providers - Auth/Theme/Query]
-    end
-    
-    subgraph "Backend - NestJS"
-        F[Controllers] --> G[Services]
-        G --> H[Repositories]
-        H --> I[Prisma ORM]
-        F --> J[Guards/Pipes/Filters]
-        G --> K["BullMQ Workers"]
-    end
-    
-    subgraph "Infrastructure"
-        I --> L[(PostgreSQL)]
-        K --> M[(Redis)]
-        N[File Storage] --> O[uploads/]
-    end
-    
-    D -->|REST API /api/v1| F
-```
+---
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Beberapa keputusan teknis yang perlu di-review:**
-> 1. **Tanpa Docker di awal**: Saya akan setup PostgreSQL dan Redis secara manual/langsung dulu agar bisa langsung develop. Docker Compose akan dibuat tapi development awal tanpa Docker. Apakah kamu sudah punya **PostgreSQL** dan **Redis** terinstall di laptop?
-> 2. **PWA di phase terakhir**: PWA (Service Worker, manifest, push notification) akan di-setup di Phase 6 setelah semua fitur core selesai. Ini standar practice.
-> 3. **TDD Approach**: Saya akan menulis test bersamaan dengan implementasi (bukan strict Red-Green-Refactor karena context window terbatas), tapi setiap module akan memiliki unit test.
+> **Keputusan Teknis & Kebutuhan Konfigurasi:**
+> 1. **Gmail SMTP Credentials (OTP)**: Backend akan memerlukan konfigurasi SMTP Gmail. Anda perlu membuat *App Password* pada akun Gmail yang digunakan agar aman dan tidak memicu blokir keamanan Google.
+> 2. **Google OAuth Client ID (Google Sign-in)**: Anda perlu mendaftarkan aplikasi di Google Cloud Console untuk mendapatkan Client ID yang akan dikonfigurasi di frontend (.env) dan backend (.env).
+> 3. **Format E-Statement PDF**: Kami telah merancang regex parsers untuk Bank BCA, Bank Jago, SeaBank, dan Bank Permata. Setelah Anda mengunggah sampel PDF asli (dengan informasi sensitif disensor), kami akan menyempurnakan filter pencocokan pola agar 100% akurat dengan layout PDF terbaru dari bank-bank tersebut.
 
-## Open Questions
-
-> [!IMPORTANT]
-> 1. **Database**: Apakah kamu sudah install PostgreSQL di laptop? Atau mau pakai Docker saja?
-> 2. **Redis**: Apakah sudah install Redis? Di Windows, Redis biasanya perlu Docker atau WSL.
-> 3. **Node.js version**: Sudah install Node.js? Versi berapa?
+---
 
 ## Proposed Changes
 
-Pengerjaan dibagi ke **8 Phase** sesuai prompt. Berikut detail Phase 1 & 2 yang akan dikerjakan pertama:
+### 1. Database Schema Updates
+
+#### [MODIFY] [schema.prisma](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/backend/prisma/schema.prisma)
+- Menambahkan field baru pada model `User`:
+  - `firstName` String (default "")
+  - `lastName` String (default "")
+  - `occupation` String? (Pekerjaan)
+  - `phoneNumber` String?
+  - `monthlyIncome` Decimal? @db.Decimal(15, 2) (Pendapatan Bulanan)
+  - `financialGoal` String? (Tujuan Finansial)
+- Menambahkan model `OtpVerification` untuk menyimpan OTP verifikasi pendaftaran & lupa password:
+  ```prisma
+  model OtpVerification {
+    id        String   @id @default(uuid())
+    email     String
+    code      String
+    purpose   String   // "REGISTER" | "FORGOT_PASSWORD"
+    expiresAt DateTime
+    createdAt DateTime @default(now())
+
+    @@index([email, code])
+    @@map("otp_verifications")
+  }
+  ```
 
 ---
 
-### Phase 1 — Foundation Setup
+### 2. Pendaftaran User & Profil Lebih Lengkap (2-Step Registration)
 
-#### Backend Foundation
+#### [MODIFY] [register/page.tsx](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/frontend/src/app/(auth)/register/page.tsx)
+- Mengubah form pendaftaran menjadi **2-Step Wizard**:
+  - **Step 1: Akun & Keamanan**: Input Email, Password, Konfirmasi Password.
+  - **Step 2: Detail Finansial & Profil**: Input Nama Depan, Nama Belakang, Nomor Telepon, Pekerjaan, Pendapatan Bulanan, Saldo Awal Utama, dan Tujuan Finansial (Dropdown: Menabung, Investasi, Mengurangi Hutang, dll.).
+- Mengirimkan data registrasi lengkap ke backend. Setelah registrasi sukses, arahkan ke halaman verifikasi email `/verify-email?email=<email>`.
 
-##### [NEW] [docker-compose.yml](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/docker-compose.yml)
-- Docker Compose untuk PostgreSQL 16 + Redis 7 (development)
-- pgAdmin (opsional, port 5050)
+#### [MODIFY] [settings/page.tsx](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/frontend/src/app/(dashboard)/settings/page.tsx)
+- Memperluas tab **Profil** agar memuat form edit data lengkap yang baru ditambahkan (Nama Depan, Nama Belakang, Telepon, Pekerjaan, Pendapatan Bulanan, Saldo Awal, Tujuan Finansial).
+- Menyambungkan form ke mutation `updateUser`.
 
-##### [NEW] backend/ — NestJS Project Scaffolding
-- `npx @nestjs/cli new backend` kemudian konfigurasi:
-
-##### [NEW] [schema.prisma](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/backend/prisma/schema.prisma)
-- Full Prisma schema dengan 8 model: User, Category, Transaction, Budget, Reminder, BankStatement, PushSubscription
-- Semua enum: Role, TransactionType, TransactionSource, BudgetPeriod, ReminderFrequency, BankName, ProcessingStatus
-- Indexes untuk optimasi query
-
-##### [NEW] [seed.ts](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/backend/prisma/seed.ts)
-- Seed default categories (Makanan, Transportasi, Belanja, Hiburan, Tagihan, Gaji, Investasi, Transfer)
-- Seed admin user default
-
-##### [NEW] backend/src/common/ — Shared Infrastructure
-- `decorators/`: @Roles, @CurrentUser, @Public
-- `guards/`: JwtAuthGuard, RolesGuard, RefreshTokenGuard
-- `pipes/`: ValidationPipe (global)
-- `filters/`: HttpExceptionFilter, PrismaExceptionFilter
-- `interceptors/`: TransformInterceptor (wrap response format), LoggingInterceptor
-- `dto/`: PaginationDto
-- `interfaces/`: PaginatedResult
-- `constants/`: roles.enum.ts
-
-##### [NEW] backend/src/config/ — Configuration
-- app.config.ts, database.config.ts, jwt.config.ts, redis.config.ts, mail.config.ts, storage.config.ts
-- Menggunakan @nestjs/config dengan validasi env via Joi
-
-##### [NEW] backend/src/prisma/ — Prisma Module
-- PrismaService (extends PrismaClient, implements OnModuleInit)
-- PrismaModule (Global module)
-
-##### [NEW] backend/src/main.ts & app.module.ts
-- Global pipes, filters, interceptors
-- Swagger setup
-- CORS configuration
-- Helmet security headers
-- Rate limiting (@nestjs/throttler)
-
-##### [NEW] backend/.env & .env.example
-- Semua environment variables sesuai spec
+#### [MODIFY] NestJS Users Module ([backend/src/modules/users/](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/backend/src/modules/users))
+- Memperbarui `UpdateUserDto` untuk menyertakan field profil baru.
+- Memperbarui `UsersService.update()` untuk menyimpan perubahan field-field ini ke database.
 
 ---
 
-#### Frontend Foundation
+### 3. Koneksi Email Gmail & Sistem OTP Verifikasi
 
-##### [NEW] frontend/ — Next.js 15 Project Scaffolding
-- `npx create-next-app@latest frontend` dengan TypeScript, Tailwind CSS, App Router
+#### [NEW] NestJS Mail & OTP Services
+- Menginstal library `nodemailer` dan `@types/nodemailer` di backend.
+- **[NEW] [mail.service.ts](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/backend/src/modules/auth/mail.service.ts)**:
+  - Mengirim email HTML dengan template OTP menggunakan config dari `mail.config.ts`.
+- **[NEW] [otp.service.ts](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/backend/src/modules/auth/otp.service.ts)**:
+  - Menghasilkan kode OTP 6-digit acak.
+  - Menyimpan kode di database (`OtpVerification`) dengan masa kedaluwarsa (10 menit).
+  - Melakukan validasi kode OTP dan masa aktif.
 
-##### [NEW] Shadcn UI Setup
-- `npx shadcn@latest init`
-- Install komponen yang dibutuhkan: button, card, input, dialog, table, toast, dropdown-menu, sidebar, form, select, badge, skeleton, tabs, separator, sheet, avatar, popover, calendar, command, checkbox, label, textarea, progress, alert
+#### [MODIFY] NestJS Auth Module ([backend/src/modules/auth/](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/backend/src/modules/auth))
+- Menambahkan endpoint verifikasi:
+  - `POST /auth/verify-otp` dengan request body `{ email, code, purpose: 'REGISTER' }`. Jika valid, setel `isEmailVerified: true` pada user.
+  - `POST /auth/resend-otp` dengan request body `{ email, purpose }`. Mengirim ulang kode OTP.
+- Integrasikan dengan `AuthService.register()`: Saat user mendaftar, kirimkan OTP verifikasi otomatis ke emailnya dan buat akun dalam kondisi belum terverifikasi (`isEmailVerified: false`).
 
-##### [NEW] frontend/src/lib/ — Utilities
-- `utils/cn.ts`: Tailwind class merge (clsx + tailwind-merge)
-- `utils/currency.ts`: Format Rupiah
-- `utils/date.ts`: Date formatting helpers
-- `lib/api/client.ts`: Axios instance + auth interceptors
-- `lib/constants/routes.ts`: Route constants
-- `lib/constants/query-keys.ts`: TanStack Query keys
-
-##### [NEW] frontend/src/types/ — Type Definitions
-- auth.types.ts, transaction.types.ts, budget.types.ts, report.types.ts, reminder.types.ts, user.types.ts, api.types.ts
-
-##### [NEW] frontend/src/providers/ — Context Providers
-- QueryProvider (TanStack Query)
-- ThemeProvider (dark/light mode via next-themes)
-- ToastProvider (Sonner/Shadcn toast)
-
-##### [NEW] frontend/src/app/layout.tsx — Root Layout
-- Google Fonts (Inter)
-- Providers wrapping
-- Global metadata + SEO
-
-##### [NEW] frontend/src/app/globals.css — Design System
-- Tailwind base + Shadcn CSS variables
-- Dark/light mode tokens
-- Custom color palette (tema keuangan: emerald/teal)
+#### [NEW] Halaman Verifikasi Email ([verify-email/page.tsx](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/frontend/src/app/(auth)/verify-email/page.tsx))
+- Membuat halaman UI minimalis untuk memasukkan kode OTP 6-digit.
+- Tombol kirim ulang OTP dengan timer hitung mundur (resend cooldown 60 detik).
+- Validasi OTP langsung, lalu otomatis mengalihkan user ke dashboard setelah verifikasi sukses.
 
 ---
 
-### Phase 2 — Core Authentication
+### 4. Fitur Pemulihan Sandi (Forgot Password)
 
-#### Backend Auth
+#### [MODIFY] NestJS Auth Controller ([backend/src/modules/auth/auth.controller.ts](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/backend/src/modules/auth/auth.controller.ts))
+- Menambahkan endpoint pemulihan kata sandi:
+  - `POST /auth/forgot-password`: Menerima `{ email }`. Mengirim OTP verifikasi dengan tujuan `FORGOT_PASSWORD`.
+  - `POST /auth/reset-password`: Menerima `{ email, code, password }`. Memverifikasi OTP, melakukan hashing pada password baru, memperbarui database user, dan menghapus OTP.
 
-##### [NEW] backend/src/modules/auth/
-- `auth.module.ts`: Import PassportModule, JwtModule, UsersModule
-- `auth.service.ts`: register(), login(), refreshTokens(), logout(), validateUser()
-- `auth.controller.ts`: POST /auth/register, /auth/login, /auth/refresh, /auth/logout, GET /auth/me
-- `dto/`: LoginDto, RegisterDto, RefreshTokenDto
-- `strategies/`: JwtStrategy, JwtRefreshStrategy, LocalStrategy
-- Unit tests: auth.service.spec.ts, auth.controller.spec.ts
-
-##### [NEW] backend/src/modules/users/
-- `users.module.ts`
-- `users.service.ts`: findByEmail(), findById(), create(), update(), updateRefreshToken()
-- `users.repository.ts`: Prisma queries abstracted
-- `users.controller.ts`: CRUD user (admin only)
-- `dto/`: CreateUserDto, UpdateUserDto
-- Unit tests: users.service.spec.ts, users.controller.spec.ts
-
-#### Frontend Auth
-
-##### [NEW] frontend/src/lib/api/auth.api.ts
-- login(), register(), refreshToken(), logout(), getMe()
-
-##### [NEW] frontend/src/hooks/use-auth.ts
-- useLogin, useRegister, useLogout, useCurrentUser (TanStack Query mutations & queries)
-
-##### [NEW] frontend/src/providers/auth-provider.tsx
-- AuthContext: user state, isAuthenticated, login/logout methods
-- Auto-refresh token logic
-
-##### [NEW] frontend/src/middleware.ts
-- Next.js middleware untuk redirect unauthenticated users ke /login
-- Redirect authenticated users dari /login ke /dashboard
-- Admin route protection
-
-##### [NEW] frontend/src/app/(auth)/layout.tsx
-- Auth layout (centered card, clean design)
-
-##### [NEW] frontend/src/app/(auth)/login/page.tsx
-- Login form: email + password
-- Zod validation + React Hook Form
-- Link ke register
-- Loading states, error handling
-
-##### [NEW] frontend/src/app/(auth)/register/page.tsx
-- Register form: nama, email, password, confirm password
-- Password strength indicator
-- Link ke login
-
-##### [NEW] frontend/src/app/(dashboard)/layout.tsx
-- Dashboard layout: Sidebar + Header + Content area
-- Collapsible sidebar
-- User dropdown (profile, settings, logout)
-- Mobile responsive (hamburger/bottom nav)
-
-##### [NEW] frontend/src/app/(dashboard)/dashboard/page.tsx
-- Placeholder dashboard page (akan di-populate di Phase 3)
-- Summary cards skeleton
-
-##### [NEW] frontend/src/components/layout/
-- sidebar.tsx: Navigation sidebar dengan links ke semua fitur
-- header.tsx: Top bar dengan user info, theme toggle, notifications
-- mobile-nav.tsx: Bottom navigation untuk mobile
+#### [NEW] Halaman Lupa Password ([forgot-password/page.tsx](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/frontend/src/app/(auth)/forgot-password/page.tsx))
+- **Step 1**: Input email untuk memicu pengiriman OTP lupa password.
+- **Step 2**: Input kode OTP dan kata sandi baru (beserta konfirmasi kata sandi).
+- Setelah sukses, arahkan kembali ke halaman `/login`.
 
 ---
 
-### Phase 3-8 (Akan Dikerjakan Setelah Phase 1-2 Diapprove)
+### 5. Integrasi Google Sign-In
 
-| Phase | Scope | Estimasi Files |
-|-------|-------|----------------|
-| 3 | Categories + Transactions + Dashboard | ~30 files |
-| 4 | Budgets + Reports + Reminders | ~30 files |
-| 5 | OCR + Bank Statement Parsers | ~25 files |
-| 6 | Push Notifications + PWA | ~10 files |
-| 7 | Admin Panel | ~10 files |
-| 8 | Testing + Polish | ~20 files |
-| 9 | DevOps & Deployment | ~10 files |
+#### [MODIFY] NestJS Auth Module ([backend/src/modules/auth/](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/backend/src/modules/auth))
+- Menginstal library `google-auth-library` di backend.
+- Menambahkan endpoint `POST /auth/google/signin`:
+  - Menerima token ID Google dari frontend.
+  - Memverifikasi token ID menggunakan Client ID Google.
+  - Jika email belum terdaftar, buat user baru di database (setel `isEmailVerified: true`).
+  - Menghasilkan JWT Access & Refresh Token dan menyetel cookie.
+
+#### [MODIFY] Frontend Login & Register Pages
+- Menambahkan SDK Google Identity Services (`https://accounts.google.com/gsi/client`) secara dinamis.
+- Mengaktifkan fungsi login Google pada tombol "Continue with Google" menggunakan Google One-Tap/Pop-up flow.
+- Setelah sukses mendapatkan token ID, kirim ke backend `POST /auth/google/signin`.
 
 ---
 
-### Phase 9: DevOps & Deployment
+### 6. Review & Koreksi Scan Struk OCR Sebelum Disimpan
 
-This phase focuses on containerization, CI/CD pipelines, and creating environment configurations to prepare the application for a stable production release.
+#### [MODIFY] Halaman Scan Struk ([scan/receipt/page.tsx](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/frontend/src/app/(dashboard)/scan/receipt/page.tsx))
+- Mengganti tombol "Simpan sebagai Transaksi (segera hadir)" yang dinonaktifkan menjadi form interaktif **Review & Edit**:
+  - **Nama Merchant / Deskripsi** (input teks)
+  - **Tanggal Transaksi** (datepicker/input tanggal)
+  - **Jumlah Total (Amount)** (input angka)
+  - **Kategori** (Dropdown menggunakan hook `useCategories` agar user dapat mengklasifikasikan pengeluaran)
+  - **Dompet / Akun** (Dropdown menggunakan hook `useAccounts` untuk memilih dompet pemotong saldo)
+  - **Catatan Tambahan** (input catatan opsional)
+- Tombol **Simpan Transaksi**: Mengirim data yang telah dikoreksi/diedit ke endpoint `POST /transactions` untuk disimpan sebagai transaksi nyata dan memotong saldo dompet yang dipilih secara dinamis.
 
-#### 1. Dockerization
-- **Backend Dockerfile** (`backend/Dockerfile`):
-  - Multi-stage build for NestJS to ensure a slim production image.
-  - Generates Prisma client during the build process.
-- **Frontend Dockerfile** (`frontend/Dockerfile`):
-  - Multi-stage build leveraging Next.js `standalone` output mode to drastically reduce image size.
-- **Docker Compose** (`docker-compose.yml`):
-  - Orchestrate local deployment or single-VM setup containing PostgreSQL, Backend, and Frontend containers.
-  - Setup `.env` mappings for secure configurations.
+---
 
-#### 2. CI/CD Pipelines (GitHub Actions)
-- **CI Pipeline** (`.github/workflows/ci.yml`):
-  - Triggers on PR and pushes to `main`.
-  - Runs ESLint, TypeScript compilation (`npm run build`), and tests for both backend and frontend.
-- **CD Pipeline** (`.github/workflows/cd.yml`) *(Optional based on user infra)*:
-  - Automates Docker image builds and pushes to a container registry (e.g., Docker Hub or GitHub Container Registry).
+### 7. Impor E-Statement PDF Bank dengan Pemetaan Dompet & Kategori
 
-#### 3. Production Configurations
-- **Environment Variables**:
-  - `backend/.env.production.example` & `frontend/.env.production.example`.
-- **Database Migrations**:
-  - Script for running `npx prisma migrate deploy` prior to spinning up the backend container.
-- **Next.js Standalone**:
-  - Update `next.config.js` to enable `output: 'standalone'`.
+#### [MODIFY] NestJS Bank Statement Module ([backend/src/modules/bank-statements/](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/backend/src/modules/bank-statements))
+- Memperbarui `ImportTransactionsDto` agar menerima mapping akun/dompet:
+  - `accountId` (String): Mengimpor seluruh baris transaksi e-statement ke satu dompet yang sama.
+  - `accountMap` (Record<string, string>): Pemetaan dompet per-transaksi (opsional).
+- Memperbarui `BankStatementsService.importTransactions()` agar menyimpan setiap transaksi menggunakan `accountId` yang dipetakan oleh user, bukan hanya default `null` (Saldo Utama).
 
-#### 4. System Logging & Optimization
-- **PM2 Configuration** (`ecosystem.config.js`) *(Alternative to Docker)*:
-  - Provide a PM2 setup script if deployment is directly on an Ubuntu/Debian server without Docker.
-
-> [!IMPORTANT] 
-> User Input Needed: Do you prefer deploying via Docker (using `docker-compose`) on a VPS (like DigitalOcean/AWS EC2) or deploying to PaaS platforms like Vercel (Frontend) and Render/Railway (Backend)? The current plan focuses on **Docker** for maximum control and portability.
+#### [MODIFY] Frontend Import PDF Tab (`ImportStatementTab` in [scan/receipt/page.tsx](file:///c:/Users/ssatyaji/Desktop/development/money-management-v2/frontend/src/app/(dashboard)/scan/receipt/page.tsx))
+- Menambahkan dropdown **Pilih Dompet Tujuan Default** di bagian atas tabel transaksi.
+- Memperluas tabel hasil parse PDF statement:
+  - Setiap baris transaksi memiliki **Dropdown Kategori** (memilih kategori transaksi).
+  - Setiap baris transaksi memiliki **Dropdown Dompet** (default mengikuti pilihan Dompet Tujuan Default, namun bisa diganti per baris).
+  - Kolom **Deskripsi** dan **Jumlah** dapat diedit secara langsung jika ada kesalahan pembacaan parse teks PDF.
+- Tombol **Import (N)**: Mengirimkan daftar transaksi yang dipilih beserta kategori, dompet tujuan, dan detail deskripsi hasil koreksi ke backend `POST /bank-statements/:id/import` untuk diproses secara massal.
 
 ---
 
 ## Verification Plan
 
 ### Automated Tests
-- `cd backend && npm run test` — Unit tests
-- `cd backend && npm run test:e2e` — Integration tests
-- `cd frontend && npm run test` — Component tests
-- `cd frontend && npx playwright test` — E2E tests
+- Menjalankan unit test di backend:
+  `cd backend && npm run test`
+- Menjalankan kompilasi TypeScript di frontend untuk memastikan tidak ada tipe yang error:
+  `cd frontend && npm run build`
 
 ### Manual Verification
-- Backend: Swagger UI di `http://localhost:3001/api/docs` — test semua endpoint
-- Frontend: `http://localhost:3000` — test registration → login → dashboard flow
-- Mobile responsive: Browser DevTools responsive mode
-- PWA: Lighthouse audit (Phase 6)
-
-### Per-Phase Checklist
-Setiap phase selesai, verifikasi:
-1. ✅ Semua endpoint bisa dipanggil via Swagger
-2. ✅ Frontend page bisa diakses dan functional
-3. ✅ Unit tests passing
-4. ✅ TypeScript strict mode — no errors
-5. ✅ ESLint — no warnings
+1. **Pendaftaran & OTP**: Mendaftar akun baru, verifikasi email terkirim ke Inbox Gmail, salin kode OTP 6-digit, pastikan akun berhasil terverifikasi.
+2. **Forgot Password**: Klik lupa sandi di login screen, input email, terima OTP, input OTP dan password baru, lalu tes login menggunakan password baru tersebut.
+3. **Google Sign-In**: Klik "Continue with Google", selesaikan popup autentikasi Google, pastikan user otomatis login dan diarahkan ke dashboard.
+4. **Scan Struk OCR**: Unggah struk belanja, verifikasi form Review & Edit terisi otomatis, ubah jumlah atau kategori secara manual, klik simpan, dan pastikan data di dashboard/transaksi sesuai hasil koreksi.
+5. **Import E-Statement**: Unggah file e-statement bank, petakan kategori dan dompet tujuan untuk beberapa transaksi, lakukan impor massal, dan pastikan saldo masing-masing dompet bertambah/berkurang sesuai transaksi yang diimpor.
