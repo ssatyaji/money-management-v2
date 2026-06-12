@@ -50,11 +50,21 @@ export function useImportTransactions() {
       statementId,
       transactionIds,
       categoryMap,
+      accountId,
+      accountMap,
     }: {
       statementId: string;
       transactionIds: string[];
       categoryMap?: Record<string, string>;
-    }) => bankStatementsApi.importTransactions(statementId, { transactionIds, categoryMap }),
+      accountId?: string;
+      accountMap?: Record<string, string>;
+    }) =>
+      bankStatementsApi.importTransactions(statementId, {
+        transactionIds,
+        categoryMap,
+        accountId,
+        accountMap,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bankStatements.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });

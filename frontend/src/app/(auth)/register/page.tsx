@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -11,7 +11,6 @@ import { useAuth } from '@/providers/auth-provider';
 
 const registerSchema = z
   .object({
-    name: z.string().min(2, 'Nama minimal 2 karakter'),
     email: z.string().email('Email tidak valid'),
     password: z
       .string()
@@ -21,6 +20,13 @@ const registerSchema = z
       .regex(/[0-9]/, 'Harus ada angka')
       .regex(/[^A-Za-z0-9]/, 'Harus ada karakter spesial'),
     confirmPassword: z.string(),
+    firstName: z.string().min(1, 'Nama depan wajib diisi'),
+    lastName: z.string().min(1, 'Nama belakang wajib diisi'),
+    phoneNumber: z.string().optional(),
+    occupation: z.string().optional(),
+    monthlyIncome: z.string().optional(),
+    startingBalance: z.string().optional(),
+    financialGoal: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Password tidak cocok',
@@ -31,37 +37,48 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 function PasswordRule({ met, label }: { met: boolean; label: string }) {
   return (
-    <div className={`flex items-center gap-1.5 text-xs ${met ? 'text-secondary' : 'text-muted-foreground'}`}>
+    <div className={`flex items-center gap-1.5 text-xs ${met ? 'text-emerald-500' : 'text-muted-foreground'}`}>
       <span className="material-symbols-outlined text-[14px]">
         {met ? 'check' : 'close'}
       </span>
-      {label}
+      {ruleTranslate(label)}
     </div>
   );
 }
 
+function ruleTranslate(label: string) {
+  return label;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, googleSignIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState(1);
 
   const {
     register,
     handleSubmit,
     watch,
+    trigger,
     formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      name: '',
       email: '',
       password: '',
       confirmPassword: '',
+      firstName: '',
+      lastName: '',
+      phoneNumber: '',
+      occupation: '',
+      monthlyIncome: '',
+      startingBalance: '0',
+      financialGoal: 'Menabung',
     },
   });
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const password = watch('password', '');
   const passwordRules = [
     { met: password.length >= 8, label: 'Minimal 8 karakter' },
@@ -71,182 +88,359 @@ export default function RegisterPage() {
     { met: /[^A-Za-z0-9]/.test(password), label: 'Karakter spesial (!@#$)' },
   ];
 
+  const handleNextStep = async () => {
+    const isStep1Valid = await trigger(['email', 'password', 'confirmPassword']);
+    if (isStep1Valid) {
+      setStep(2);
+    }
+  };
+
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
     try {
+      const incomeNum = data.monthlyIncome ? Number(data.monthlyIncome.replace(/[^0-9]/g, '')) : 0;
+      const balanceNum = data.startingBalance ? Number(data.startingBalance.replace(/[^0-9]/g, '')) : 0;
+
       await registerUser({
-        name: data.name,
         email: data.email,
         password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        name: `${data.firstName} ${data.lastName}`.trim(),
+        occupation: data.occupation || undefined,
+        phoneNumber: data.phoneNumber || undefined,
+        monthlyIncome: incomeNum || undefined,
+        startingBalance: balanceNum || undefined,
+        financialGoal: data.financialGoal || undefined,
       });
-      toast.success('Registrasi berhasil! Selamat datang 🎉');
-      router.push('/dashboard');
+
+      toast.success('Registrasi berhasil! Kode verifikasi telah dikirim ke email Anda 📧');
+      router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { error?: { message?: string } } } };
-      toast.error(err.response?.data?.error?.message || 'Registrasi gagal. Silakan coba lagi.');
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || 'Registrasi gagal. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleGoogleSignIn = async (credential: string) => {
+    setIsLoading(true);
+    try {
+      await googleSignIn(credential);
+      toast.success('Daftar dengan Google berhasil! 🎉');
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Gagal masuk dengan Google.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (step !== 1) return;
+    
+    // Load Google GIS script dynamically
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      if (window.google) {
+        const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '17811954369-dummy.apps.googleusercontent.com';
+        
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (response: any) => {
+            handleGoogleSignIn(response.credential);
+          },
+        });
+
+        const btnElement = document.getElementById('google-signin-btn-register');
+        if (btnElement) {
+          window.google.accounts.id.renderButton(btnElement, {
+            theme: 'filled_blue',
+            size: 'large',
+            width: btnElement.clientWidth || 320,
+            text: 'signup_with',
+            shape: 'rectangular',
+          });
+        }
+      }
+    };
+  }, [step]);
+
   return (
     <>
       <main className="min-h-screen flex flex-col items-center justify-center px-4 md:px-8 py-12">
-        <div className="w-full max-w-sm flex flex-col items-center space-y-8">
+        <div className="w-full max-w-md flex flex-col items-center space-y-8 bg-card/40 backdrop-blur-md border border-border p-8 rounded-2xl shadow-xl">
           
           {/* Brand & Heading Section */}
-          <header className="w-full text-center space-y-4 animate-in fade-in zoom-in duration-500">
+          <header className="w-full text-center space-y-4">
             <div className="flex flex-col items-center gap-1">
               <span className="text-h2 font-bold text-primary tracking-tight">Zayn Finance</span>
-              <div className="h-1 w-8 bg-secondary rounded-full"></div>
+              <div className="h-1 w-8 bg-emerald-500 rounded-full"></div>
             </div>
             <div className="space-y-1">
-              <h1 className="text-h1 text-primary">Sign Up</h1>
-              <p className="text-body-md text-muted-foreground">Create an account to start managing your wealth.</p>
+              <h1 className="text-h1 text-primary">Daftar Akun</h1>
+              <p className="text-body-md text-muted-foreground">
+                Langkah {step} dari 2: {step === 1 ? 'Informasi Kredensial' : 'Informasi Profil & Finansial'}
+              </p>
             </div>
           </header>
 
-          {/* Register Form Section */}
-          <section className="w-full space-y-6">
-            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-              
-              {/* Name Field */}
-              <div className="space-y-1">
-                <label className="text-label-caps text-muted-foreground uppercase tracking-widest" htmlFor="name">
-                  Full Name
-                </label>
-                <div className="relative group">
-                  <input
-                    id="name"
-                    type="text"
-                    placeholder="Your Full Name"
-                    autoComplete="name"
-                    autoFocus
-                    {...register('name')}
-                    className={`w-full h-14 px-4 bg-muted border border-transparent rounded-lg text-body-md text-foreground transition-all duration-200 outline-none focus:border-primary focus:bg-card focus:ring-0 ${errors.name ? 'border-destructive' : ''}`}
-                  />
-                </div>
-                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-              </div>
-
-              {/* Email Field */}
-              <div className="space-y-1">
-                <label className="text-label-caps text-muted-foreground uppercase tracking-widest" htmlFor="email">
-                  Email Address
-                </label>
-                <div className="relative group">
+          {/* Form */}
+          <form className="w-full space-y-4" onSubmit={handleSubmit(onSubmit)}>
+            {step === 1 ? (
+              // STEP 1 FIELDS
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
+                {/* Email Field */}
+                <div className="space-y-1">
+                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="email">
+                    Alamat Email
+                  </label>
                   <input
                     id="email"
                     type="email"
-                    placeholder="name@example.com"
-                    autoComplete="email"
+                    placeholder="nama@email.com"
                     {...register('email')}
-                    className={`w-full h-14 px-4 bg-muted border border-transparent rounded-lg text-body-md text-foreground transition-all duration-200 outline-none focus:border-primary focus:bg-card focus:ring-0 ${errors.email ? 'border-destructive' : ''}`}
+                    className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.email ? 'border-destructive' : ''}`}
                   />
+                  {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                 </div>
-                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-              </div>
 
-              {/* Password Field */}
-              <div className="space-y-1">
-                <label className="text-label-caps text-muted-foreground uppercase tracking-widest" htmlFor="password">
-                  Password
-                </label>
-                <div className="relative group">
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    autoComplete="new-password"
-                    {...register('password')}
-                    className={`w-full h-14 px-4 pr-12 bg-muted border border-transparent rounded-lg text-body-md text-foreground transition-all duration-200 outline-none focus:border-primary focus:bg-card focus:ring-0 ${errors.password ? 'border-destructive' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">
-                      {showPassword ? 'visibility_off' : 'visibility'}
-                    </span>
-                  </button>
-                </div>
-                {password.length > 0 && (
-                  <div className="grid grid-cols-2 gap-1 mt-2">
-                    {passwordRules.map((rule) => (
-                      <PasswordRule key={rule.label} met={rule.met} label={rule.label} />
-                    ))}
+                {/* Password Field */}
+                <div className="space-y-1">
+                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="password">
+                    Kata Sandi
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      {...register('password')}
+                      className={`w-full h-12 px-4 pr-12 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.password ? 'border-destructive' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">
+                        {showPassword ? 'visibility_off' : 'visibility'}
+                      </span>
+                    </button>
                   </div>
-                )}
-              </div>
+                  {password.length > 0 && (
+                    <div className="grid grid-cols-2 gap-1 mt-2">
+                      {passwordRules.map((rule) => (
+                        <PasswordRule key={rule.label} met={rule.met} label={rule.label} />
+                      ))}
+                    </div>
+                  )}
+                  {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+                </div>
 
-              {/* Confirm Password Field */}
-              <div className="space-y-1">
-                <label className="text-label-caps text-muted-foreground uppercase tracking-widest" htmlFor="confirmPassword">
-                  Confirm Password
-                </label>
-                <div className="relative group">
+                {/* Confirm Password Field */}
+                <div className="space-y-1">
+                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="confirmPassword">
+                    Konfirmasi Kata Sandi
+                  </label>
                   <input
                     id="confirmPassword"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
-                    autoComplete="new-password"
                     {...register('confirmPassword')}
-                    className={`w-full h-14 px-4 pr-12 bg-muted border border-transparent rounded-lg text-body-md text-foreground transition-all duration-200 outline-none focus:border-primary focus:bg-card focus:ring-0 ${errors.confirmPassword ? 'border-destructive' : ''}`}
+                    className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.confirmPassword ? 'border-destructive' : ''}`}
+                  />
+                  {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    type="button"
+                    onClick={handleNextStep}
+                    className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    Lanjut
+                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // STEP 2 FIELDS
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* First Name */}
+                  <div className="space-y-1">
+                    <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="firstName">
+                      Nama Depan
+                    </label>
+                    <input
+                      id="firstName"
+                      type="text"
+                      placeholder="John"
+                      {...register('firstName')}
+                      className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.firstName ? 'border-destructive' : ''}`}
+                    />
+                    {errors.firstName && <p className="text-sm text-destructive">{errors.firstName.message}</p>}
+                  </div>
+
+                  {/* Last Name */}
+                  <div className="space-y-1">
+                    <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="lastName">
+                      Nama Belakang
+                    </label>
+                    <input
+                      id="lastName"
+                      type="text"
+                      placeholder="Doe"
+                      {...register('lastName')}
+                      className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.lastName ? 'border-destructive' : ''}`}
+                    />
+                    {errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message}</p>}
+                  </div>
+                </div>
+
+                {/* Phone Number */}
+                <div className="space-y-1">
+                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="phoneNumber">
+                    Nomor Telepon (Opsional)
+                  </label>
+                  <input
+                    id="phoneNumber"
+                    type="tel"
+                    placeholder="08123456789"
+                    {...register('phoneNumber')}
+                    className="w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background"
                   />
                 </div>
-                {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
+
+                {/* Occupation */}
+                <div className="space-y-1">
+                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="occupation">
+                    Pekerjaan (Opsional)
+                  </label>
+                  <input
+                    id="occupation"
+                    type="text"
+                    placeholder="Karyawan, Pengusaha, Freelancer"
+                    {...register('occupation')}
+                    className="w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Monthly Income */}
+                  <div className="space-y-1">
+                    <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="monthlyIncome">
+                      Pendapatan Bulanan (Rp)
+                    </label>
+                    <input
+                      id="monthlyIncome"
+                      type="text"
+                      placeholder="5.000.000"
+                      {...register('monthlyIncome')}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        e.target.value = val ? Number(val).toLocaleString('id-ID') : '';
+                      }}
+                      className="w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background"
+                    />
+                  </div>
+
+                  {/* Starting Balance */}
+                  <div className="space-y-1">
+                    <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="startingBalance">
+                      Saldo Awal Utama (Rp)
+                    </label>
+                    <input
+                      id="startingBalance"
+                      type="text"
+                      placeholder="1.000.000"
+                      {...register('startingBalance')}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        e.target.value = val ? Number(val).toLocaleString('id-ID') : '';
+                      }}
+                      className="w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background"
+                    />
+                  </div>
+                </div>
+
+                {/* Financial Goal */}
+                <div className="space-y-1">
+                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="financialGoal">
+                    Tujuan Finansial Utama
+                  </label>
+                  <select
+                    id="financialGoal"
+                    {...register('financialGoal')}
+                    className="w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background cursor-pointer"
+                  >
+                    <option value="Menabung">Menabung (Savings)</option>
+                    <option value="Investasi">Investasi (Investment)</option>
+                    <option value="Mengurangi Hutang">Melunasi / Mengurangi Hutang</option>
+                    <option value="Dana Darurat">Mengumpulkan Dana Darurat</option>
+                    <option value="Membeli Barang">Membeli Aset / Barang Impian</option>
+                  </select>
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="w-1/3 h-12 bg-transparent border border-border text-foreground hover:bg-muted/50 rounded-lg font-bold transition-all"
+                  >
+                    Kembali
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-2/3 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Mendaftar...
+                      </span>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-[18px]">person_add</span>
+                        Daftar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </form>
+
+          {step === 1 && (
+            <>
+              {/* Divider */}
+              <div className="relative flex items-center py-2 w-full">
+                <div className="flex-grow border-t border-border"></div>
+                <span className="flex-shrink mx-4 text-label-caps text-muted-foreground uppercase tracking-widest text-xs">ATAU</span>
+                <div className="flex-grow border-t border-border"></div>
               </div>
 
-              {/* Submit Action */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-14 bg-primary text-primary-foreground rounded-lg text-h3 font-bold shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                      Memproses...
-                    </span>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined">person_add</span>
-                      Sign Up
-                    </>
-                  )}
-                </button>
+              {/* Social Logins */}
+              <div className="flex justify-center w-full min-h-[44px]">
+                <div id="google-signin-btn-register" className="w-full flex justify-center" />
               </div>
-            </form>
-
-            {/* Divider */}
-            <div className="relative flex items-center py-2">
-              <div className="flex-grow border-t border-border"></div>
-              <span className="flex-shrink mx-4 text-label-caps text-muted-foreground uppercase tracking-widest">OR</span>
-              <div className="flex-grow border-t border-border"></div>
-            </div>
-
-            {/* Social Logins */}
-            <div className="grid grid-cols-1 gap-4">
-              <button type="button" className="w-full h-14 bg-card border border-border rounded-lg flex items-center justify-center gap-4 hover:bg-muted transition-colors duration-200 group">
-                <svg className="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.16v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.16C1.43 8.55 1 10.22 1 12s.43 3.45 1.16 4.93l3.68-2.84z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.16 7.07l3.68 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-                <span className="text-body-md text-foreground font-semibold">Sign up with Google</span>
-              </button>
-            </div>
-          </section>
+            </>
+          )}
 
           {/* Footer Signup */}
-          <footer className="w-full text-center pt-4 pb-8">
+          <footer className="w-full text-center pt-2">
             <p className="text-body-md text-muted-foreground">
-              Already have an account?{' '}
-              <Link href="/login" className="text-primary font-bold hover:underline transition-all">
-                Sign In
+              Sudah punya akun?{' '}
+              <Link href="/login" className="text-emerald-500 font-bold hover:underline transition-all">
+                Masuk
               </Link>
             </p>
           </footer>
@@ -255,8 +449,8 @@ export default function RegisterPage() {
 
       {/* Ambient Visual Elements */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary opacity-10 blur-[120px] rounded-full"></div>
-        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-secondary opacity-10 blur-[120px] rounded-full"></div>
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-emerald-500/10 opacity-10 blur-[120px] rounded-full"></div>
+        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-indigo-500/10 opacity-10 blur-[120px] rounded-full"></div>
       </div>
     </>
   );

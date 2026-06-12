@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   CheckCircle2,
   XCircle,
@@ -24,6 +24,8 @@ import {
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/currency';
 import { useUploadReceipt } from '@/hooks/use-ocr';
+import { useCategories, useCreateTransaction } from '@/hooks/use-transactions';
+import { useAccounts } from '@/hooks/use-accounts';
 import {
   useBankStatements,
   useUploadStatement,
@@ -61,7 +63,48 @@ function ScanReceiptTab() {
   const [ocrResult, setOcrResult] = useState<ParsedReceipt | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Form edit states
+  const [editMerchant, setEditMerchant] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editAccount, setEditAccount] = useState('main');
+  const [editNote, setEditNote] = useState('');
+
   const uploadMutation = useUploadReceipt();
+  const createTxnMutation = useCreateTransaction();
+  const { data: categories = [] } = useCategories('EXPENSE');
+  const { data: accounts = [] } = useAccounts();
+
+  // Populate form fields on successful OCR
+  useEffect(() => {
+    if (ocrResult) {
+      setEditMerchant(ocrResult.merchant || '');
+      setEditAmount(ocrResult.total ? String(ocrResult.total) : '0');
+      
+      // Attempt to parse/format date from OCR
+      let formattedDate = new Date().toISOString().split('T')[0];
+      if (ocrResult.date) {
+        const parts = ocrResult.date.split(/[/-]/);
+        if (parts.length === 3) {
+          if (parts[0].length === 4) {
+            formattedDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+          } else if (parts[2].length === 4) {
+            formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+          }
+        }
+      }
+      setEditDate(formattedDate);
+    }
+  }, [ocrResult]);
+
+  // Set default category when loaded
+  useEffect(() => {
+    const defaultCat = categories.find(c => c.isDefault) || categories[0];
+    if (defaultCat && !editCategory) {
+      setEditCategory(defaultCat.id);
+    }
+  }, [categories, editCategory]);
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -94,7 +137,7 @@ function ScanReceiptTab() {
       {
         onSuccess: (data) => {
           setOcrResult(data.result);
-          toast.success('Struk berhasil diproses!');
+          toast.success('Struk berhasil diproses! Silakan review detail transaksi.');
         },
         onError: () => {
           toast.error('Gagal memproses struk. Pastikan gambar jelas.');
@@ -107,7 +150,46 @@ function ScanReceiptTab() {
     setSelectedFile(null);
     setPreviewUrl(null);
     setOcrResult(null);
+    setEditMerchant('');
+    setEditAmount('');
+    setEditNote('');
+    setEditCategory(categories[0]?.id || '');
+    setEditAccount('main');
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleSaveTransaction = () => {
+    if (!editMerchant.trim()) {
+      toast.error('Merchant / deskripsi wajib diisi');
+      return;
+    }
+    const cleanAmount = Number(editAmount.replace(/[^0-9]/g, ''));
+    if (isNaN(cleanAmount) || cleanAmount <= 0) {
+      toast.error('Jumlah transaksi harus lebih dari 0');
+      return;
+    }
+    if (!editCategory) {
+      toast.error('Pilih kategori terlebih dahulu');
+      return;
+    }
+
+    createTxnMutation.mutate({
+      type: 'EXPENSE',
+      amount: cleanAmount,
+      description: editMerchant.trim(),
+      date: new Date(editDate).toISOString(),
+      categoryId: editCategory,
+      accountId: editAccount === 'main' ? undefined : editAccount,
+      note: editNote.trim() || undefined,
+    }, {
+      onSuccess: () => {
+        toast.success('Transaksi OCR berhasil disimpan! 🎉');
+        handleClear();
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.message || 'Gagal menyimpan transaksi struk.');
+      }
+    });
   };
 
   return (
@@ -221,9 +303,9 @@ function ScanReceiptTab() {
         </div>
       </div>
 
-      {/* OCR Result */}
+      {/* OCR Result and Edit Form */}
       <div className="space-y-4">
-        <h3 className="font-semibold text-lg">Hasil Scan</h3>
+        <h3 className="font-semibold text-lg">Hasil Scan & Review</h3>
 
         {uploadMutation.isPending && (
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
@@ -240,28 +322,108 @@ function ScanReceiptTab() {
         )}
 
         {ocrResult && (
-          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-            {/* Merchant & Date */}
+          <div className="rounded-xl border border-border bg-card p-6 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* Merchant */}
+            <div className="space-y-2">
+              <Label htmlFor="ocr-merchant">Merchant / Deskripsi</Label>
+              <Input
+                id="ocr-merchant"
+                value={editMerchant}
+                onChange={(e) => setEditMerchant(e.target.value)}
+                placeholder="Nama Toko atau Deskripsi"
+                className="bg-background"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-xs text-muted-foreground">Merchant</Label>
-                <p className="font-medium">{ocrResult.merchant || 'Tidak terdeteksi'}</p>
+              {/* Amount */}
+              <div className="space-y-2">
+                <Label htmlFor="ocr-amount">Jumlah Total (Rp)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">Rp</span>
+                  <Input
+                    id="ocr-amount"
+                    value={editAmount ? Number(editAmount.replace(/[^0-9]/g, '')).toLocaleString('id-ID') : ''}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setEditAmount(val);
+                    }}
+                    placeholder="0"
+                    className="pl-10 bg-background"
+                  />
+                </div>
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Tanggal</Label>
-                <p className="font-medium">{ocrResult.date || 'Tidak terdeteksi'}</p>
+
+              {/* Date */}
+              <div className="space-y-2">
+                <Label htmlFor="ocr-date">Tanggal</Label>
+                <Input
+                  id="ocr-date"
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="bg-background"
+                />
               </div>
             </div>
 
-            {/* Items */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Category */}
+              <div className="space-y-2">
+                <Label htmlFor="ocr-category">Kategori</Label>
+                <select
+                  id="ocr-category"
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Wallet/Account */}
+              <div className="space-y-2">
+                <Label htmlFor="ocr-account">Dompet / Akun</Label>
+                <select
+                  id="ocr-account"
+                  value={editAccount}
+                  onChange={(e) => setEditAccount(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Note */}
+            <div className="space-y-2">
+              <Label htmlFor="ocr-note">Catatan Tambahan (Opsional)</Label>
+              <textarea
+                id="ocr-note"
+                value={editNote}
+                onChange={(e) => setEditNote(e.target.value)}
+                placeholder="Tambahkan catatan..."
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
+
+            {/* Items display for reference */}
             {ocrResult.items.length > 0 && (
-              <div>
-                <Label className="text-xs text-muted-foreground mb-2 block">Item</Label>
-                <div className="space-y-1">
+              <div className="border-t border-border pt-3">
+                <Label className="text-xs text-muted-foreground mb-2 block">Daftar Item Hasil Scan</Label>
+                <div className="max-h-[120px] overflow-y-auto space-y-1 pr-1">
                   {ocrResult.items.map((item, i) => (
-                    <div key={i} className="flex justify-between text-sm py-1 border-b border-border/50 last:border-0">
-                      <span>
-                        {item.quantity > 1 && <span className="text-muted-foreground">{item.quantity}x </span>}
+                    <div key={i} className="flex justify-between text-xs py-1 border-b border-border/30 last:border-0">
+                      <span className="text-muted-foreground">
+                        {item.quantity > 1 && <span>{item.quantity}x </span>}
                         {item.name}
                       </span>
                       <span className="font-mono">{formatCurrency(item.price)}</span>
@@ -271,41 +433,29 @@ function ScanReceiptTab() {
               </div>
             )}
 
-            {/* Totals */}
-            <div className="border-t border-border pt-3 space-y-1">
-              {ocrResult.subtotal !== null && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-mono">{formatCurrency(ocrResult.subtotal)}</span>
-                </div>
-              )}
-              {ocrResult.tax !== null && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Pajak</span>
-                  <span className="font-mono">{formatCurrency(ocrResult.tax)}</span>
-                </div>
-              )}
-              {ocrResult.total !== null && (
-                <div className="flex justify-between font-semibold text-base pt-1 border-t border-border">
-                  <span>Total</span>
-                  <span className="font-mono text-emerald-500">{formatCurrency(ocrResult.total)}</span>
-                </div>
-              )}
-            </div>
-
             {/* Raw Text Toggle */}
-            <details className="text-sm">
+            <details className="text-xs">
               <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
                 Lihat teks mentah OCR
               </summary>
-              <pre className="mt-2 p-3 bg-muted/50 rounded-lg text-xs whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+              <pre className="mt-2 p-3 bg-muted/50 rounded-lg text-[10px] whitespace-pre-wrap max-h-[150px] overflow-y-auto">
                 {ocrResult.rawText}
               </pre>
             </details>
 
-            <Button className="w-full bg-emerald-600 hover:bg-emerald-700" disabled>
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Simpan sebagai Transaksi (segera hadir)
+            <Button 
+              onClick={handleSaveTransaction} 
+              disabled={createTxnMutation.isPending}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg h-12"
+            >
+              {createTxnMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Menyimpan...</>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Simpan Transaksi
+                </>
+              )}
             </Button>
           </div>
         )}
@@ -335,9 +485,49 @@ function ImportStatementTab() {
   const [selectedTxnIds, setSelectedTxnIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // States for category/wallet mapping
+  const [defaultWallet, setDefaultWallet] = useState('main');
+  const [rowCategories, setRowCategories] = useState<Record<string, string>>({});
+  const [rowAccounts, setRowAccounts] = useState<Record<string, string>>({});
+
   const uploadMutation = useUploadStatement();
   const importMutation = useImportTransactions();
   const { data: parsedTransactions, isLoading: loadingTransactions } = useParsedTransactions(uploadedStatementId);
+  const { data: categories = [] } = useCategories();
+  const { data: accounts = [] } = useAccounts();
+
+  // Populate row-level default categories and wallets
+  useEffect(() => {
+    if (parsedTransactions) {
+      const initialCats: Record<string, string> = {};
+      const initialAccs: Record<string, string> = {};
+
+      const defaultExpCat = categories.find(c => c.isDefault && c.type === 'EXPENSE') || categories.find(c => c.type === 'EXPENSE') || categories[0];
+      const defaultIncCat = categories.find(c => c.isDefault && c.type === 'INCOME') || categories.find(c => c.type === 'INCOME') || categories[0];
+
+      parsedTransactions.forEach((txn) => {
+        initialAccs[txn.tempId] = defaultWallet;
+        initialCats[txn.tempId] = txn.type === 'INCOME' 
+          ? (defaultIncCat?.id || '') 
+          : (defaultExpCat?.id || '');
+      });
+
+      setRowCategories(prev => ({ ...initialCats, ...prev }));
+      setRowAccounts(prev => ({ ...initialAccs, ...prev }));
+    }
+  }, [parsedTransactions, categories]);
+
+  // Bulk update row wallets when default wallet is changed
+  const handleDefaultWalletChange = (walletId: string) => {
+    setDefaultWallet(walletId);
+    if (parsedTransactions) {
+      const updatedAccs = { ...rowAccounts };
+      parsedTransactions.forEach((txn) => {
+        updatedAccs[txn.tempId] = walletId;
+      });
+      setRowAccounts(updatedAccs);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -401,6 +591,8 @@ function ImportStatementTab() {
       {
         statementId: uploadedStatementId,
         transactionIds: Array.from(selectedTxnIds),
+        categoryMap: rowCategories,
+        accountMap: rowAccounts,
       },
       {
         onSuccess: (data) => {
@@ -409,10 +601,12 @@ function ImportStatementTab() {
           setUploadedStatementId(null);
           setSelectedTxnIds(new Set());
           setSelectedBank('');
+          setRowCategories({});
+          setRowAccounts({});
           if (fileInputRef.current) fileInputRef.current.value = '';
         },
-        onError: () => {
-          toast.error('Gagal mengimport transaksi');
+        onError: (error: any) => {
+          toast.error(error.response?.data?.message || 'Gagal mengimport transaksi');
         },
       },
     );
@@ -423,6 +617,8 @@ function ImportStatementTab() {
     setUploadedStatementId(null);
     setSelectedTxnIds(new Set());
     setSelectedBank('');
+    setRowCategories({});
+    setRowAccounts({});
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -489,10 +685,28 @@ function ImportStatementTab() {
       {parsedTransactions && parsedTransactions.length > 0 && (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="p-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-3 justify-between sm:justify-start w-full sm:w-auto">
-              <h3 className="font-semibold">Transaksi Ditemukan</h3>
-              <Badge variant="secondary">{parsedTransactions.length} transaksi</Badge>
+            <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1">
+              <div>
+                <h3 className="font-semibold">Transaksi Ditemukan</h3>
+                <Badge variant="secondary" className="mt-1">{parsedTransactions.length} transaksi</Badge>
+              </div>
+
+              {/* Default Wallet Select */}
+              <div className="flex items-center gap-2">
+                <Label htmlFor="default-wallet" className="text-xs text-muted-foreground whitespace-nowrap">Dompet Default:</Label>
+                <select
+                  id="default-wallet"
+                  value={defaultWallet}
+                  onChange={(e) => handleDefaultWalletChange(e.target.value)}
+                  className="h-9 w-[150px] rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background"
+                >
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>{acc.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
+
             <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
               <span className="text-sm text-muted-foreground whitespace-nowrap">
                 {selectedTxnIds.size} dipilih
@@ -526,6 +740,8 @@ function ImportStatementTab() {
                   <th className="p-3 text-left text-xs font-medium text-muted-foreground uppercase">Deskripsi</th>
                   <th className="p-3 text-right text-xs font-medium text-muted-foreground uppercase">Jumlah</th>
                   <th className="p-3 text-center text-xs font-medium text-muted-foreground uppercase">Tipe</th>
+                  <th className="p-3 text-left text-xs font-medium text-muted-foreground uppercase">Kategori</th>
+                  <th className="p-3 text-left text-xs font-medium text-muted-foreground uppercase">Dompet</th>
                 </tr>
               </thead>
               <tbody>
@@ -551,7 +767,7 @@ function ImportStatementTab() {
                         year: 'numeric',
                       })}
                     </td>
-                    <td className="p-3 text-sm max-w-[300px] truncate">{txn.description}</td>
+                    <td className="p-3 text-sm max-w-[200px] truncate">{txn.description}</td>
                     <td className="p-3 text-sm text-right font-mono whitespace-nowrap">
                       <span className={txn.type === 'INCOME' ? 'text-emerald-500' : 'text-red-400'}>
                         {txn.type === 'INCOME' ? '+' : '-'}{formatCurrency(txn.amount)}
@@ -568,6 +784,38 @@ function ImportStatementTab() {
                       >
                         {txn.type === 'INCOME' ? 'Masuk' : 'Keluar'}
                       </Badge>
+                    </td>
+
+                    {/* Category Column */}
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={rowCategories[txn.tempId] || ''}
+                        onChange={(e) => setRowCategories({ ...rowCategories, [txn.tempId]: e.target.value })}
+                        className="h-8 w-[120px] rounded-md border border-input bg-background px-1 py-0.5 text-xs focus:ring-1 focus:ring-emerald-500"
+                      >
+                        {categories
+                          .filter((c) => c.type === txn.type)
+                          .map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                      </select>
+                    </td>
+
+                    {/* Wallet Column */}
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={rowAccounts[txn.tempId] || 'main'}
+                        onChange={(e) => setRowAccounts({ ...rowAccounts, [txn.tempId]: e.target.value })}
+                        className="h-8 w-[120px] rounded-md border border-input bg-background px-1 py-0.5 text-xs focus:ring-1 focus:ring-emerald-500"
+                      >
+                        {accounts.map((acc) => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.name}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                   </tr>
                 ))}

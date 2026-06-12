@@ -28,4 +28,23 @@ export class ImportTransactionsDto {
   @IsOptional()
   @IsObject()
   categoryMap?: Record<string, string>;
+
+  @ApiPropertyOptional({
+    description: 'A single account ID to import all transactions into',
+    example: 'account-uuid-123',
+  })
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Mapping of tempId to accountId for each transaction',
+    example: {
+      'txn-1234-0': 'account-uuid-1',
+      'txn-1234-1': 'account-uuid-2',
+    },
+  })
+  @IsOptional()
+  @IsObject()
+  accountMap?: Record<string, string>;
 }

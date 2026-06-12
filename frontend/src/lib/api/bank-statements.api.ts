@@ -59,7 +59,12 @@ export const bankStatementsApi = {
    */
   importTransactions: async (
     id: string,
-    data: { transactionIds: string[]; categoryMap?: Record<string, string> },
+    data: {
+      transactionIds: string[];
+      categoryMap?: Record<string, string>;
+      accountId?: string;
+      accountMap?: Record<string, string>;
+    },
   ): Promise<ImportTransactionsResult> => {
     const response = await apiClient.post<ApiResponse<ImportTransactionsResult>>(
       `/bank-statements/${id}/import`,

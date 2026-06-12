@@ -30,19 +30,37 @@ export class OcrParserService {
       .map((l) => l.trim())
       .filter(Boolean);
 
+    const items = this.extractItems(lines);
+    const subtotal = this.extractAmount(
+      rawText,
+      /sub\s*total\s*[:\s]*(?:rp\.?\s*)?([0-9.,]+)/i,
+    );
+    const tax = this.extractAmount(
+      rawText,
+      /(?:tax|pajak|ppn)\s*[:\s]*(?:rp\.?\s*)?([0-9.,]+)/i,
+    );
+
+    let total = this.extractTotal(rawText);
+
+    // Fallback: if total extraction fails, try subtotal + tax, or sum of items
+    if (!total || total === 0) {
+      if (subtotal && subtotal > 0) {
+        total = subtotal + (tax || 0);
+      } else {
+        const computedTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        if (computedTotal > 0) {
+          total = computedTotal + (tax || 0);
+        }
+      }
+    }
+
     return {
       merchant: this.extractMerchant(lines),
       date: this.extractDate(rawText),
-      items: this.extractItems(lines),
-      subtotal: this.extractAmount(
-        rawText,
-        /sub\s*total\s*[:\s]*(?:rp\.?\s*)?([0-9.,]+)/i,
-      ),
-      tax: this.extractAmount(
-        rawText,
-        /(?:tax|pajak|ppn)\s*[:\s]*(?:rp\.?\s*)?([0-9.,]+)/i,
-      ),
-      total: this.extractTotal(rawText),
+      items,
+      subtotal,
+      tax,
+      total,
       rawText,
     };
   }
@@ -128,13 +146,13 @@ export class OcrParserService {
   private extractTotal(text: string): number | null {
     // Try various total patterns (most specific first)
     const patterns = [
-      /(?:grand\s*total|total\s*(?:bayar|pembayaran|belanja|harga))\s*[:\s]*(?:rp\.?\s*)?([0-9.,]+)/i,
-      /total\s*[:\s]*(?:rp\.?\s*)?([0-9.,]+)/i,
+      /(?:grand\s*total|total\s*(?:bayar|pembayaran|belanja|harga|rp)|jumlah\s*(?:total|rp|bayar|pembayaran))\s*[:\s\t]*(?:rp\.?\s*)?([0-9.,]+)/i,
+      /(?:total|jumlah|bayar|netto|amount)\s*[:\s\t]*(?:rp\.?\s*)?([0-9.,]+)/i,
     ];
 
     for (const pattern of patterns) {
       const amount = this.extractAmount(text, pattern);
-      if (amount !== null) {
+      if (amount !== null && amount > 0) {
         return amount;
       }
     }

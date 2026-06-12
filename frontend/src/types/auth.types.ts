@@ -2,6 +2,12 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  firstName: string;
+  lastName: string;
+  occupation: string | null;
+  phoneNumber: string | null;
+  monthlyIncome: number | null;
+  financialGoal: string | null;
   role: 'ADMIN' | 'USER';
   avatar: string | null;
   isEmailVerified: boolean;

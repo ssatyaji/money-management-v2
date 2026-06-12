@@ -27,13 +27,19 @@ import {
 import { cn } from '@/lib/utils';
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserContext } = useAuth();
   const { mutate: updateUser, isPending } = useUpdateUser();
   const { theme, setTheme } = useTheme();
 
   const [mounted, setMounted] = useState(false);
   const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [occupation, setOccupation] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [monthlyIncome, setMonthlyIncome] = useState('');
   const [startingBalance, setStartingBalance] = useState('');
+  const [financialGoal, setFinancialGoal] = useState('');
 
   // Wallets management state
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
@@ -65,16 +71,40 @@ export default function SettingsPage() {
     setMounted(true);
     if (user) {
       setName(user.name);
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
+      setOccupation(user.occupation || '');
+      setPhoneNumber(user.phoneNumber || '');
+      setMonthlyIncome(user.monthlyIncome ? String(user.monthlyIncome) : '');
       setStartingBalance(user.startingBalance ? String(user.startingBalance) : '0');
+      setFinancialGoal(user.financialGoal || 'Menabung');
     }
   }, [user]);
 
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    const computedName = `${firstName} ${lastName}`.trim() || name;
+    
+    const incomeNum = monthlyIncome ? Number(monthlyIncome.replace(/[^0-9]/g, '')) : undefined;
+    const balanceNum = startingBalance ? Number(startingBalance.replace(/[^0-9]/g, '')) : undefined;
+
     updateUser({
       id: user.id,
-      data: { name, startingBalance: Number(startingBalance) },
+      data: {
+        name: computedName,
+        firstName,
+        lastName,
+        occupation,
+        phoneNumber,
+        monthlyIncome: incomeNum,
+        startingBalance: balanceNum,
+        financialGoal,
+      },
+    }, {
+      onSuccess: (updatedUser) => {
+        updateUserContext(updatedUser as any);
+      }
     });
   };
 
@@ -205,44 +235,121 @@ export default function SettingsPage() {
           <div className="rounded-2xl border border-border bg-card p-6 shadow-[0px_4px_12px_rgba(26,43,60,0.05)]">
             <h3 className="text-lg font-semibold mb-4">Informasi Pribadi</h3>
             <form onSubmit={handleUpdateProfile} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nama Lengkap</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Masukkan nama Anda"
-                  className="max-w-md bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Alamat Email</Label>
-                <Input
-                  id="email"
-                  value={user.email}
-                  disabled
-                  className="max-w-md bg-muted text-muted-foreground"
-                />
-                <p className="text-xs text-muted-foreground">Email tidak dapat diubah saat ini.</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="startingBalance">Saldo Awal Utama (Rp)</Label>
-                <div className="relative max-w-md">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">Rp</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">Nama Depan</Label>
                   <Input
-                    id="startingBalance"
-                    type="text"
-                    value={startingBalance ? formatNumber(Number(startingBalance)) : ''}
-                    onChange={(e) => {
-                      const rawValue = e.target.value.replace(/[^0-9]/g, '');
-                      setStartingBalance(rawValue);
-                    }}
-                    placeholder="0"
-                    className="pl-10 bg-background"
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Nama Depan"
+                    className="bg-background"
+                    required
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Saldo awal dasar sebelum ditambah pemasukan & dikurang pengeluaran manual.</p>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Nama Belakang</Label>
+                  <Input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Nama Belakang"
+                    className="bg-background"
+                    required
+                  />
+                </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Alamat Email</Label>
+                  <Input
+                    id="email"
+                    value={user.email}
+                    disabled
+                    className="bg-muted text-muted-foreground"
+                  />
+                  <p className="text-xs text-muted-foreground">Email tidak dapat diubah.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Nomor Telepon</Label>
+                  <Input
+                    id="phoneNumber"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="08123456789"
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="occupation">Pekerjaan</Label>
+                  <Input
+                    id="occupation"
+                    value={occupation}
+                    onChange={(e) => setOccupation(e.target.value)}
+                    placeholder="Karyawan, Swasta, dll."
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="financialGoal">Tujuan Finansial Utama</Label>
+                  <select
+                    id="financialGoal"
+                    value={financialGoal}
+                    onChange={(e) => setFinancialGoal(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="Menabung">Menabung (Savings)</option>
+                    <option value="Investasi">Investasi (Investment)</option>
+                    <option value="Mengurangi Hutang">Melunasi / Mengurangi Hutang</option>
+                    <option value="Dana Darurat">Mengumpulkan Dana Darurat</option>
+                    <option value="Membeli Barang">Membeli Aset / Barang Impian</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="monthlyIncome">Pendapatan Bulanan (Rp)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">Rp</span>
+                    <Input
+                      id="monthlyIncome"
+                      type="text"
+                      value={monthlyIncome ? formatNumber(Number(monthlyIncome)) : ''}
+                      onChange={(e) => {
+                        const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                        setMonthlyIncome(rawValue);
+                      }}
+                      placeholder="0"
+                      className="pl-10 bg-background"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="startingBalance">Saldo Awal Utama (Rp)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">Rp</span>
+                    <Input
+                      id="startingBalance"
+                      type="text"
+                      value={startingBalance ? formatNumber(Number(startingBalance)) : ''}
+                      onChange={(e) => {
+                        const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                        setStartingBalance(rawValue);
+                      }}
+                      placeholder="0"
+                      className="pl-10 bg-background"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Saldo awal dasar sebelum ditambah pemasukan & pengeluaran.</p>
+                </div>
+              </div>
+
               <Button type="submit" disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6 mt-4">
                 {isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
               </Button>
