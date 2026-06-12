@@ -1,4 +1,48 @@
+'use client';
+
+import { useAuth } from '@/providers/auth-provider';
+import { useRouter, usePathname } from 'next/navigation';
+import { useEffect } from 'react';
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      // If user is on verify-email page, only redirect if they are already verified.
+      // For all other auth pages (login, register, forgot-password), redirect immediately if authenticated.
+      if (pathname === '/verify-email') {
+        if (user?.isEmailVerified) {
+          router.push('/dashboard');
+        }
+      } else {
+        router.push('/dashboard');
+      }
+    }
+  }, [isAuthenticated, isLoading, user, pathname, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground animate-pulse">Memuat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Prevent flash of auth page content if authenticated (except for unverified user on verify-email page)
+  if (isAuthenticated) {
+    if (pathname === '/verify-email' && !user?.isEmailVerified) {
+      // Allow unverified user to see verify-email page
+    } else {
+      return null;
+    }
+  }
+
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
       {/* Animated gradient background */}
@@ -23,3 +67,4 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     </div>
   );
 }
+
