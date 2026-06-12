@@ -109,18 +109,25 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 bg-card border border-border rounded-lg shadow-[0px_4px_12px_rgba(26,43,60,0.1)] p-1 z-50">
             <DropdownMenuItem
-              onClick={() => router.push('/settings')}
-              className="flex items-center gap-3 w-full px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer rounded-md outline-none"
-            >
-              <span className="material-symbols-outlined text-[20px]">settings</span>
-              Pengaturan
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => router.push('/settings')}
+              onClick={() => router.push('/settings?tab=profile')}
               className="flex items-center gap-3 w-full px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer rounded-md outline-none"
             >
               <span className="material-symbols-outlined text-[20px]">person</span>
-              Profil
+              Profil Saya
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => router.push('/settings?tab=wallets')}
+              className="flex items-center gap-3 w-full px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer rounded-md outline-none"
+            >
+              <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+              Dompet Saya
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => router.push('/settings?tab=security')}
+              className="flex items-center gap-3 w-full px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer rounded-md outline-none"
+            >
+              <span className="material-symbols-outlined text-[20px]">lock</span>
+              Keamanan
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border my-1" />
             <DropdownMenuItem
