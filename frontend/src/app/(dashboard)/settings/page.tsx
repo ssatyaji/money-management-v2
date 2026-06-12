@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useUpdateUser } from '@/hooks/use-users';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,10 +27,20 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const { user, logout, updateUserContext } = useAuth();
   const { mutate: updateUser, isPending } = useUpdateUser();
   const { theme, setTheme } = useTheme();
+
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState('profile');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['profile', 'wallets', 'preferences', 'security'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   const [mounted, setMounted] = useState(false);
   const [name, setName] = useState('');
@@ -210,7 +221,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-muted/50 rounded-full p-1 border border-border/50 flex w-full overflow-x-auto hide-scrollbar justify-start sm:justify-center">
           <TabsTrigger value="profile" className="gap-2 rounded-full px-4 sm:px-6 data-[state=active]:bg-card data-[state=active]:shadow-sm whitespace-nowrap">
             <span className="material-symbols-outlined text-[18px]">person</span>
@@ -621,5 +632,13 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Memuat pengaturan...</div>}>
+      <SettingsPageContent />
+    </Suspense>
   );
 }
