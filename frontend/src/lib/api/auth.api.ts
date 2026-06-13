@@ -2,6 +2,11 @@ import apiClient from './client';
 import { LoginResponse, RegisterResponse, User } from '@/types/auth.types';
 import { ApiResponse } from '@/types/api.types';
 
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface LoginInput {
   email: string;
   password: string;
@@ -69,6 +74,11 @@ export const authApi = {
     password: string;
   }): Promise<{ success: boolean; message: string }> => {
     const response = await apiClient.post<ApiResponse<{ success: boolean; message: string }>>('/auth/reset-password', data);
+    return response.data.data;
+  },
+
+  changePassword: async (data: ChangePasswordInput): Promise<{ success: boolean; message: string }> => {
+    const response = await apiClient.post<ApiResponse<{ success: boolean; message: string }>>('/auth/change-password', data);
     return response.data.data;
   },
 

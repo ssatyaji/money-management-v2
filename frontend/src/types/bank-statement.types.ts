@@ -11,6 +11,7 @@ export interface BankStatement {
   statementDate: string | null;
   processedAt: string | null;
   createdAt: string;
+  errorMessage?: string | null;
   _count?: {
     transactions: number;
   };

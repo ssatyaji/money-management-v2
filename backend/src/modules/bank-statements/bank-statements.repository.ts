@@ -42,6 +42,7 @@ export class BankStatementsRepository {
         statementDate: true,
         processedAt: true,
         createdAt: true,
+        errorMessage: true,
         _count: {
           select: { transactions: true },
         },

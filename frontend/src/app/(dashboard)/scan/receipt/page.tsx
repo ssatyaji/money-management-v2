@@ -173,11 +173,16 @@ function ScanReceiptTab() {
       return;
     }
 
+    // Construct local date time to prevent day shifting and default to current hour/minute
+    const [year, month, day] = editDate.split('-').map(Number);
+    const txnDate = new Date();
+    txnDate.setFullYear(year, month - 1, day);
+
     createTxnMutation.mutate({
       type: 'EXPENSE',
       amount: cleanAmount,
       description: editMerchant.trim(),
-      date: new Date(editDate).toISOString(),
+      date: txnDate.toISOString(),
       categoryId: editCategory,
       accountId: editAccount === 'main' ? undefined : editAccount,
       note: editNote.trim() || undefined,
@@ -394,6 +399,7 @@ function ScanReceiptTab() {
                   onChange={(e) => setEditAccount(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
+                  <option value="main">Saldo Utama</option>
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
                       {acc.name}
@@ -700,6 +706,7 @@ function ImportStatementTab() {
                   onChange={(e) => handleDefaultWalletChange(e.target.value)}
                   className="h-9 w-[150px] rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background"
                 >
+                  <option value="main">Saldo Utama</option>
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>{acc.name}</option>
                   ))}
@@ -810,6 +817,7 @@ function ImportStatementTab() {
                         onChange={(e) => setRowAccounts({ ...rowAccounts, [txn.tempId]: e.target.value })}
                         className="h-8 w-[120px] rounded-md border border-input bg-background px-1 py-0.5 text-xs focus:ring-1 focus:ring-emerald-500"
                       >
+                        <option value="main">Saldo Utama</option>
                         {accounts.map((acc) => (
                           <option key={acc.id} value={acc.id}>
                             {acc.name}
@@ -870,6 +878,21 @@ function UploadHistoryTab() {
       {statements.map((stmt: BankStatement) => {
         const statusConfig = STATUS_CONFIG[stmt.status] || STATUS_CONFIG.PENDING;
 
+        let label = BANK_LABELS[stmt.bankName] || stmt.bankName;
+        let isOcr = false;
+
+        if (stmt.errorMessage) {
+          try {
+            const parsedError = JSON.parse(stmt.errorMessage);
+            if (parsedError.type === 'OCR_RECEIPT') {
+              label = 'Scan Struk (OCR)';
+              isOcr = true;
+            }
+          } catch {
+            // Ignore parse errors, fallback to default
+          }
+        }
+
         return (
           <div
             key={stmt.id}
@@ -877,14 +900,16 @@ function UploadHistoryTab() {
           >
             <div className="flex items-center gap-4 min-w-0 w-full sm:w-auto">
               <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-[20px] text-muted-foreground">description</span>
+                <span className="material-symbols-outlined text-[20px] text-muted-foreground">
+                  {isOcr ? 'receipt_long' : 'description'}
+                </span>
               </div>
 
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{stmt.fileName}</p>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <Badge variant="outline" className="text-xs whitespace-nowrap">
-                    {BANK_LABELS[stmt.bankName] || stmt.bankName}
+                    {label}
                   </Badge>
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {new Date(stmt.createdAt).toLocaleDateString('id-ID', {

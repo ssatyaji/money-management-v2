@@ -12,6 +12,7 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { OtpService } from './otp.service';
 
 @Injectable()
@@ -261,6 +262,25 @@ export class AuthService {
     });
 
     return { success: true, message: 'Kata sandi berhasil diatur ulang' };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.usersService.findById(userId);
+
+    const isPasswordValid = await bcrypt.compare(
+      dto.currentPassword,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      throw new BadRequestException('Kata sandi saat ini salah');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 12);
+    await this.usersService.update(userId, {
+      password: hashedPassword,
+    });
+
+    return { success: true, message: 'Kata sandi berhasil diperbarui' };
   }
 
   async refreshTokens(userId: string, refreshToken: string) {

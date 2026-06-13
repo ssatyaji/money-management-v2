@@ -26,6 +26,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { authApi } from '@/lib/api/auth.api';
 
 function SettingsPageContent() {
   const { user, logout, updateUserContext } = useAuth();
@@ -51,6 +52,11 @@ function SettingsPageContent() {
   const [monthlyIncome, setMonthlyIncome] = useState('');
   const [startingBalance, setStartingBalance] = useState('');
   const [financialGoal, setFinancialGoal] = useState('');
+
+  // Change password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Wallets management state
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
@@ -119,9 +125,52 @@ function SettingsPageContent() {
     });
   };
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.info('Fitur ubah kata sandi akan segera hadir di pembaruan berikutnya.');
+
+    if (!currentPassword) {
+      toast.error('Masukkan kata sandi saat ini');
+      return;
+    }
+
+    if (!newPassword) {
+      toast.error('Masukkan kata sandi baru');
+      return;
+    }
+
+    // Password validation criteria
+    if (newPassword.length < 8) {
+      toast.error('Kata sandi baru minimal harus 8 karakter');
+      return;
+    }
+
+    const hasUppercase = /[A-Z]/.test(newPassword);
+    const hasLowercase = /[a-z]/.test(newPassword);
+    const hasNumber = /[0-9]/.test(newPassword);
+    const hasSpecialChar = /[^A-Za-z0-9]/.test(newPassword);
+
+    if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecialChar) {
+      toast.error(
+        'Kata sandi baru harus mengandung huruf besar, huruf kecil, angka, dan karakter spesial (!@#$)'
+      );
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await authApi.changePassword({
+        currentPassword,
+        newPassword,
+      });
+      toast.success('Kata sandi berhasil diperbarui 🎉');
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Gagal memperbarui kata sandi';
+      toast.error(msg);
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleOpenCreateWallet = () => {
@@ -513,6 +562,10 @@ function SettingsPageContent() {
                   type="password"
                   placeholder="••••••••"
                   className="max-w-md bg-background"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  disabled={isChangingPassword}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -522,10 +575,26 @@ function SettingsPageContent() {
                   type="password"
                   placeholder="••••••••"
                   className="max-w-md bg-background"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  disabled={isChangingPassword}
+                  required
                 />
               </div>
-              <Button type="submit" variant="secondary" className="rounded-full px-6 mt-4">
-                Perbarui Kata Sandi
+              <Button 
+                type="submit" 
+                variant="secondary" 
+                className="rounded-full px-6 mt-4 flex items-center gap-2"
+                disabled={isChangingPassword}
+              >
+                {isChangingPassword ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-background border-t-foreground rounded-full animate-spin" />
+                    Memperbarui...
+                  </>
+                ) : (
+                  'Perbarui Kata Sandi'
+                )}
               </Button>
             </form>
           </div>
