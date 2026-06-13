@@ -21,11 +21,11 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Money Management',
-    template: '%s | Money Management',
+    default: 'Zayn Finance',
+    template: '%s | Zayn Finance',
   },
   description: 'Aplikasi manajemen keuangan pribadi untuk keluarga',
-  keywords: ['money management', 'keuangan', 'budgeting', 'finance'],
+  keywords: ['money management', 'keuangan', 'budgeting', 'finance', 'zayn finance'],
   manifest: '/manifest.json',
 };
 
