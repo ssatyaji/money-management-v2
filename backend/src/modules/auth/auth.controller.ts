@@ -162,7 +162,13 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ) {
     await this.authService.logout(userId);
-    response.clearCookie('refresh_token');
+    const isProd = process.env.NODE_ENV === 'production';
+    response.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
+      path: '/',
+    });
     return { message: 'Logged out successfully' };
   }
 
@@ -174,10 +180,11 @@ export class AuthController {
   }
 
   private setRefreshTokenCookie(response: Response, refreshToken: string) {
+    const isProd = process.env.NODE_ENV === 'production';
     response.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/',
     });
