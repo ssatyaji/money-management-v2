@@ -1,6 +1,6 @@
 {
   "name": "Zayn Finance",
-  "short_name": "Zayn",
+  "short_name": "Zayn Finance",
   "description": "Aplikasi manajemen keuangan pribadi yang modern dan dinamis",
   "start_url": "/dashboard",
   "display": "standalone",

@@ -28,7 +28,7 @@ serwist.addEventListeners();
 // Listen to Push events
 self.addEventListener("push", (event: any) => {
   const data = event.data?.json() ?? {};
-  const title = data.title || "Money Management";
+  const title = data.title || "Zayn Finance";
   const options = {
     body: data.body || "Anda memiliki notifikasi baru.",
     icon: "/icons/icon-192x192.png",

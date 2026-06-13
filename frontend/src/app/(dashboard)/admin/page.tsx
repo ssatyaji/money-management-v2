@@ -36,7 +36,7 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Admin Overview</h1>
-        <p className="text-muted-foreground mt-1">Statistik global platform Money Management</p>
+        <p className="text-muted-foreground mt-1">Statistik global platform Zayn Finance</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
