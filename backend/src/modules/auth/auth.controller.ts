@@ -41,6 +41,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     };
   }
 
@@ -60,6 +61,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     };
   }
 
@@ -79,6 +81,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     };
   }
 
@@ -162,6 +165,7 @@ export class AuthController {
 
     return {
       accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     };
   }
 

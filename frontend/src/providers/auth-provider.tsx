@@ -27,9 +27,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Try to refresh token (cookie-based)
+        // Try to refresh token (cookie-based or storage-based)
         const tokens = await authApi.refresh();
         setAccessToken(tokens.accessToken);
+        if (tokens.refreshToken) {
+          localStorage.setItem('refresh_token', tokens.refreshToken);
+        }
 
         // Get user profile
         const userData = await authApi.getMe();
@@ -37,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // No valid session
         setAccessToken(null);
+        localStorage.removeItem('refresh_token');
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -49,18 +53,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (data: LoginInput) => {
     const response = await authApi.login(data);
     setAccessToken(response.accessToken);
+    if (response.refreshToken) {
+      localStorage.setItem('refresh_token', response.refreshToken);
+    }
     setUser(response.user);
   }, []);
 
   const register = useCallback(async (data: RegisterInput) => {
     const response = await authApi.register(data);
     setAccessToken(response.accessToken);
+    if (response.refreshToken) {
+      localStorage.setItem('refresh_token', response.refreshToken);
+    }
     setUser(response.user);
   }, []);
 
   const googleSignIn = useCallback(async (token: string) => {
     const response = await authApi.googleSignIn({ token });
     setAccessToken(response.accessToken);
+    if (response.refreshToken) {
+      localStorage.setItem('refresh_token', response.refreshToken);
+    }
     setUser(response.user);
   }, []);
 
@@ -76,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Ignore logout errors
     } finally {
       setAccessToken(null);
+      localStorage.removeItem('refresh_token');
       setUser(null);
     }
   }, []);
