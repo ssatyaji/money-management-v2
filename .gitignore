@@ -34,3 +34,6 @@ coverage/
 
 # Prisma
 backend/prisma/migrations/**/migration_lock.toml
+
+# Temp/Sample statements
+temp/

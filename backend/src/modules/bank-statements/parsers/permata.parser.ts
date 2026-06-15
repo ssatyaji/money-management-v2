@@ -34,25 +34,184 @@ export class PermataParser extends BaseStatementParser {
     const transactions: ParsedTransaction[] = [];
     let statementDate: Date | undefined;
     let accountNumber: string | undefined;
+    let statementYear = new Date().getFullYear();
 
     // Try to extract account number
-    const accMatch = text.match(
-      /(?:nomor\s*(?:rekening|akun)|account\s*(?:no|number))[:\s]*(\d[\d\s\-.]+\d)/i,
-    );
+    const accMatch = text.match(/(?:no\.?\s*rekening|account\s*no\.?)(?:\s*\n?[^\n]+){0,10}?\n\s*(\d{7,})/i);
     if (accMatch) {
-      accountNumber = accMatch[1].replace(/[\s\-.]/g, '');
+      accountNumber = accMatch[1].trim();
+    } else {
+      // Fallback to simpler inline match
+      const fallbackAccMatch = text.match(
+        /(?:nomor\s*(?:rekening|akun)|account\s*(?:no|number)|no\.?\s*rek(?:ening)?)[:\s]*(\d[\d\s\-.]+\d)/i,
+      );
+      if (fallbackAccMatch) {
+        accountNumber = fallbackAccMatch[1].replace(/[\s\-.]/g, '');
+      }
     }
 
-    // Try to extract statement period
-    const periodMatch = text.match(/(?:periode|period)[:\s]*(.+?)(?:\n|$)/i);
-    if (periodMatch) {
-      const dateStr = periodMatch[1].trim();
-      const parsed = this.parseDate(dateStr.split(/\s*[-–]\s*/)[1] || dateStr);
+    // Try to extract statement period directly using date range pattern
+    const dateRangeMatch = text.match(/(\d{1,2}\s+[a-z]+\s+\d{4})\s*[-–]\s*(\d{1,2}\s+[a-z]+\s+\d{4})/i);
+    if (dateRangeMatch) {
+      const yearMatch = dateRangeMatch[2].match(/(\d{4})/);
+      if (yearMatch) {
+        statementYear = parseInt(yearMatch[1]);
+      }
+      const parsed = this.parseDate(dateRangeMatch[2]);
       if (parsed) statementDate = parsed;
+    } else {
+      // Fallback to old period match
+      const periodMatch = text.match(/(?:periode|period)[:\s]*(.+?)(?:\n|$)/i);
+      if (periodMatch) {
+        const yearMatch = periodMatch[1].match(/(\d{4})/);
+        if (yearMatch) {
+          statementYear = parseInt(yearMatch[1]);
+        }
+        const dateStr =
+          periodMatch[1]
+            .trim()
+            .split(/\s*[-–]\s*/)
+            .pop() || '';
+        const parsed = this.parseDate(dateStr);
+        if (parsed) statementDate = parsed;
+      }
     }
 
-    // Parse transaction lines
-    // Pattern: DD/MM/YYYY  Description  Amount  (Debit/Credit indicator)
+    // Extract starting balance to determine INCOME vs EXPENSE via balance diff
+    let startingBalance = 0;
+    const startBalMatch = text.match(
+      /(?:saldo\s*awal|beginning\s*balance)\s*([\d,]+\.\d{2})/i,
+    );
+    if (startBalMatch) {
+      startingBalance = parseFloat(startBalMatch[1].replace(/,/g, ''));
+    }
+
+    const dateRangePattern = /^(\d{2}\/\d{2})\s+(\d{2}\/\d{2})\s+(.*)/;
+    const amtBalPattern = /([\d,]+\.\d{2})\s+([\d,]+\.\d{2})$/;
+
+    let currentTxn: {
+      dateStr: string;
+      descLines: string[];
+      amount: number | null;
+      balance: number | null;
+    } | null = null;
+
+    let txnIndex = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const dateMatch = line.match(dateRangePattern);
+
+      if (dateMatch) {
+        // If there was an unfinished transaction, push it
+        if (currentTxn) {
+          this.pushTransaction(transactions, currentTxn, statementYear, txnIndex++);
+        }
+
+        const dateStr = dateMatch[1];
+        const rest = dateMatch[3].trim();
+
+        // Check if amount and balance are on the same line
+        const amtBalMatch = rest.match(amtBalPattern);
+        if (amtBalMatch) {
+          const description = rest.substring(0, rest.length - amtBalMatch[0].length).trim();
+          transactions.push({
+            tempId: this.generateTempId(txnIndex++),
+            date: this.parseDateWithYear(dateStr, statementYear) || new Date(),
+            description,
+            amount: this.parseAmount(amtBalMatch[1]),
+            balance: this.parseAmount(amtBalMatch[2]),
+            type: 'EXPENSE', // will determine later
+          });
+          currentTxn = null;
+        } else {
+          currentTxn = {
+            dateStr,
+            descLines: [rest],
+            amount: null,
+            balance: null,
+          };
+        }
+      } else if (currentTxn) {
+        const amtBalMatchOnly = line.match(/^([\d,]+\.\d{2})\s+([\d,]+\.\d{2})$/);
+        if (amtBalMatchOnly) {
+          currentTxn.amount = this.parseAmount(amtBalMatchOnly[1]);
+          currentTxn.balance = this.parseAmount(amtBalMatchOnly[2]);
+          this.pushTransaction(transactions, currentTxn, statementYear, txnIndex++);
+          currentTxn = null;
+        } else {
+          if (
+            line.includes('Halaman/Page') ||
+            line.includes('No. Rekening') ||
+            line.includes('Tgl Trx.') ||
+            line.toLowerCase().includes('statement period') ||
+            line.toLowerCase().includes('rekening koran')
+          ) {
+            // Skip page headers
+          } else {
+            currentTxn.descLines.push(line);
+          }
+        }
+      }
+    }
+
+    if (currentTxn) {
+      this.pushTransaction(transactions, currentTxn, statementYear, txnIndex++);
+    }
+
+    // Determine type by calculating balance difference
+    let prevBalance = startingBalance;
+    for (let j = 0; j < transactions.length; j++) {
+      const t = transactions[j];
+      if (t.balance !== undefined) {
+        const diff = t.balance - prevBalance;
+        if (diff > 0) {
+          t.type = 'INCOME';
+        } else {
+          t.type = 'EXPENSE';
+        }
+        prevBalance = t.balance;
+      } else {
+        t.type = 'EXPENSE';
+      }
+    }
+
+    // Fallback: try the old simple/regex pattern if no transactions found
+    if (transactions.length === 0) {
+      this.parseLegacyFormat(lines, transactions, statementYear);
+    }
+
+    return { transactions, statementDate, accountNumber };
+  }
+
+  private parseDateWithYear(dateStr: string, year: number): Date | null {
+    // dateStr is DD/MM
+    return this.parseDate(`${dateStr}/${year}`);
+  }
+
+  private pushTransaction(
+    transactions: ParsedTransaction[],
+    raw: { dateStr: string; descLines: string[]; amount: number | null; balance: number | null },
+    year: number,
+    index: number,
+  ): void {
+    const date = this.parseDateWithYear(raw.dateStr, year) || new Date();
+    const description = raw.descLines.join(' ').replace(/\s+/g, ' ').trim();
+    transactions.push({
+      tempId: this.generateTempId(index),
+      date,
+      description,
+      amount: raw.amount || 0,
+      balance: raw.balance || undefined,
+      type: 'EXPENSE', // will determine later
+    });
+  }
+
+  private parseLegacyFormat(
+    lines: string[],
+    transactions: ParsedTransaction[],
+    statementYear: number,
+  ): void {
     const txnPattern =
       /^(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s+(.+?)\s+([\d.,]+(?:\.\d{2})?)\s*(?:(DB|CR|D|C))?\s*(?:([\d.,]+))?\s*$/i;
 
@@ -83,17 +242,15 @@ export class PermataParser extends BaseStatementParser {
       }
     }
 
-    // Fallback: try a simpler pattern if no transactions found
     if (transactions.length === 0) {
-      this.parseSimpleFormat(lines, transactions);
+      this.parseSimpleFormat(lines, transactions, statementYear);
     }
-
-    return { transactions, statementDate, accountNumber };
   }
 
   private parseSimpleFormat(
     lines: string[],
     transactions: ParsedTransaction[],
+    year: number,
   ): void {
     let txnIndex = 0;
     const datePattern = /^(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/;
@@ -104,7 +261,6 @@ export class PermataParser extends BaseStatementParser {
         const date = this.parseDate(dateMatch[1]);
         if (!date) continue;
 
-        // Look for amount in the same or next line
         const restOfLine = lines[i].substring(dateMatch[0].length).trim();
         const amountMatch = restOfLine.match(/([\d.,]{4,})\s*$/);
 
@@ -118,7 +274,7 @@ export class PermataParser extends BaseStatementParser {
               date,
               description,
               amount,
-              type: 'EXPENSE', // Default to expense, user can change
+              type: 'EXPENSE',
             });
           }
         }
