@@ -61,7 +61,8 @@ function ScanReceiptTab() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [ocrResult, setOcrResult] = useState<ParsedReceipt | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // Form edit states
   const [editMerchant, setEditMerchant] = useState('');
@@ -155,7 +156,8 @@ function ScanReceiptTab() {
     setEditNote('');
     setEditCategory(categories[0]?.id || '');
     setEditAccount('main');
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
   };
 
   const handleSaveTransaction = () => {
@@ -220,11 +222,20 @@ function ScanReceiptTab() {
             </div>
           )}
 
+          {/* Camera input: capture="environment" forces the device camera */}
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+          />
+          {/* Gallery input: no capture attribute, opens photo gallery / file picker */}
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
             className="hidden"
             onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
           />
@@ -289,7 +300,7 @@ function ScanReceiptTab() {
 
                 {/* Shutter Button */}
                 <button 
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => cameraInputRef.current?.click()}
                   className="w-18 h-18 sm:w-20 sm:h-20 rounded-full border-[6px] border-white/50 flex items-center justify-center group transition-transform active:scale-95 shrink-0"
                 >
                   <div className="w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] rounded-full bg-white group-hover:bg-gray-200 transition-colors" />
@@ -297,7 +308,7 @@ function ScanReceiptTab() {
 
                 {/* Gallery Button */}
                 <button 
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => galleryInputRef.current?.click()}
                   className="w-12 h-12 rounded-full bg-black/40 flex items-center justify-center text-white border border-white/20 hover:bg-black/60 transition-colors shrink-0"
                 >
                   <span className="material-symbols-outlined">imagesmode</span>
