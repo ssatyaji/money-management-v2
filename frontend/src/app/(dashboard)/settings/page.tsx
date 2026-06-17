@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { authApi } from '@/lib/api/auth.api';
+import { LogoutDialog } from '@/components/shared/logout-dialog';
 
 function SettingsPageContent() {
   const { user, logout, updateUserContext } = useAuth();
@@ -67,6 +68,8 @@ function SettingsPageContent() {
   const [showWalletDialog, setShowWalletDialog] = useState(false);
   const [editingWalletId, setEditingWalletId] = useState<string | null>(null);
   const [deleteWalletConfirmId, setDeleteWalletConfirmId] = useState<string | null>(null);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [walletForm, setWalletForm] = useState({
     name: '',
     startingBalance: '',
@@ -237,6 +240,16 @@ function SettingsPageContent() {
       toast.error('Gagal menghapus dompet');
     } finally {
       setDeleteWalletConfirmId(null);
+    }
+  };
+
+  const confirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutDialog(false);
     }
   };
 
@@ -609,7 +622,7 @@ function SettingsPageContent() {
                 <p className="text-sm text-muted-foreground mt-1 mb-4">
                   Sesi Anda akan diakhiri dan Anda akan dikembalikan ke halaman masuk.
                 </p>
-                <Button variant="destructive" onClick={logout} className="rounded-full px-6 shadow-sm">
+                <Button variant="destructive" onClick={() => setShowLogoutDialog(true)} className="rounded-full px-6 shadow-sm">
                   Keluar Sekarang
                 </Button>
               </div>
@@ -700,6 +713,14 @@ function SettingsPageContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Logout Confirmation Dialog */}
+      <LogoutDialog
+        open={showLogoutDialog}
+        onOpenChange={setShowLogoutDialog}
+        onConfirm={confirmLogout}
+        isLoading={isLoggingOut}
+      />
     </div>
   );
 }
