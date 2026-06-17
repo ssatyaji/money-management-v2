@@ -195,15 +195,17 @@ export class AuthService {
   async verifyOtp(email: string, code: string, purpose: 'REGISTER' | 'FORGOT_PASSWORD') {
     const normalizedEmail = email.toLowerCase();
     const isValid = await this.otpService.verifyOtp(normalizedEmail, code, purpose);
-    
+
     if (!isValid) {
       throw new BadRequestException('Kode OTP salah atau telah kedaluwarsa');
     }
 
     if (purpose === 'REGISTER') {
-      await this.usersService.update(null as any, {
-        isEmailVerified: true,
-      } as any); // Wait, usersService.update takes id as first param. Let's find user first.
+      const user = await this.usersService.findByEmail(normalizedEmail);
+      if (!user) {
+        throw new BadRequestException('User tidak ditemukan');
+      }
+      await this.usersService.update(user.id, { isEmailVerified: true });
     }
 
     return { success: true, message: 'OTP verified successfully' };

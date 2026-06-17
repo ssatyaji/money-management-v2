@@ -8,16 +8,27 @@ import { AppHeader } from '@/components/layout/header';
 import { MobileNav } from '@/components/layout/mobile-nav';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();  // ← tambah 'user'
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, isLoading, router]);
+    if (isLoading) return; // Tunggu hingga auth state selesai dimuat
 
+    if (!isAuthenticated) {
+      // Tidak login → ke halaman login
+      router.push('/login');
+      return;
+    }
+
+    if (!user?.isEmailVerified) {
+      // Sudah login tapi belum verifikasi email → ke halaman verify-email
+      router.push(`/verify-email?email=${encodeURIComponent(user?.email ?? '')}`);
+      return;
+    }
+  }, [isAuthenticated, isLoading, user, router]);
+
+  // Tampilkan loading spinner selama auth state dimuat
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -29,7 +40,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!isAuthenticated) {
+  // Jangan render konten jika tidak terautentikasi atau belum verifikasi email
+  if (!isAuthenticated || !user?.isEmailVerified) {
     return null;
   }
 

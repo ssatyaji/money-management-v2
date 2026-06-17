@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { cn } from '@/lib/utils';
+import { LogoutDialog } from '@/components/shared/logout-dialog';
 
 interface HeaderProps {
   onMenuToggle: () => void;
@@ -26,6 +27,8 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
   const router = useRouter();
   const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications();
   const [greeting, setGreeting] = useState('Selamat Datang');
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     // Get the hour in the local browser timezone (e.g. Bangkok/Hanoi/Jakarta)
@@ -41,13 +44,24 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
     }
   }, []);
 
-  const handleLogout = async () => {
-    await logout();
-    router.push('/login');
+  const handleLogout = () => {
+    setShowLogoutDialog(true);
+  };
+
+  const confirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      router.push('/login');
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutDialog(false);
+    }
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between px-4 md:px-6 h-16 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 shadow-[0px_4px_12px_rgba(26,43,60,0.05)]">
+    <>
+      <header className="sticky top-0 z-50 flex items-center justify-between px-4 md:px-6 h-16 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 shadow-[0px_4px_12px_rgba(26,43,60,0.05)]">
       {/* Left section: Menu toggle (lg only) + Avatar & Greeting */}
       <div className="flex items-center gap-3">
         {/* Desktop Menu Toggle */}
@@ -141,5 +155,13 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
         </DropdownMenu>
       </div>
     </header>
+
+    <LogoutDialog
+      open={showLogoutDialog}
+      onOpenChange={setShowLogoutDialog}
+      onConfirm={confirmLogout}
+      isLoading={isLoggingOut}
+    />
+  </>
   );
 }
