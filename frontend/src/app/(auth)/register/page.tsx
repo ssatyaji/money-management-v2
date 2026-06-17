@@ -114,11 +114,22 @@ export default function RegisterPage() {
         financialGoal: data.financialGoal || undefined,
       });
 
-      toast.success('Registrasi berhasil! Kode verifikasi telah dikirim ke email Anda 📧');
+      toast.success('Akun berhasil dibuat! 🎉 Silakan cek inbox email Anda untuk kode verifikasi. Jika tidak ada, periksa folder spam atau kirim ulang di halaman verifikasi.');
       router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Registrasi gagal. Silakan coba lagi.');
+      const err = error as { response?: { data?: { message?: string; statusCode?: number } }; message?: string };
+      const statusCode = err.response?.data?.statusCode;
+      const backendMsg = err.response?.data?.message;
+      
+      if (backendMsg) {
+        toast.error(backendMsg);
+      } else if (statusCode === 409) {
+        toast.error('Email ini sudah terdaftar. Silakan masuk atau gunakan email lain.');
+      } else if (statusCode === 400) {
+        toast.error('Data yang dimasukkan tidak valid. Periksa kembali isian form Anda.');
+      } else {
+        toast.error('Registrasi gagal. Periksa koneksi internet Anda dan coba lagi.');
+      }
     } finally {
       setIsLoading(false);
     }
