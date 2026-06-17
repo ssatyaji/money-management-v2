@@ -30,7 +30,7 @@ export class AuthService {
     const email = registerDto.email.toLowerCase();
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException('Email ini sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.');
     }
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 12);
@@ -84,7 +84,7 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const user = await this.usersService.findByEmail(loginDto.email.toLowerCase());
     if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException('Email atau kata sandi salah. Silakan periksa kembali.');
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -92,7 +92,7 @@ export class AuthService {
       user.password,
     );
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException('Email atau kata sandi salah. Silakan periksa kembali.');
     }
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);

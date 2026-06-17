@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from './mail.service';
 
@@ -12,6 +12,23 @@ export class OtpService {
   ) {}
 
   async generateAndSendOtp(email: string, purpose: 'REGISTER' | 'FORGOT_PASSWORD'): Promise<void> {
+    // Rate limiting: cek apakah OTP sudah dikirim dalam 60 detik terakhir
+    const recentOtp = await this.prisma.otpVerification.findFirst({
+      where: {
+        email,
+        purpose,
+        createdAt: {
+          gt: new Date(Date.now() - 60 * 1000), // dalam 60 detik terakhir
+        },
+      },
+    });
+
+    if (recentOtp) {
+      const secondsAgo = Math.floor((Date.now() - recentOtp.createdAt.getTime()) / 1000);
+      const cooldownRemaining = 60 - secondsAgo;
+      throw new BadRequestException(`Tunggu ${cooldownRemaining} detik sebelum meminta OTP baru.`);
+    }
+
     // Generate random 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry

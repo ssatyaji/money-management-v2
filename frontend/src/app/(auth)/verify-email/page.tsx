@@ -16,6 +16,7 @@ function VerifyEmailForm() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
 
   // Handle countdown timer
   useEffect(() => {
@@ -55,7 +56,7 @@ function VerifyEmailForm() {
   };
 
   const handleResend = async () => {
-    if (resendCooldown > 0) return;
+    if (resendCooldown > 0 || isResending) return;
     
     const targetEmail = email || user?.email;
     if (!targetEmail) {
@@ -63,12 +64,17 @@ function VerifyEmailForm() {
       return;
     }
 
+    setIsResending(true);
+    setResendCooldown(60); // Set cooldown immediately to block spamming
     try {
       await authApi.resendOtp({ email: targetEmail, purpose: 'REGISTER' });
-      toast.success('Kode OTP verifikasi baru telah dikirim 📧');
-      setResendCooldown(60); // 60 seconds cooldown
+      toast.success('Kode OTP verifikasi baru telah dikirim ke email Anda 📧');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal mengirim ulang OTP.');
+      setResendCooldown(0); // Reset cooldown on failure
+      const msg = error.response?.data?.message || 'Gagal mengirim ulang OTP. Silakan coba lagi.';
+      toast.error(msg);
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -130,10 +136,23 @@ function VerifyEmailForm() {
         <button
           type="button"
           onClick={handleResend}
-          disabled={resendCooldown > 0}
-          className={`font-semibold hover:underline transition-colors ${resendCooldown > 0 ? 'text-muted-foreground cursor-not-allowed' : 'text-emerald-500'}`}
+          disabled={resendCooldown > 0 || isResending}
+          className={`font-semibold hover:underline transition-colors inline-flex items-center gap-1.5 ${
+            resendCooldown > 0 || isResending 
+              ? 'text-muted-foreground cursor-not-allowed' 
+              : 'text-emerald-500'
+          }`}
         >
-          {resendCooldown > 0 ? `Kirim ulang (${resendCooldown}s)` : 'Kirim Ulang'}
+          {isResending ? (
+            <>
+              <span className="w-3.5 h-3.5 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+              Mengirim...
+            </>
+          ) : resendCooldown > 0 ? (
+            `Kirim ulang (${resendCooldown}s)`
+          ) : (
+            'Kirim Ulang'
+          )}
         </button>
       </div>
 
