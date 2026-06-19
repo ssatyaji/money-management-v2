@@ -27,4 +27,12 @@ export class ReportsController {
   ) {
     return this.reportsService.getYearlyReport(userId, year);
   }
+
+  @Get('forecast')
+  @ApiOperation({ summary: 'Get 30-day cashflow forecast' })
+  getCashflowForecast(
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.reportsService.getCashflowForecast(userId);
+  }
 }

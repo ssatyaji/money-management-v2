@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -105,12 +106,18 @@ export default function TransactionsPage() {
           <p className="text-muted-foreground mt-1">Kelola pemasukan dan pengeluaran Anda</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => setIsExportDialogOpen(true)}>
+          <Link href="/transactions/recurring">
+            <Button variant="outline" className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/5 cursor-pointer">
+              <Clock className="w-4 h-4" />
+              <span className="hidden sm:inline">Tagihan Berulang</span>
+            </Button>
+          </Link>
+          <Button variant="outline" className="gap-2 cursor-pointer" onClick={() => setIsExportDialogOpen(true)}>
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">Unduh Laporan</span>
           </Button>
           <Link href="/transactions/new">
-            <Button className="gap-2">
+            <Button className="gap-2 cursor-pointer">
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Tambah Transaksi</span>
             </Button>

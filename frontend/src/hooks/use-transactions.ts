@@ -120,3 +120,10 @@ export function useRecentTransactions(limit: number = 5) {
     queryFn: () => transactionsApi.getRecent(limit),
   });
 }
+
+export function useCashflowForecast() {
+  return useQuery({
+    queryKey: ['reports', 'forecast'],
+    queryFn: () => transactionsApi.getCashflowForecast(),
+  });
+}

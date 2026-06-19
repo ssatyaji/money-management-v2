@@ -60,6 +60,13 @@ export interface DailyTrendItem {
   expense: number;
 }
 
+export interface ForecastItem {
+  date: string;
+  income: number;
+  expense: number;
+  balance: number;
+}
+
 export const transactionsApi = {
   getAll: async (filters: TransactionFilters): Promise<PaginatedResponse<Transaction>> => {
     const response = await apiClient.get<PaginatedResponse<Transaction>>('/transactions', {
@@ -131,5 +138,10 @@ export const transactionsApi = {
       responseType: 'blob',
     });
     return response.data;
+  },
+
+  getCashflowForecast: async (): Promise<ForecastItem[]> => {
+    const response = await apiClient.get<ApiResponse<ForecastItem[]>>('/reports/forecast');
+    return response.data.data;
   },
 };

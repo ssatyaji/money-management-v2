@@ -204,4 +204,125 @@ export class ReportsRepository {
       })),
     };
   }
+
+  async getCashflowForecast(userId: string) {
+    // 1. Get current balance
+    const allTimeSummary = await this.prisma.transaction.groupBy({
+      by: ['type'],
+      where: { userId },
+      _sum: { amount: true },
+    });
+
+    let allTimeIncome = 0;
+    let allTimeExpense = 0;
+    allTimeSummary.forEach((s) => {
+      if (s.type === 'INCOME') allTimeIncome = Number(s._sum.amount) || 0;
+      if (s.type === 'EXPENSE') allTimeExpense = Number(s._sum.amount) || 0;
+    });
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { startingBalance: true },
+    });
+    const userStartingBalance = Number(user?.startingBalance) || 0;
+
+    const wallets = await this.prisma.account.findMany({
+      where: { userId },
+      select: { startingBalance: true },
+    });
+    const walletsStartingBalance = wallets.reduce((sum, w) => sum + (Number(w.startingBalance) || 0), 0);
+
+    const currentBalance = userStartingBalance + walletsStartingBalance + allTimeIncome - allTimeExpense;
+
+    // 2. Fetch last 30 days of transactions to get daily averages
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const recentTx = await this.prisma.transaction.findMany({
+      where: {
+        userId,
+        date: { gte: thirtyDaysAgo },
+      },
+      select: { amount: true, type: true },
+    });
+
+    let pastIncome = 0;
+    let pastExpense = 0;
+    recentTx.forEach((tx) => {
+      if (tx.type === 'INCOME') pastIncome += Number(tx.amount);
+      if (tx.type === 'EXPENSE') pastExpense += Number(tx.amount);
+    });
+
+    // Simple daily averages
+    const avgDailyIncome = pastIncome / 30;
+    const avgDailyExpense = pastExpense / 30;
+
+    // 3. Fetch active recurring transactions
+    const recurring = await this.prisma.recurringTransaction.findMany({
+      where: {
+        userId,
+        isActive: true,
+      },
+    });
+
+    // 4. Project 30 days ahead
+    const forecast = [];
+    let runningBalance = currentBalance;
+    const today = new Date();
+
+    for (let day = 1; day <= 30; day++) {
+      const projectionDate = new Date(today);
+      projectionDate.setDate(today.getDate() + day);
+      const dateKey = projectionDate.toISOString().split('T')[0];
+
+      let dayIncome = avgDailyIncome;
+      let dayExpense = avgDailyExpense;
+
+      // Check if any recurring transaction hits today
+      recurring.forEach((rec) => {
+        let recDate = new Date(rec.nextDueDate);
+        // Clean time for comparison
+        const pDate = new Date(projectionDate.getFullYear(), projectionDate.getMonth(), projectionDate.getDate());
+        
+        // Loop forward to see if matches projectionDate
+        while (recDate <= pDate) {
+          const rDate = new Date(recDate.getFullYear(), recDate.getMonth(), recDate.getDate());
+          if (rDate.getTime() === pDate.getTime()) {
+            if (rec.type === 'INCOME') {
+              dayIncome += Number(rec.amount);
+            } else if (rec.type === 'EXPENSE') {
+              dayExpense += Number(rec.amount);
+            }
+            break;
+          }
+          // Increment recDate based on frequency
+          switch (rec.frequency) {
+            case 'DAILY':
+              recDate.setDate(recDate.getDate() + 1);
+              break;
+            case 'WEEKLY':
+              recDate.setDate(recDate.getDate() + 7);
+              break;
+            case 'MONTHLY':
+              recDate.setMonth(recDate.getMonth() + 1);
+              break;
+            case 'YEARLY':
+              recDate.setFullYear(recDate.getFullYear() + 1);
+              break;
+          }
+        }
+      });
+
+      runningBalance = runningBalance + dayIncome - dayExpense;
+
+      forecast.push({
+        date: dateKey,
+        income: Math.round(dayIncome),
+        expense: Math.round(dayExpense),
+        balance: Math.round(runningBalance),
+      });
+    }
+
+    return forecast;
+  }
 }

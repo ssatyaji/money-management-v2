@@ -89,6 +89,7 @@ model User {
   bankStatements    BankStatement[]
   pushSubscriptions PushSubscription[]
   accounts          Account[]
+  recurringTransactions RecurringTransaction[]
 
   @@map("users")
 }
@@ -107,6 +108,7 @@ model Category {
 
   transactions Transaction[]
   budgets      Budget[]
+  recurringTransactions RecurringTransaction[]
 
   @@unique([name, userId])
   @@map("categories")
@@ -240,6 +242,7 @@ model Account {
 
   transactions            Transaction[] @relation("SourceAccountTransactions")
   destinationTransactions Transaction[] @relation("DestinationAccountTransactions")
+  recurringTransactions   RecurringTransaction[]
 
   @@unique([name, userId])
   @@map("accounts")
@@ -255,4 +258,40 @@ model OtpVerification {
 
   @@index([email, code])
   @@map("otp_verifications")
+}
+
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model RecurringTransaction {
+  id            String             @id @default(uuid())
+  amount        Decimal            @db.Decimal(15, 2)
+  type          TransactionType
+  description   String
+  note          String?
+  frequency     RecurringFrequency
+  startDate     DateTime
+  nextDueDate   DateTime
+  isActive      Boolean            @default(true)
+  lastTriggered DateTime?
+
+  categoryId    String
+  category      Category           @relation(fields: [categoryId], references: [id])
+
+  accountId     String
+  account       Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  userId        String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([userId, nextDueDate])
+  @@index([userId, isActive])
+  @@map("recurring_transactions")
 }

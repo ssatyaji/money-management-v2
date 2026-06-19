@@ -263,3 +263,14 @@ html {
   animation: scan-line 3s ease-in-out infinite;
 }
 
+/* ponytail: design tokens for glow and smooth hover states */
+.ambient-glow {
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.08);
+}
+.dark .ambient-glow {
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.04);
+}
+.transition-all-300 {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
