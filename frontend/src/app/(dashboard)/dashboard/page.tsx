@@ -13,17 +13,19 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatTransactionDate } from '@/lib/utils/date';
+import { useState } from 'react';
 import {
   useTransactionSummary,
   useCategoryBreakdown,
   useDailyTrend,
   useRecentTransactions,
+  useCashflowForecast,
 } from '@/hooks/use-transactions';
 import { useAccounts } from '@/hooks/use-accounts';
+import { SkeletonDashboard } from '@/components/ui/skeleton-dashboard';
 
 const COLORS = [
   '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6',
@@ -35,11 +37,20 @@ export default function DashboardPage() {
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
+  const [chartView, setChartView] = useState<'overview' | 'forecast'>('overview');
+
   const { data: summary, isLoading: loadingSummary } = useTransactionSummary(month, year);
   const { data: breakdown, isLoading: loadingBreakdown } = useCategoryBreakdown(month, year);
   const { data: dailyTrend, isLoading: loadingTrend } = useDailyTrend(month, year);
   const { data: recentTx, isLoading: loadingRecent } = useRecentTransactions(7);
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
+  const { data: forecastData, isLoading: loadingForecast } = useCashflowForecast();
+
+  const isLoading = loadingSummary || loadingBreakdown || loadingTrend || loadingRecent || loadingAccounts || loadingForecast;
+
+  if (isLoading) {
+    return <SkeletonDashboard />;
+  }
 
   const pieData = (breakdown || []).map((item, idx) => ({
     name: item.category?.name || 'Lainnya',
@@ -54,6 +65,11 @@ export default function DashboardPage() {
     Pengeluaran: d.expense,
   }));
 
+  const forecastChartData = (forecastData || []).map((d) => ({
+    date: d.date.slice(5), // "MM-DD"
+    Saldo: d.balance,
+  }));
+
   const balance = summary?.allTimeBalance ?? summary?.balance ?? 0;
   const isPositive = balance >= 0;
 
@@ -66,7 +82,7 @@ export default function DashboardPage() {
           <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
         </div>
         <div className="text-2xl sm:text-3xl md:text-[40px] font-bold tracking-tight z-10 truncate">
-          {loadingSummary ? <Skeleton className="w-48 h-10 bg-primary-foreground/20" /> : formatCurrency(balance)}
+          {formatCurrency(balance)}
         </div>
         <div className="flex items-center gap-1 opacity-90 mt-2 z-10">
           <span className="material-symbols-outlined text-[16px]">
@@ -83,7 +99,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Wallets / Accounts Section */}
-      {!loadingAccounts && accounts.length > 0 && (
+      {accounts.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dompet Saya</h3>
@@ -95,7 +111,7 @@ export default function DashboardPage() {
             {accounts.map((acc) => (
               <div
                 key={acc.id}
-                className="min-w-[180px] sm:min-w-[220px] rounded-2xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between relative overflow-hidden shrink-0"
+                className="min-w-[180px] sm:min-w-[220px] rounded-2xl border border-border/70 bg-card/65 backdrop-blur-md p-4 shadow-sm hover:shadow-md hover:scale-[1.02] hover:border-emerald-500/20 transition-all duration-300 flex flex-col justify-between relative overflow-hidden shrink-0"
               >
                 <div
                   className="absolute left-0 top-0 bottom-0 w-1.5"
@@ -115,19 +131,19 @@ export default function DashboardPage() {
 
       {/* Quick Actions Bento */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-        <Link href="/transactions/new?type=INCOME" className="group flex flex-col items-center justify-center gap-2 p-4 bg-card border border-border rounded-[20px] shadow-[0px_2px_8px_rgba(26,43,60,0.04)] hover:shadow-[0px_8px_24px_rgba(26,43,60,0.08)] transition-all duration-300 hover:-translate-y-1 active:scale-95">
+        <Link href="/transactions/new?type=INCOME" className="group flex flex-col items-center justify-center gap-2 p-4 bg-card/65 backdrop-blur-md border border-border/80 rounded-[20px] shadow-[0px_2px_8px_rgba(26,43,60,0.04)] hover:shadow-[0px_8px_24px_rgba(26,43,60,0.08)] transition-all duration-300 hover:-translate-y-1 active:scale-95">
           <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
             <span className="material-symbols-outlined text-[24px]">arrow_downward</span>
           </div>
           <span className="font-body-sm text-sm font-semibold text-foreground">Income</span>
         </Link>
-        <Link href="/transactions/new?type=EXPENSE" className="group flex flex-col items-center justify-center gap-2 p-4 bg-card border border-border rounded-[20px] shadow-[0px_2px_8px_rgba(26,43,60,0.04)] hover:shadow-[0px_8px_24px_rgba(26,43,60,0.08)] transition-all duration-300 hover:-translate-y-1 active:scale-95">
+        <Link href="/transactions/new?type=EXPENSE" className="group flex flex-col items-center justify-center gap-2 p-4 bg-card/65 backdrop-blur-md border border-border/80 rounded-[20px] shadow-[0px_2px_8px_rgba(26,43,60,0.04)] hover:shadow-[0px_8px_24px_rgba(26,43,60,0.08)] transition-all duration-300 hover:-translate-y-1 active:scale-95">
           <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
             <span className="material-symbols-outlined text-[24px]">arrow_upward</span>
           </div>
           <span className="font-body-sm text-sm font-semibold text-foreground">Expense</span>
         </Link>
-        <Link href="/transactions" className="group flex flex-col items-center justify-center gap-2 p-4 bg-card border border-border rounded-[20px] shadow-[0px_2px_8px_rgba(26,43,60,0.04)] hover:shadow-[0px_8px_24px_rgba(26,43,60,0.08)] transition-all duration-300 hover:-translate-y-1 active:scale-95">
+        <Link href="/transactions" className="group flex flex-col items-center justify-center gap-2 p-4 bg-card/65 backdrop-blur-md border border-border/80 rounded-[20px] shadow-[0px_2px_8px_rgba(26,43,60,0.04)] hover:shadow-[0px_8px_24px_rgba(26,43,60,0.08)] transition-all duration-300 hover:-translate-y-1 active:scale-95">
           <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
             <span className="material-symbols-outlined text-[24px]">receipt_long</span>
           </div>
@@ -145,7 +161,7 @@ export default function DashboardPage() {
       {/* Main Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Income Stat */}
-        <div className="p-6 bg-card border border-border rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] flex flex-col">
+        <div className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:scale-[1.01] hover:border-emerald-500/20 transition-all duration-300 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3 text-emerald-600">
               <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
@@ -155,13 +171,13 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-xl sm:text-2xl md:text-3xl font-heading font-bold text-foreground truncate">
-            {loadingSummary ? <Skeleton className="w-32 h-8" /> : formatCurrency(summary?.totalIncome ?? 0)}
+            {formatCurrency(summary?.totalIncome ?? 0)}
           </div>
           <p className="text-sm text-muted-foreground mt-2">Total income this month</p>
         </div>
 
         {/* Expense Stat */}
-        <div className="p-6 bg-card border border-border rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] flex flex-col">
+        <div className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:scale-[1.01] hover:border-emerald-500/20 transition-all duration-300 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3 text-red-600">
               <div className="p-2 rounded-xl bg-red-50 dark:bg-red-500/10">
@@ -171,7 +187,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-xl sm:text-2xl md:text-3xl font-heading font-bold text-foreground truncate">
-            {loadingSummary ? <Skeleton className="w-32 h-8" /> : formatCurrency(summary?.totalExpense ?? 0)}
+            {formatCurrency(summary?.totalExpense ?? 0)}
           </div>
           <p className="text-sm text-muted-foreground mt-2">Total expense this month</p>
         </div>
@@ -180,56 +196,118 @@ export default function DashboardPage() {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cashflow Chart */}
-        <div className="lg:col-span-2 p-6 bg-card border border-border rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)]">
-          <h3 className="font-h3 text-xl font-bold text-foreground mb-6">Cashflow Overview</h3>
-          {loadingTrend ? (
-            <Skeleton className="w-full h-[260px]" />
-          ) : chartData.length === 0 ? (
-            <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
-              No transactions yet this month
+        <div className="lg:col-span-2 p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:border-emerald-500/10 transition-all duration-300">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+            <h3 className="font-h3 text-xl font-bold text-foreground">
+              {chartView === 'overview' ? 'Cashflow Overview' : 'Prediksi Arus Kas (30 Hari Ke Depan)'}
+            </h3>
+            <div className="flex bg-muted/65 p-1 rounded-xl border border-border/40 text-xs font-semibold">
+              <button
+                onClick={() => setChartView('overview')}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg transition-all cursor-pointer",
+                  chartView === 'overview'
+                    ? "bg-card text-foreground shadow-sm font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Tren Harian
+              </button>
+              <button
+                onClick={() => setChartView('forecast')}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1",
+                  chartView === 'forecast'
+                    ? "bg-card text-foreground shadow-sm font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span className="material-symbols-outlined text-[14px]">insights</span>
+                Prediksi
+              </button>
             </div>
+          </div>
+
+          {chartView === 'overview' ? (
+            chartData.length === 0 ? (
+              <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
+                No transactions yet this month
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--card)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: 'var(--foreground)'
+                    }}
+                    itemStyle={{ color: 'var(--foreground)' }}
+                    formatter={(value) => formatCurrency(Number(value))}
+                  />
+                  <Area type="monotone" dataKey="Pemasukan" stroke="#10b981" fill="url(#colorIncome)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
+                  <Area type="monotone" dataKey="Pengeluaran" stroke="#ef4444" fill="url(#colorExpense)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )
           ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'var(--card)',
-                    border: 'none',
-                    borderRadius: '12px',
-                    boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: 'var(--foreground)'
-                  }}
-                  itemStyle={{ color: 'var(--foreground)' }}
-                  formatter={(value) => formatCurrency(Number(value))}
-                />
-                <Area type="monotone" dataKey="Pemasukan" stroke="#10b981" fill="url(#colorIncome)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
-                <Area type="monotone" dataKey="Pengeluaran" stroke="#ef4444" fill="url(#colorExpense)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
-              </AreaChart>
-            </ResponsiveContainer>
+            forecastChartData.length === 0 ? (
+              <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
+                No forecast data available
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={forecastChartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--card)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: 'var(--foreground)'
+                    }}
+                    itemStyle={{ color: 'var(--foreground)' }}
+                    formatter={(value) => formatCurrency(Number(value))}
+                  />
+                  <Area type="monotone" dataKey="Saldo" stroke="#3b82f6" fill="url(#colorBalance)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )
           )}
         </div>
 
         {/* Expenses Pie */}
-        <div className="p-6 bg-card border border-border rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)]">
+        <div className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:border-emerald-500/10 transition-all duration-300">
           <h3 className="font-h3 text-xl font-bold text-foreground mb-6">Top Expenses</h3>
-          {loadingBreakdown ? (
-            <Skeleton className="w-full h-[260px]" />
-          ) : pieData.length === 0 ? (
+          {pieData.length === 0 ? (
             <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
               No expenses to show
             </div>
@@ -283,7 +361,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Transactions List */}
-      <div className="w-full bg-card border border-border rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] overflow-hidden">
+      <div className="w-full bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] overflow-hidden">
         <div className="flex items-center justify-between p-6 pb-4 border-b border-border/50">
           <h3 className="font-h3 text-xl font-bold text-foreground">Recent Activity</h3>
           <Link href="/transactions" className="text-sm font-semibold text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
@@ -292,22 +370,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="p-2">
-          {loadingRecent ? (
-            <div className="p-4 space-y-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Skeleton className="w-12 h-12 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="w-32 h-4" />
-                      <Skeleton className="w-20 h-3" />
-                    </div>
-                  </div>
-                  <Skeleton className="w-24 h-5" />
-                </div>
-              ))}
-            </div>
-          ) : !recentTx || recentTx.length === 0 ? (
+          {!recentTx || recentTx.length === 0 ? (
             <div className="py-12 text-center flex flex-col items-center justify-center">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
                 <span className="material-symbols-outlined text-[32px]">receipt_long</span>
@@ -317,11 +380,12 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-1">
-              {recentTx.map((tx) => (
+              {recentTx.map((tx, idx) => (
                 <Link
                   key={tx.id}
                   href={`/transactions/${tx.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-[16px] transition-colors group gap-4"
+                  style={{ animationDelay: `${idx * 60}ms` }}
+                  className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-[16px] transition-all duration-300 group gap-4 animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
                 >
                   <div className="flex items-center gap-4 min-w-0">
                     <div
@@ -341,15 +405,27 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end shrink-0 text-right">
+                  <div className="flex items-center gap-3 shrink-0">
                     <span
                       className={cn(
-                        'font-bold text-sm md:text-base',
-                        tx.type === 'INCOME' ? 'text-emerald-600' : 'text-foreground'
+                        'text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline-block shrink-0',
+                        tx.type === 'INCOME'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20'
+                          : 'bg-red-500/10 text-red-600 dark:bg-red-500/20'
                       )}
                     >
-                      {tx.type === 'INCOME' ? '+' : '-'}{formatCurrency(Number(tx.amount))}
+                      {tx.type === 'INCOME' ? 'Masuk' : 'Keluar'}
                     </span>
+                    <div className="flex flex-col items-end text-right">
+                      <span
+                        className={cn(
+                          'font-bold text-sm md:text-base',
+                          tx.type === 'INCOME' ? 'text-emerald-600' : 'text-foreground'
+                        )}
+                      >
+                        {tx.type === 'INCOME' ? '+' : '-'}{formatCurrency(Number(tx.amount))}
+                      </span>
+                    </div>
                   </div>
                 </Link>
               ))}

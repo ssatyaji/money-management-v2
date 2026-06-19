@@ -12,4 +12,8 @@ export class ReportsService {
   async getYearlyReport(userId: string, year: number) {
     return this.reportsRepository.getYearlyReport(userId, year);
   }
+
+  async getCashflowForecast(userId: string) {
+    return this.reportsRepository.getCashflowForecast(userId);
+  }
 }
