@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { authApi } from '@/lib/api/auth.api';
+import { deleteMe } from '@/lib/api/users.api';
 import { LogoutDialog } from '@/components/shared/logout-dialog';
 
 function SettingsPageContent() {
@@ -70,6 +71,8 @@ function SettingsPageContent() {
   const [deleteWalletConfirmId, setDeleteWalletConfirmId] = useState<string | null>(null);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [walletForm, setWalletForm] = useState({
     name: '',
     startingBalance: '',
@@ -250,6 +253,21 @@ function SettingsPageContent() {
     } finally {
       setIsLoggingOut(false);
       setShowLogoutDialog(false);
+    }
+  };
+
+  const confirmDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      await deleteMe();
+      toast.success('Akun Anda berhasil dihapus 😢');
+      await logout();
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Gagal menghapus akun';
+      toast.error(msg);
+    } finally {
+      setIsDeletingAccount(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -628,6 +646,23 @@ function SettingsPageContent() {
               </div>
             </div>
           </div>
+
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6 mt-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
+                <span className="material-symbols-outlined text-xl">delete_forever</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-red-500">Hapus Akun</h3>
+                <p className="text-sm text-muted-foreground mt-1 mb-4">
+                  Tindakan ini bersifat permanen dan tidak dapat dibatalkan. Semua data keuangan, riwayat transaksi, anggaran, dompet, dan profil Anda akan dihapus selamanya dari sistem.
+                </p>
+                <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} className="rounded-full px-6 shadow-sm bg-red-600 hover:bg-red-700">
+                  Hapus Akun Permanen
+                </Button>
+              </div>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -721,6 +756,29 @@ function SettingsPageContent() {
         onConfirm={confirmLogout}
         isLoading={isLoggingOut}
       />
+
+      {/* Delete Account Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-500 flex items-center gap-2">
+              <span className="material-symbols-outlined text-xl">warning</span>
+              Hapus Akun Anda?
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Apakah Anda benar-benar yakin? Semua data Anda akan dihapus secara permanen dari server. Tindakan ini <strong>tidak dapat dibatalkan</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeletingAccount}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteAccount} disabled={isDeletingAccount} className="bg-red-600 hover:bg-red-700">
+              {isDeletingAccount ? 'Menghapus...' : 'Ya, Hapus Akun Saya'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

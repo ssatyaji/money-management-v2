@@ -54,6 +54,14 @@ export class UsersRepository {
   }
 
   async delete(id: string): Promise<User> {
-    return this.prisma.user.delete({ where: { id } });
+    return this.prisma.$transaction(async (tx) => {
+      // Delete user data in correct order to avoid foreign key violations
+      await tx.transaction.deleteMany({ where: { userId: id } });
+      await tx.budget.deleteMany({ where: { userId: id } });
+      await tx.recurringTransaction.deleteMany({ where: { userId: id } });
+      await tx.category.deleteMany({ where: { userId: id } });
+      return tx.user.delete({ where: { id } });
+    });
   }
 }
+

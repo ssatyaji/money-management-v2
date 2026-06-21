@@ -60,3 +60,8 @@ export const updateUser = async (id: string, data: UpdateUserDto): Promise<User>
 export const deleteUser = async (id: string): Promise<void> => {
   await apiClient.delete(`/users/${id}`);
 };
+
+export const deleteMe = async (): Promise<void> => {
+  await apiClient.delete('/users/me');
+};
+

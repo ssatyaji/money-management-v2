@@ -50,6 +50,12 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
+  @Delete('me')
+  @ApiOperation({ summary: 'Delete own account' })
+  removeMe(@CurrentUser() currentUser: { id: string }) {
+    return this.usersService.remove(currentUser.id);
+  }
+
   @Delete(':id')
   @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Delete user (Admin only)' })
@@ -57,3 +63,4 @@ export class UsersController {
     return this.usersService.remove(id);
   }
 }
+
