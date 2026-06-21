@@ -49,12 +49,10 @@ export class AuthService {
       financialGoal: registerDto.financialGoal,
     });
 
-    // Generate and send email verification OTP code
-    try {
-      await this.otpService.generateAndSendOtp(email, 'REGISTER');
-    } catch (error: any) {
+    // Fire-and-forget: jangan blokir response, kirim OTP di background
+    this.otpService.generateAndSendOtp(email, 'REGISTER').catch((error: any) => {
       this.logger.error(`Failed to send verification OTP to ${email}: ${error.message}`);
-    }
+    });
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.updateRefreshToken(user.id, tokens.refreshToken);
