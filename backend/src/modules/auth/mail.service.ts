@@ -22,6 +22,9 @@ export class MailService {
           user,
           pass,
         },
+        connectionTimeout: 10000,  // 10 detik timeout untuk koneksi
+        greetingTimeout: 10000,    // 10 detik timeout untuk greeting
+        socketTimeout: 15000,      // 15 detik timeout untuk socket
       });
       this.logger.log('SMTP Mail transporter configured successfully.');
     } else {
@@ -31,8 +34,8 @@ export class MailService {
 
   async sendMail(to: string, subject: string, html: string): Promise<boolean> {
     if (!this.transporter) {
-      this.logger.warn(`[Mail-Fallback] Transporter not configured. Cannot send email to: ${to}`);
-      this.logger.log(`[Mail-Fallback] Subject: ${subject}\nHTML Content:\n${html}`);
+      this.logger.error(`[MAIL-ERROR] SMTP transporter NOT configured! MAIL_USER/MAIL_PASS env vars are missing. Email to ${to} was NOT sent.`);
+      this.logger.debug(`[Mail-Fallback] Subject: ${subject}`);
       return false;
     }
 
