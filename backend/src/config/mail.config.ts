@@ -6,5 +6,6 @@ export default registerAs('mail', () => ({
   user: process.env.MAIL_USER || '',
   pass: process.env.MAIL_PASS || '',
   resendApiKey: process.env.RESEND_API_KEY || '',
+  brevoApiKey: process.env.BREVO_API_KEY || '',
   from: process.env.MAIL_FROM || '"Zayn Finance" <noreply@zaynfinance.com>',
 }));
