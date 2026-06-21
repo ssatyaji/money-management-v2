@@ -25,7 +25,8 @@ export class MailService {
         connectionTimeout: 10000,  // 10 detik timeout untuk koneksi
         greetingTimeout: 10000,    // 10 detik timeout untuk greeting
         socketTimeout: 15000,      // 15 detik timeout untuk socket
-      });
+        family: 4,                 // Force IPv4 (ponytail: fix ENETUNREACH)
+      } as any);
       this.logger.log('SMTP Mail transporter configured successfully.');
     } else {
       this.logger.warn('SMTP credentials are missing. OTP emails will be logged to console instead of sent.');
