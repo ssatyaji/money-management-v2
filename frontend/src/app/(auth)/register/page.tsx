@@ -185,18 +185,22 @@ export default function RegisterPage() {
 
   return (
     <>
-      <main className="min-h-screen flex flex-col items-center justify-center px-4 md:px-8 py-12">
-        <div className="w-full max-w-md flex flex-col items-center space-y-8 bg-card/40 backdrop-blur-md border border-border p-8 rounded-2xl shadow-xl">
+      <main className="min-h-screen flex flex-col items-center justify-center px-4 md:px-8 py-12 relative">
+        <div className="w-full max-w-md flex flex-col items-center space-y-6 bg-card/65 backdrop-blur-xl border border-border/60 p-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden">
+          {/* Top border light highlight */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"></div>
           
           {/* Brand & Heading Section */}
-          <header className="w-full text-center space-y-4">
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-h2 font-bold text-primary tracking-tight">Zayn Finance</span>
-              <div className="h-1 w-8 bg-emerald-500 rounded-full"></div>
+          <header className="w-full text-center space-y-2 animate-in fade-in zoom-in duration-500">
+            <div className="flex flex-col items-center gap-1.5">
+              <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-emerald-600 dark:to-emerald-400 bg-clip-text text-transparent">
+                Zayn Finance
+              </span>
+              <div className="h-[3px] w-6 bg-emerald-500 rounded-full"></div>
             </div>
             <div className="space-y-1">
-              <h1 className="text-h1 text-primary">Daftar Akun</h1>
-              <p className="text-body-md text-muted-foreground">
+              <h1 className="text-xl font-bold tracking-tight text-foreground">Daftar Akun</h1>
+              <p className="text-xs text-muted-foreground">
                 Langkah {step} dari 2: {step === 1 ? 'Informasi Kredensial' : 'Informasi Profil & Finansial'}
               </p>
             </div>
@@ -209,7 +213,7 @@ export default function RegisterPage() {
               <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
                 {/* Email Field */}
                 <div className="space-y-1">
-                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="email">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="email">
                     Alamat Email
                   </label>
                   <input
@@ -217,14 +221,14 @@ export default function RegisterPage() {
                     type="email"
                     placeholder="nama@email.com"
                     {...register('email')}
-                    className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.email ? 'border-destructive' : ''}`}
+                    className={`w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70 ${errors.email ? 'border-destructive/80 focus:border-destructive focus:ring-destructive/20' : ''}`}
                   />
-                  {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                  {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
                 </div>
 
                 {/* Password Field */}
                 <div className="space-y-1">
-                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="password">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="password">
                     Kata Sandi
                   </label>
                   <div className="relative">
@@ -233,12 +237,12 @@ export default function RegisterPage() {
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       {...register('password')}
-                      className={`w-full h-12 px-4 pr-12 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.password ? 'border-destructive' : ''}`}
+                      className={`w-full h-11 px-4 pr-12 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70 ${errors.password ? 'border-destructive/80 focus:border-destructive focus:ring-destructive/20' : ''}`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[20px]">
                         {showPassword ? 'visibility_off' : 'visibility'}
@@ -252,12 +256,12 @@ export default function RegisterPage() {
                       ))}
                     </div>
                   )}
-                  {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+                  {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
                 </div>
 
                 {/* Confirm Password Field */}
                 <div className="space-y-1">
-                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="confirmPassword">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="confirmPassword">
                     Konfirmasi Kata Sandi
                   </label>
                   <input
@@ -265,16 +269,16 @@ export default function RegisterPage() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     {...register('confirmPassword')}
-                    className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.confirmPassword ? 'border-destructive' : ''}`}
+                    className={`w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70 ${errors.confirmPassword ? 'border-destructive/80 focus:border-destructive focus:ring-destructive/20' : ''}`}
                   />
-                  {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
+                  {errors.confirmPassword && <p className="text-xs text-destructive mt-1">{errors.confirmPassword.message}</p>}
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-2">
                   <button
                     type="button"
                     onClick={handleNextStep}
-                    className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm hover:shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     Lanjut
                     <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
@@ -287,7 +291,7 @@ export default function RegisterPage() {
                 <div className="grid grid-cols-2 gap-4">
                   {/* First Name */}
                   <div className="space-y-1">
-                    <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="firstName">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="firstName">
                       Nama Depan
                     </label>
                     <input
@@ -295,14 +299,14 @@ export default function RegisterPage() {
                       type="text"
                       placeholder="John"
                       {...register('firstName')}
-                      className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.firstName ? 'border-destructive' : ''}`}
+                      className={`w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70 ${errors.firstName ? 'border-destructive/80 focus:border-destructive focus:ring-destructive/20' : ''}`}
                     />
-                    {errors.firstName && <p className="text-sm text-destructive">{errors.firstName.message}</p>}
+                    {errors.firstName && <p className="text-xs text-destructive mt-1">{errors.firstName.message}</p>}
                   </div>
 
                   {/* Last Name */}
                   <div className="space-y-1">
-                    <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="lastName">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="lastName">
                       Nama Belakang
                     </label>
                     <input
@@ -310,15 +314,15 @@ export default function RegisterPage() {
                       type="text"
                       placeholder="Doe"
                       {...register('lastName')}
-                      className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${errors.lastName ? 'border-destructive' : ''}`}
+                      className={`w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70 ${errors.lastName ? 'border-destructive/80 focus:border-destructive focus:ring-destructive/20' : ''}`}
                     />
-                    {errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message}</p>}
+                    {errors.lastName && <p className="text-xs text-destructive mt-1">{errors.lastName.message}</p>}
                   </div>
                 </div>
 
                 {/* Phone Number */}
                 <div className="space-y-1">
-                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="phoneNumber">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="phoneNumber">
                     Nomor Telepon (Opsional)
                   </label>
                   <input
@@ -326,13 +330,13 @@ export default function RegisterPage() {
                     type="tel"
                     placeholder="08123456789"
                     {...register('phoneNumber')}
-                    className="w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background"
+                    className="w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70"
                   />
                 </div>
 
                 {/* Occupation */}
                 <div className="space-y-1">
-                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="occupation">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="occupation">
                     Pekerjaan (Opsional)
                   </label>
                   <input
@@ -340,14 +344,14 @@ export default function RegisterPage() {
                     type="text"
                     placeholder="Karyawan, Pengusaha, Freelancer"
                     {...register('occupation')}
-                    className="w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background"
+                    className="w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Monthly Income */}
                   <div className="space-y-1">
-                    <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="monthlyIncome">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="monthlyIncome">
                       Pendapatan Bulanan (Rp)
                     </label>
                     <input
@@ -359,13 +363,13 @@ export default function RegisterPage() {
                         const val = e.target.value.replace(/[^0-9]/g, '');
                         e.target.value = val ? Number(val).toLocaleString('id-ID') : '';
                       }}
-                      className="w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background"
+                      className="w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70"
                     />
                   </div>
 
                   {/* Starting Balance */}
                   <div className="space-y-1">
-                    <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="startingBalance">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="startingBalance">
                       Saldo Awal Utama (Rp)
                     </label>
                     <input
@@ -377,20 +381,20 @@ export default function RegisterPage() {
                         const val = e.target.value.replace(/[^0-9]/g, '');
                         e.target.value = val ? Number(val).toLocaleString('id-ID') : '';
                       }}
-                      className="w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background"
+                      className="w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70"
                     />
                   </div>
                 </div>
 
                 {/* Financial Goal */}
                 <div className="space-y-1">
-                  <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="financialGoal">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="financialGoal">
                     Tujuan Finansial Utama
                   </label>
                   <select
                     id="financialGoal"
                     {...register('financialGoal')}
-                    className="w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background cursor-pointer"
+                    className="w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70 cursor-pointer"
                   >
                     <option value="Menabung">Menabung (Savings)</option>
                     <option value="Investasi">Investasi (Investment)</option>
@@ -400,18 +404,18 @@ export default function RegisterPage() {
                   </select>
                 </div>
 
-                <div className="pt-4 flex gap-3">
+                <div className="pt-2 flex gap-3">
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="w-1/3 h-12 bg-transparent border border-border text-foreground hover:bg-muted/50 rounded-lg font-bold transition-all"
+                    className="w-1/3 h-11 bg-transparent border border-border text-foreground hover:bg-muted/50 rounded-xl text-sm font-semibold transition-all cursor-pointer"
                   >
                     Kembali
                   </button>
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-2/3 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
+                    className="w-2/3 h-11 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm hover:shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
                   >
                     {isLoading ? (
                       <span className="flex items-center gap-2">
@@ -433,10 +437,10 @@ export default function RegisterPage() {
           {step === 1 && (
             <>
               {/* Divider */}
-              <div className="relative flex items-center py-2 w-full">
-                <div className="flex-grow border-t border-border"></div>
-                <span className="flex-shrink mx-4 text-label-caps text-muted-foreground uppercase tracking-widest text-xs">ATAU</span>
-                <div className="flex-grow border-t border-border"></div>
+              <div className="relative flex items-center py-1 w-full">
+                <div className="flex-grow border-t border-border/60"></div>
+                <span className="flex-shrink mx-3 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest">ATAU</span>
+                <div className="flex-grow border-t border-border/60"></div>
               </div>
 
               {/* Social Logins */}
@@ -447,10 +451,10 @@ export default function RegisterPage() {
           )}
 
           {/* Footer Signup */}
-          <footer className="w-full text-center pt-2">
-            <p className="text-body-md text-muted-foreground">
+          <footer className="w-full text-center pt-1 border-t border-border/40">
+            <p className="text-xs text-muted-foreground">
               Sudah punya akun?{' '}
-              <Link href="/login" className="text-emerald-500 font-bold hover:underline transition-all">
+              <Link href="/login" className="text-emerald-500 hover:text-emerald-600 font-bold transition-colors">
                 Masuk
               </Link>
             </p>
@@ -460,8 +464,8 @@ export default function RegisterPage() {
 
       {/* Ambient Visual Elements */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-emerald-500/10 opacity-10 blur-[120px] rounded-full"></div>
-        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-indigo-500/10 opacity-10 blur-[120px] rounded-full"></div>
+        <div className="absolute -top-[10%] -left-[10%] w-[45%] h-[45%] bg-emerald-500/10 dark:bg-emerald-500/5 blur-[120px] rounded-full"></div>
+        <div className="absolute -bottom-[10%] -right-[10%] w-[45%] h-[45%] bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] rounded-full"></div>
       </div>
     </>
   );

@@ -103,20 +103,24 @@ export default function ForgotPasswordPage() {
 
   return (
     <>
-      <main className="min-h-screen flex flex-col items-center justify-center px-4 md:px-8 py-12">
-        <div className="w-full max-w-md flex flex-col items-center space-y-8 bg-card/40 backdrop-blur-md border border-border p-8 rounded-2xl shadow-xl">
+      <main className="min-h-screen flex flex-col items-center justify-center px-4 md:px-8 py-12 relative">
+        <div className="w-full max-w-md flex flex-col items-center space-y-6 bg-card/65 backdrop-blur-xl border border-border/60 p-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden">
+          {/* Top border light highlight */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"></div>
           
           {/* Brand & Heading Section */}
-          <header className="w-full text-center space-y-4">
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-h2 font-bold text-primary tracking-tight">Zayn Finance</span>
-              <div className="h-1 w-8 bg-emerald-500 rounded-full"></div>
+          <header className="w-full text-center space-y-2 animate-in fade-in zoom-in duration-500">
+            <div className="flex flex-col items-center gap-1.5">
+              <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-emerald-600 dark:to-emerald-400 bg-clip-text text-transparent">
+                Zayn Finance
+              </span>
+              <div className="h-[3px] w-6 bg-emerald-500 rounded-full"></div>
             </div>
             <div className="space-y-1">
-              <h1 className="text-h1 text-primary">Lupa Sandi?</h1>
-              <p className="text-body-md text-muted-foreground mt-2">
+              <h1 className="text-xl font-bold tracking-tight text-foreground">Lupa Sandi?</h1>
+              <p className="text-xs text-muted-foreground">
                 {step === 1 
-                  ? 'Masukkan email terdaftar untuk meminta kode pemulihan OTP'
+                  ? 'Masukkan email terdaftar untuk meminta kode pemulihan OTP.'
                   : `Kode verifikasi dikirim ke ${email}. Setel kata sandi baru Anda.`}
               </p>
             </div>
@@ -126,7 +130,7 @@ export default function ForgotPasswordPage() {
             // STEP 1: REQUEST OTP
             <form className="w-full space-y-4" onSubmit={forgotForm.handleSubmit(onForgotSubmit)}>
               <div className="space-y-1">
-                <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="forgot-email">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="forgot-email">
                   Alamat Email
                 </label>
                 <input
@@ -134,17 +138,17 @@ export default function ForgotPasswordPage() {
                   type="email"
                   placeholder="nama@email.com"
                   {...forgotForm.register('email')}
-                  className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${forgotForm.formState.errors.email ? 'border-destructive' : ''}`}
+                  className={`w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70 ${forgotForm.formState.errors.email ? 'border-destructive/80 focus:border-destructive focus:ring-destructive/20' : ''}`}
                 />
                 {forgotForm.formState.errors.email && (
-                  <p className="text-sm text-destructive">{forgotForm.formState.errors.email.message}</p>
+                  <p className="text-xs text-destructive mt-1">{forgotForm.formState.errors.email.message}</p>
                 )}
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
+                className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm hover:shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
@@ -164,7 +168,7 @@ export default function ForgotPasswordPage() {
             <form className="w-full space-y-4" onSubmit={resetForm.handleSubmit(onResetSubmit)}>
               {/* Code Field */}
               <div className="space-y-1">
-                <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="reset-code">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="reset-code">
                   Kode OTP (6-Digit)
                 </label>
                 <input
@@ -173,16 +177,16 @@ export default function ForgotPasswordPage() {
                   maxLength={6}
                   placeholder="000000"
                   {...resetForm.register('code')}
-                  className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-center text-xl font-bold tracking-[4px] outline-none focus:border-emerald-500 focus:bg-background ${resetForm.formState.errors.code ? 'border-destructive' : ''}`}
+                  className={`w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-center text-lg font-bold tracking-[4px] outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all ${resetForm.formState.errors.code ? 'border-destructive/80 focus:border-destructive focus:ring-destructive/20' : ''}`}
                 />
                 {resetForm.formState.errors.code && (
-                  <p className="text-sm text-destructive">{resetForm.formState.errors.code.message}</p>
+                  <p className="text-xs text-destructive mt-1">{resetForm.formState.errors.code.message}</p>
                 )}
               </div>
 
               {/* Password Field */}
               <div className="space-y-1">
-                <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="reset-password">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="reset-password">
                   Kata Sandi Baru
                 </label>
                 <div className="relative">
@@ -191,12 +195,12 @@ export default function ForgotPasswordPage() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     {...resetForm.register('password')}
-                    className={`w-full h-12 px-4 pr-12 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${resetForm.formState.errors.password ? 'border-destructive' : ''}`}
+                    className={`w-full h-11 px-4 pr-12 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70 ${resetForm.formState.errors.password ? 'border-destructive/80 focus:border-destructive focus:ring-destructive/20' : ''}`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[20px]">
                       {showPassword ? 'visibility_off' : 'visibility'}
@@ -211,13 +215,13 @@ export default function ForgotPasswordPage() {
                   </div>
                 )}
                 {resetForm.formState.errors.password && (
-                  <p className="text-sm text-destructive">{resetForm.formState.errors.password.message}</p>
+                  <p className="text-xs text-destructive mt-1">{resetForm.formState.errors.password.message}</p>
                 )}
               </div>
 
               {/* Confirm Password Field */}
               <div className="space-y-1">
-                <label className="text-label-caps text-muted-foreground uppercase tracking-widest text-xs" htmlFor="reset-confirmPassword">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="reset-confirmPassword">
                   Konfirmasi Kata Sandi Baru
                 </label>
                 <input
@@ -225,10 +229,10 @@ export default function ForgotPasswordPage() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   {...resetForm.register('confirmPassword')}
-                  className={`w-full h-12 px-4 bg-muted/60 border border-border rounded-lg text-body-md text-foreground transition-all outline-none focus:border-emerald-500 focus:bg-background ${resetForm.formState.errors.confirmPassword ? 'border-destructive' : ''}`}
+                  className={`w-full h-11 px-4 bg-muted/40 hover:bg-muted/65 focus:bg-background border border-border/80 focus:border-emerald-500/80 rounded-xl text-sm transition-all outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-muted-foreground/70 ${resetForm.formState.errors.confirmPassword ? 'border-destructive/80 focus:border-destructive focus:ring-destructive/20' : ''}`}
                 />
                 {resetForm.formState.errors.confirmPassword && (
-                  <p className="text-sm text-destructive">{resetForm.formState.errors.confirmPassword.message}</p>
+                  <p className="text-xs text-destructive mt-1">{resetForm.formState.errors.confirmPassword.message}</p>
                 )}
               </div>
 
@@ -236,14 +240,14 @@ export default function ForgotPasswordPage() {
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="w-1/3 h-12 bg-transparent border border-border text-foreground hover:bg-muted/50 rounded-lg font-bold transition-all"
+                  className="w-1/3 h-11 bg-transparent border border-border text-foreground hover:bg-muted/50 rounded-xl text-sm font-semibold transition-all cursor-pointer"
                 >
                   Kembali
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-2/3 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                  className="w-2/3 h-11 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm hover:shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
                 >
                   {isLoading ? (
                     <span className="flex items-center gap-2">
@@ -259,10 +263,10 @@ export default function ForgotPasswordPage() {
           )}
 
           {/* Footer */}
-          <footer className="w-full text-center pt-2">
-            <p className="text-body-md text-muted-foreground">
+          <footer className="w-full text-center pt-1 border-t border-border/40">
+            <p className="text-xs text-muted-foreground">
               Ingat sandi Anda?{' '}
-              <Link href="/login" className="text-emerald-500 font-bold hover:underline transition-all">
+              <Link href="/login" className="text-emerald-500 hover:text-emerald-600 font-bold transition-colors">
                 Masuk
               </Link>
             </p>
@@ -272,8 +276,8 @@ export default function ForgotPasswordPage() {
 
       {/* Ambient Visual Elements */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-emerald-500/10 opacity-10 blur-[120px] rounded-full"></div>
-        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-indigo-500/10 opacity-10 blur-[120px] rounded-full"></div>
+        <div className="absolute -top-[10%] -left-[10%] w-[45%] h-[45%] bg-emerald-500/10 dark:bg-emerald-500/5 blur-[120px] rounded-full"></div>
+        <div className="absolute -bottom-[10%] -right-[10%] w-[45%] h-[45%] bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] rounded-full"></div>
       </div>
     </>
   );
