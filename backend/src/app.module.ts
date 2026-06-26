@@ -19,6 +19,7 @@ import { RecurringTransactionsModule } from './modules/recurring-transactions/re
 import { ScheduleModule } from '@nestjs/schedule';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { HealthController } from './common/health.controller';
 import appConfig from './config/app.config';
 import jwtConfig from './config/jwt.config';
 import redisConfig from './config/redis.config';
@@ -62,6 +63,7 @@ import storageConfig from './config/storage.config';
     AccountsModule,
     RecurringTransactionsModule,
   ],
+  controllers: [HealthController],
   providers: [
     // Global JWT auth guard — all routes require auth by default
     {

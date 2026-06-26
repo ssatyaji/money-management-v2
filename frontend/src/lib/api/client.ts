@@ -11,6 +11,25 @@ export const setAccessToken = (token: string | null) => {
 
 export const getAccessToken = () => accessToken;
 
+/**
+ * Classify whether an error is a server/network error (server down, cold starting)
+ * vs a genuine auth error (token invalid/expired).
+ *
+ * Server/network errors:
+ * - No response at all (network error, DNS failure, timeout)
+ * - 408 Request Timeout
+ * - 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout
+ *
+ * These indicate the server is unreachable (e.g., Render free tier cold start),
+ * NOT that the token is invalid.
+ */
+export function isServerOrNetworkError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  if (!error.response) return true; // Network error — no response received
+  const status = error.response.status;
+  return [408, 502, 503, 504].includes(status);
+}
+
 const apiClient = axios.create({
   baseURL: API_URL,
   withCredentials: true, // Send cookies (refresh token)
@@ -72,12 +91,18 @@ apiClient.interceptors.response.use(
 
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh failed — clear token and redirect to login
         setAccessToken(null);
+
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('refresh_token');
-          if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
-            window.location.href = '/login';
+          // Only clear refresh token on genuine auth errors (401/403).
+          // If the server is down or cold-starting (502/503/504/network error),
+          // preserve the refresh token so the user can retry later.
+          const isServerDown = isServerOrNetworkError(refreshError);
+          if (!isServerDown) {
+            localStorage.removeItem('refresh_token');
+            if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
+              window.location.href = '/login';
+            }
           }
         }
         return Promise.reject(refreshError);
