@@ -287,6 +287,8 @@ export class AuthService {
     const user = await this.usersService.findById(userId);
 
     if (!user.refreshToken) {
+      // Refresh token is null — either user already logged out or token reuse attack
+      this.logger.warn(`Refresh token reuse attempt for user ${userId} — stored token is null`);
       throw new UnauthorizedException('Access denied');
     }
 
@@ -295,6 +297,10 @@ export class AuthService {
       user.refreshToken,
     );
     if (!isRefreshTokenValid) {
+      // Token doesn't match — possible token theft (old token used after rotation)
+      // Invalidate all refresh tokens as a security precaution
+      this.logger.warn(`Invalid refresh token for user ${userId} — possible token theft, invalidating all sessions`);
+      await this.usersService.updateRefreshToken(userId, null);
       throw new UnauthorizedException('Access denied');
     }
 

@@ -151,6 +151,7 @@ export class AuthController {
   @UseGuards(RefreshTokenGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Refresh access token' })
   async refresh(
     @CurrentUser() user: { id: string; refreshToken: string },

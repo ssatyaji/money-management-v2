@@ -122,6 +122,14 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 bg-card border border-border rounded-lg shadow-[0px_4px_12px_rgba(26,43,60,0.1)] p-1 z-50">
+            {/* Refresh — only visible on mobile (PWA on iPhone doesn't support pull-to-refresh) */}
+            <DropdownMenuItem
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-3 w-full px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer rounded-md outline-none lg:hidden"
+            >
+              <span className="material-symbols-outlined text-[20px]">refresh</span>
+              Refresh
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => router.push('/settings?tab=profile')}
               className="flex items-center gap-3 w-full px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer rounded-md outline-none"

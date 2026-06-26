@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User } from '@/types/auth.types';
 import { authApi, LoginInput, RegisterInput } from '@/lib/api/auth.api';
-import { setAccessToken } from '@/lib/api/client';
+import { setAccessToken, isServerOrNetworkError } from '@/lib/api/client';
 
 interface AuthContextType {
   user: User | null;
@@ -26,28 +26,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Try to restore session on mount
   useEffect(() => {
     const initAuth = async () => {
-      try {
-        // Try to refresh token (cookie-based or storage-based)
-        const tokens = await authApi.refresh();
-        setAccessToken(tokens.accessToken);
-        if (tokens.refreshToken) {
-          localStorage.setItem('refresh_token', tokens.refreshToken);
-        }
-
-        // Get user profile
-        const userData = await authApi.getMe();
-        setUser(userData);
-      } catch {
-        // No valid session
-        setAccessToken(null);
-        localStorage.removeItem('refresh_token');
-        setUser(null);
-      } finally {
+      // Check if we have a stored refresh token before attempting
+      const hasStoredToken = typeof window !== 'undefined' && localStorage.getItem('refresh_token');
+      if (!hasStoredToken) {
         setIsLoading(false);
+        return;
+      }
+
+      const MAX_RETRIES = 3;
+      const BASE_DELAY_MS = 2000; // Exponential backoff: 2s, 4s, 8s
+
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          // Try to refresh token (cookie-based or storage-based)
+          const tokens = await authApi.refresh();
+          setAccessToken(tokens.accessToken);
+          if (tokens.refreshToken) {
+            localStorage.setItem('refresh_token', tokens.refreshToken);
+          }
+
+          // Get user profile
+          const userData = await authApi.getMe();
+          setUser(userData);
+          return; // Success — exit
+        } catch (error: unknown) {
+          const isServerDown = isServerOrNetworkError(error);
+
+          if (isServerDown && attempt < MAX_RETRIES) {
+            // Server is cold-starting — wait and retry
+            await new Promise(resolve =>
+              setTimeout(resolve, BASE_DELAY_MS * Math.pow(2, attempt)),
+            );
+            continue;
+          }
+
+          // Genuine auth error (401/403) or max retries exceeded
+          setAccessToken(null);
+          if (!isServerDown) {
+            // Token is truly invalid — clear it
+            localStorage.removeItem('refresh_token');
+          }
+          // If server is still down after max retries, keep the token
+          // so user can try again on next page load
+          setUser(null);
+          return;
+        }
       }
     };
 
-    initAuth();
+    initAuth().finally(() => setIsLoading(false));
   }, []);
 
   const login = useCallback(async (data: LoginInput) => {
