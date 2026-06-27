@@ -223,7 +223,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3 text-amber-600">
               <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10">
-                <span className="material-symbols-outlined text-[20px]">hand_coins</span>
+                <span className="material-symbols-outlined text-[20px]">paid</span>
               </div>
               <span className="font-body-sm font-semibold">Hutang & Piutang</span>
             </div>

@@ -12,7 +12,7 @@ export function MobileNav() {
     { label: 'Transaksi', href: '/transactions', icon: 'receipt_long' },
     { label: 'Budget', href: '/budgets', icon: 'savings' },
     { label: 'Goals', href: '/goals', icon: 'target' },
-    { label: 'Hutang', href: '/debts', icon: 'hand_coins' },
+    { label: 'Hutang', href: '/debts', icon: 'paid' },
     { label: 'Investasi', href: '/investments', icon: 'trending_up' },
     { label: 'Laporan', href: '/reports/monthly', icon: 'insights' },
     { label: 'Reminder', href: '/reminders', icon: 'notifications' },
