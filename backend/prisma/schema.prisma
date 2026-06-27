@@ -82,17 +82,17 @@ model User {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  transactions      Transaction[]
-  categories        Category[]
-  budgets           Budget[]
-  reminders         Reminder[]
-  bankStatements    BankStatement[]
-  pushSubscriptions PushSubscription[]
-  accounts          Account[]
+  transactions          Transaction[]
+  categories            Category[]
+  budgets               Budget[]
+  reminders             Reminder[]
+  bankStatements        BankStatement[]
+  pushSubscriptions     PushSubscription[]
+  accounts              Account[]
   recurringTransactions RecurringTransaction[]
-  savingGoals       SavingGoal[]
-  debts             Debt[]
-  investmentAssets  InvestmentAsset[]
+  savingGoals           SavingGoal[]
+  debts                 Debt[]
+  investmentAssets      InvestmentAsset[]
 
   @@map("users")
 }
@@ -109,8 +109,8 @@ model Category {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
-  transactions Transaction[]
-  budgets      Budget[]
+  transactions          Transaction[]
+  budgets               Budget[]
   recurringTransactions RecurringTransaction[]
 
   @@unique([name, userId])
@@ -141,6 +141,11 @@ model Transaction {
 
   bankStatementId String?
   bankStatement   BankStatement? @relation(fields: [bankStatementId], references: [id])
+
+  savingGoalId String?
+  savingGoal   SavingGoal? @relation(fields: [savingGoalId], references: [id], onDelete: SetNull)
+
+  goalContribution GoalContribution?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -175,15 +180,15 @@ model Budget {
 }
 
 model Reminder {
-  id           String              @id @default(uuid())
+  id           String             @id @default(uuid())
   title        String
   description  String?
-  amount       Decimal?            @db.Decimal(15, 2)
+  amount       Decimal?           @db.Decimal(15, 2)
   dueDate      DateTime
-  isRecurring  Boolean             @default(false)
+  isRecurring  Boolean            @default(false)
   frequency    ReminderFrequency?
-  isCompleted  Boolean             @default(false)
-  notifyBefore Int                 @default(1)
+  isCompleted  Boolean            @default(false)
+  notifyBefore Int                @default(1)
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -243,9 +248,10 @@ model Account {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  transactions            Transaction[] @relation("SourceAccountTransactions")
-  destinationTransactions Transaction[] @relation("DestinationAccountTransactions")
+  transactions            Transaction[]          @relation("SourceAccountTransactions")
+  destinationTransactions Transaction[]          @relation("DestinationAccountTransactions")
   recurringTransactions   RecurringTransaction[]
+  goalContributions       GoalContribution[]
 
   @@unique([name, userId])
   @@map("accounts")
@@ -255,7 +261,7 @@ model OtpVerification {
   id        String   @id @default(uuid())
   email     String
   code      String
-  purpose   String   // "REGISTER" | "FORGOT_PASSWORD"
+  purpose   String // "REGISTER" | "FORGOT_PASSWORD"
   expiresAt DateTime
   createdAt DateTime @default(now())
 
@@ -282,17 +288,17 @@ model RecurringTransaction {
   isActive      Boolean            @default(true)
   lastTriggered DateTime?
 
-  categoryId    String
-  category      Category           @relation(fields: [categoryId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  accountId     String
-  account       Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
-  userId        String
-  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, nextDueDate])
   @@index([userId, isActive])
@@ -304,8 +310,8 @@ model RecurringTransaction {
 // ============================================================================
 
 enum GoalType {
-  SAVE_UP    // Kumpulkan uang (DP rumah, dana darurat)
-  PAY_OFF    // Lunasi hutang (cicilan mobil, KPR)
+  SAVE_UP // Kumpulkan uang (DP rumah, dana darurat)
+  PAY_OFF // Lunasi hutang (cicilan mobil, KPR)
 }
 
 enum GoalStatus {
@@ -328,28 +334,35 @@ model SavingGoal {
   status        GoalStatus @default(ACTIVE)
   completedAt   DateTime?
 
-  userId        String
-  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   contributions GoalContribution[]
+  transactions  Transaction[]
 
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, status])
   @@map("saving_goals")
 }
 
 model GoalContribution {
-  id        String     @id @default(uuid())
-  amount    Decimal    @db.Decimal(15, 2)
-  note      String?
-  date      DateTime   @default(now())
+  id     String   @id @default(uuid())
+  amount Decimal  @db.Decimal(15, 2)
+  note   String?
+  date   DateTime @default(now())
 
-  goalId    String
-  goal      SavingGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  goalId String
+  goal   SavingGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime   @default(now())
+  accountId String?
+  account   Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  transactionId String?      @unique
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
 
   @@index([goalId, date])
   @@map("goal_contributions")
@@ -360,8 +373,8 @@ model GoalContribution {
 // ============================================================================
 
 enum DebtType {
-  RECEIVABLE  // Piutang — orang hutang ke kita
-  PAYABLE     // Hutang — kita hutang ke orang
+  RECEIVABLE // Piutang — orang hutang ke kita
+  PAYABLE // Hutang — kita hutang ke orang
 }
 
 enum DebtStatus {
@@ -384,13 +397,13 @@ model Debt {
   borrowDate    DateTime   @default(now())
   settledAt     DateTime?
 
-  userId        String
-  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  payments      DebtPayment[]
+  payments DebtPayment[]
 
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, status])
   @@index([userId, type])
@@ -398,13 +411,13 @@ model Debt {
 }
 
 model DebtPayment {
-  id        String   @id @default(uuid())
-  amount    Decimal  @db.Decimal(15, 2)
-  note      String?
-  date      DateTime @default(now())
+  id     String   @id @default(uuid())
+  amount Decimal  @db.Decimal(15, 2)
+  note   String?
+  date   DateTime @default(now())
 
-  debtId    String
-  debt      Debt     @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  debtId String
+  debt   Debt   @relation(fields: [debtId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -417,39 +430,39 @@ model DebtPayment {
 // ============================================================================
 
 enum AssetType {
-  STOCK       // Saham
-  GOLD        // Emas
-  CRYPTO      // Cryptocurrency
+  STOCK // Saham
+  GOLD // Emas
+  CRYPTO // Cryptocurrency
   MUTUAL_FUND // Reksa Dana
-  BOND        // Obligasi
-  DEPOSIT     // Deposito
-  PROPERTY    // Properti
-  OTHER       // Lainnya
+  BOND // Obligasi
+  DEPOSIT // Deposito
+  PROPERTY // Properti
+  OTHER // Lainnya
 }
 
 model InvestmentAsset {
-  id               String    @id @default(uuid())
-  name             String
-  ticker           String?
-  assetType        AssetType
-  icon             String?   @default("📈")
-  color            String?   @default("#8b5cf6")
+  id        String    @id @default(uuid())
+  name      String
+  ticker    String?
+  assetType AssetType
+  icon      String?   @default("📈")
+  color     String?   @default("#8b5cf6")
 
-  totalUnits       Decimal   @db.Decimal(18, 8)
-  avgBuyPrice      Decimal   @db.Decimal(15, 2)
-  currentPrice     Decimal   @db.Decimal(15, 2)
-  currentPriceDate DateTime  @default(now())
+  totalUnits       Decimal  @db.Decimal(18, 8)
+  avgBuyPrice      Decimal  @db.Decimal(15, 2)
+  currentPrice     Decimal  @db.Decimal(15, 2)
+  currentPriceDate DateTime @default(now())
 
-  totalInvested    Decimal   @db.Decimal(15, 2)
-  currentValue     Decimal   @db.Decimal(15, 2)
+  totalInvested Decimal @db.Decimal(15, 2)
+  currentValue  Decimal @db.Decimal(15, 2)
 
-  userId           String
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  transactions     InvestmentTransaction[]
+  transactions InvestmentTransaction[]
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, name, assetType])
   @@index([userId, assetType])
@@ -457,19 +470,19 @@ model InvestmentAsset {
 }
 
 model InvestmentTransaction {
-  id           String          @id @default(uuid())
-  type         String          // "BUY" | "SELL" | "DIVIDEND"
-  units        Decimal         @db.Decimal(18, 8)
-  pricePerUnit Decimal         @db.Decimal(15, 2)
-  totalAmount  Decimal         @db.Decimal(15, 2)
-  fee          Decimal         @default(0) @db.Decimal(15, 2)
+  id           String   @id @default(uuid())
+  type         String // "BUY" | "SELL" | "DIVIDEND"
+  units        Decimal  @db.Decimal(18, 8)
+  pricePerUnit Decimal  @db.Decimal(15, 2)
+  totalAmount  Decimal  @db.Decimal(15, 2)
+  fee          Decimal  @default(0) @db.Decimal(15, 2)
   note         String?
-  date         DateTime        @default(now())
+  date         DateTime @default(now())
 
-  assetId      String
-  asset        InvestmentAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assetId String
+  asset   InvestmentAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
-  createdAt    DateTime        @default(now())
+  createdAt DateTime @default(now())
 
   @@index([assetId, date])
   @@map("investment_transactions")
