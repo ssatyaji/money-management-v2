@@ -40,3 +40,9 @@ temp/
 
 # Plans
 plan/
+
+# Agent configuration & prompts
+.agents/
+agent/
+prompt.txt
+prompt-apps.txt
