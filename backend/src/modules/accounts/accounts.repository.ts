@@ -73,6 +73,7 @@ export class AccountsRepository {
         userId,
         destinationAccountId: filterAccountId,
         type: 'TRANSFER',
+        savingGoalId: null,
       },
       _sum: { amount: true },
     });
