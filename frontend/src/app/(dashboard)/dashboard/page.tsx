@@ -26,6 +26,9 @@ import {
 } from '@/hooks/use-transactions';
 import { useAccounts } from '@/hooks/use-accounts';
 import { SkeletonDashboard } from '@/components/ui/skeleton-dashboard';
+import { useSavingGoalSummary } from '@/hooks/use-saving-goals';
+import { useDebtSummary } from '@/hooks/use-debts';
+import { usePortfolioSummary } from '@/hooks/use-investments';
 
 const COLORS = [
   '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6',
@@ -45,8 +48,11 @@ export default function DashboardPage() {
   const { data: recentTx, isLoading: loadingRecent } = useRecentTransactions(7);
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
   const { data: forecastData, isLoading: loadingForecast } = useCashflowForecast();
+  const { data: savingSummary, isLoading: loadingSaving } = useSavingGoalSummary();
+  const { data: debtSummary, isLoading: loadingDebts } = useDebtSummary();
+  const { data: portfolioSummary, isLoading: loadingPortfolio } = usePortfolioSummary();
 
-  const isLoading = loadingSummary || loadingBreakdown || loadingTrend || loadingRecent || loadingAccounts || loadingForecast;
+  const isLoading = loadingSummary || loadingBreakdown || loadingTrend || loadingRecent || loadingAccounts || loadingForecast || loadingSaving || loadingDebts || loadingPortfolio;
 
   if (isLoading) {
     return <SkeletonDashboard />;
@@ -191,6 +197,73 @@ export default function DashboardPage() {
           </div>
           <p className="text-sm text-muted-foreground mt-2">Total expense this month</p>
         </div>
+      </div>
+
+      {/* Feature Summary Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Saving Goals Widget */}
+        <Link href="/goals" className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:scale-[1.01] hover:border-primary/20 transition-all duration-300 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3 text-indigo-600">
+              <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
+                <span className="material-symbols-outlined text-[20px]">target</span>
+              </div>
+              <span className="font-body-sm font-semibold">Saving Goals</span>
+            </div>
+            <span className="text-xs font-semibold text-primary">{savingSummary?.overallProgress ?? 0}%</span>
+          </div>
+          <div className="text-xl font-heading font-bold text-foreground truncate">
+            {formatCurrency(savingSummary?.totalSaved ?? 0)}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">Terkumpul dari target {formatCurrency(savingSummary?.totalTarget ?? 0)}</p>
+        </Link>
+
+        {/* Debt Widget */}
+        <Link href="/debts" className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:scale-[1.01] hover:border-primary/20 transition-all duration-300 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3 text-amber-600">
+              <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10">
+                <span className="material-symbols-outlined text-[20px]">hand_coins</span>
+              </div>
+              <span className="font-body-sm font-semibold">Hutang & Piutang</span>
+            </div>
+            {debtSummary?.overdueCount && debtSummary.overdueCount > 0 ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-600">{debtSummary.overdueCount} Overdue</span>
+            ) : null}
+          </div>
+          <div className={cn("text-xl font-heading font-bold truncate", (debtSummary?.netPosition ?? 0) >= 0 ? "text-emerald-600" : "text-red-600")}>
+            {formatCurrency(debtSummary?.netPosition ?? 0)}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Piutang: {formatCurrency(debtSummary?.totalReceivable ?? 0)} | Hutang: {formatCurrency(debtSummary?.totalPayable ?? 0)}
+          </p>
+        </Link>
+
+        {/* Investment Widget */}
+        <Link href="/investments" className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:scale-[1.01] hover:border-primary/20 transition-all duration-300 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3 text-violet-600">
+              <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10">
+                <span className="material-symbols-outlined text-[20px]">trending_up</span>
+              </div>
+              <span className="font-body-sm font-semibold">Investasi</span>
+            </div>
+            <span className={cn(
+              "text-[10px] font-bold px-2 py-0.5 rounded-full",
+              (portfolioSummary?.totalGainLoss ?? 0) >= 0
+                ? "bg-emerald-500/10 text-emerald-600"
+                : "bg-red-500/10 text-red-600"
+            )}>
+              {(portfolioSummary?.totalGainLossPercent ?? 0) >= 0 ? '+' : ''}{portfolioSummary?.totalGainLossPercent ?? 0}%
+            </span>
+          </div>
+          <div className="text-xl font-heading font-bold text-foreground truncate">
+            {formatCurrency(portfolioSummary?.totalCurrentValue ?? 0)}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Modal: {formatCurrency(portfolioSummary?.totalInvested ?? 0)} | Gain: {formatCurrency(portfolioSummary?.totalGainLoss ?? 0)}
+          </p>
+        </Link>
       </div>
 
       {/* Charts Section */}

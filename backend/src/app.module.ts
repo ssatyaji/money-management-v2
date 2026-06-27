@@ -16,6 +16,9 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AdminModule } from './modules/admin/admin.module';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { RecurringTransactionsModule } from './modules/recurring-transactions/recurring-transactions.module';
+import { SavingGoalsModule } from './modules/saving-goals/saving-goals.module';
+import { DebtsModule } from './modules/debts/debts.module';
+import { InvestmentsModule } from './modules/investments/investments.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -62,6 +65,9 @@ import storageConfig from './config/storage.config';
     AdminModule,
     AccountsModule,
     RecurringTransactionsModule,
+    SavingGoalsModule,
+    DebtsModule,
+    InvestmentsModule,
   ],
   controllers: [HealthController],
   providers: [

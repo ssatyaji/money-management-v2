@@ -49,4 +49,19 @@ export const queryKeys = {
     all: ['accounts'] as const,
     detail: (id: string) => ['accounts', 'detail', id] as const,
   },
+  savingGoals: {
+    all: ['saving-goals'] as const,
+    summary: ['saving-goals', 'summary'] as const,
+    detail: (id: string) => ['saving-goals', 'detail', id] as const,
+  },
+  debts: {
+    all: ['debts'] as const,
+    summary: ['debts', 'summary'] as const,
+    detail: (id: string) => ['debts', 'detail', id] as const,
+  },
+  investments: {
+    assets: ['investments', 'assets'] as const,
+    portfolio: ['investments', 'portfolio'] as const,
+    assetDetail: (id: string) => ['investments', 'assets', id] as const,
+  },
 } as const;

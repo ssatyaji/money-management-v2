@@ -17,6 +17,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Wallet,
+  Target,
+  HandCoins,
+  TrendingUp,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,6 +31,9 @@ const menuItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Transaksi', href: '/transactions', icon: ArrowLeftRight },
   { label: 'Budget', href: '/budgets', icon: PiggyBank },
+  { label: 'Goals', href: '/goals', icon: Target },
+  { label: 'Hutang/Piutang', href: '/debts', icon: HandCoins },
+  { label: 'Investasi', href: '/investments', icon: TrendingUp },
   { label: 'Laporan Bulanan', href: '/reports/monthly', icon: BarChart3 },
   { label: 'Laporan Tahunan', href: '/reports/yearly', icon: CalendarDays },
   { label: 'Reminder', href: '/reminders', icon: Bell },
