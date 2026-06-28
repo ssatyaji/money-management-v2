@@ -4,11 +4,13 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { InvestmentsRepository } from './investments.repository';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { CreateInvestmentTxDto } from './dto/create-investment-tx.dto';
 import { InvestmentAsset } from '@prisma/client';
+import { MarketDataService } from './market-data.service';
 
 export interface EnrichedAsset extends Omit<InvestmentAsset, 'totalUnits' | 'avgBuyPrice' | 'currentPrice' | 'totalInvested' | 'currentValue'> {
   totalUnits: number;
@@ -33,18 +35,28 @@ export interface EnrichedAsset extends Omit<InvestmentAsset, 'totalUnits' | 'avg
 
 @Injectable()
 export class InvestmentsService {
-  constructor(private readonly investmentsRepository: InvestmentsRepository) {}
+  constructor(
+    private readonly investmentsRepository: InvestmentsRepository,
+    private readonly marketDataService: MarketDataService,
+  ) {}
 
   async createAsset(userId: string, dto: CreateAssetDto): Promise<EnrichedAsset> {
+    let currentPrice = dto.currentPrice;
+    if (dto.ticker) {
+      const fetchedPrice = await this.marketDataService.getPrice(dto.ticker, dto.assetType);
+      if (fetchedPrice !== null) {
+        currentPrice = fetchedPrice;
+      }
+    }
     const totalInvested = dto.totalUnits * dto.avgBuyPrice;
-    const currentValue = dto.totalUnits * dto.currentPrice;
+    const currentValue = dto.totalUnits * currentPrice;
 
     const asset = await this.investmentsRepository.createAsset({
       name: dto.name,
       assetType: dto.assetType,
       totalUnits: dto.totalUnits,
       avgBuyPrice: dto.avgBuyPrice,
-      currentPrice: dto.currentPrice,
+      currentPrice: currentPrice,
       totalInvested,
       currentValue,
       ticker: dto.ticker,
@@ -183,6 +195,24 @@ export class InvestmentsService {
       throw new NotFoundException('Investment asset not found');
     }
     return this.enrichAsset(updatedAsset);
+  }
+
+  @Cron('*/5 * * * *')
+  async syncMarketPrices() {
+    const assets = await this.investmentsRepository.findAllAssets({});
+    for (const asset of assets) {
+      if (asset.ticker) {
+        const price = await this.marketDataService.getPrice(asset.ticker, asset.assetType);
+        if (price !== null && price !== Number(asset.currentPrice)) {
+          const totalUnits = Number(asset.totalUnits);
+          await this.investmentsRepository.updateAsset(asset.id, {
+            currentPrice: price,
+            currentPriceDate: new Date(),
+            currentValue: totalUnits * price,
+          });
+        }
+      }
+    }
   }
 
   async getPortfolioSummary(userId: string) {
