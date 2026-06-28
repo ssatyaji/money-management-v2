@@ -6,6 +6,7 @@ import {
   savingGoalsApi,
   type CreateSavingGoalInput,
   type AddContributionInput,
+  type CompleteGoalInput,
 } from '@/lib/api/saving-goals.api';
 
 export function useSavingGoals() {
@@ -72,6 +73,20 @@ export function useAddContribution() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.savingGoals.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.savingGoals.summary });
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts.all });
+    },
+  });
+}
+
+export function useCompleteSavingGoal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ goalId, data }: { goalId: string; data: CompleteGoalInput }) =>
+      savingGoalsApi.complete(goalId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.savingGoals.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.savingGoals.summary });
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts.all });
     },
   });
 }

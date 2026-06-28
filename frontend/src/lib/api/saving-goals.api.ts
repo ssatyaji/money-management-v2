@@ -56,8 +56,14 @@ export interface CreateSavingGoalInput {
 
 export interface AddContributionInput {
   amount: number;
+  accountId: string;
   note?: string;
   date?: string;
+}
+
+export interface CompleteGoalInput {
+  action: 'WITHDRAW' | 'SPEND';
+  targetId: string;
 }
 
 // ─── Saving Goals API ───────────────────────────────────────────────────────
@@ -94,6 +100,11 @@ export const savingGoalsApi = {
 
   addContribution: async (id: string, data: AddContributionInput): Promise<SavingGoal> => {
     const response = await apiClient.post<ApiResponse<SavingGoal>>(`/saving-goals/${id}/contribute`, data);
+    return response.data.data;
+  },
+
+  complete: async (id: string, data: CompleteGoalInput): Promise<SavingGoal> => {
+    const response = await apiClient.post<ApiResponse<SavingGoal>>(`/saving-goals/${id}/complete`, data);
     return response.data.data;
   },
 };
