@@ -64,6 +64,7 @@ export interface AddContributionInput {
 export interface CompleteGoalInput {
   action: 'WITHDRAW' | 'SPEND';
   targetId: string;
+  amount?: number;
 }
 
 // ─── Saving Goals API ───────────────────────────────────────────────────────

@@ -73,7 +73,13 @@ export class AccountsRepository {
         userId,
         destinationAccountId: filterAccountId,
         type: 'TRANSFER',
-        savingGoalId: null,
+        OR: [
+          { savingGoalId: null },
+          {
+            savingGoalId: { not: null },
+            goalContribution: { is: null },
+          },
+        ],
       },
       _sum: { amount: true },
     });
@@ -83,6 +89,13 @@ export class AccountsRepository {
         userId,
         accountId: filterAccountId,
         type: 'TRANSFER',
+        OR: [
+          { savingGoalId: null },
+          {
+            savingGoalId: { not: null },
+            goalContribution: { isNot: null },
+          },
+        ],
       },
       _sum: { amount: true },
     });

@@ -48,6 +48,7 @@ export default function GoalDetailPage() {
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [completeAction, setCompleteAction] = useState<'WITHDRAW' | 'SPEND'>('WITHDRAW');
   const [completeTargetId, setCompleteTargetId] = useState('');
+  const [completeAmount, setCompleteAmount] = useState('');
 
   // Auto pre-fill account selection
   useEffect(() => {
@@ -94,12 +95,21 @@ export default function GoalDetailPage() {
       toast.error(completeAction === 'WITHDRAW' ? 'Pilih dompet tujuan' : 'Pilih kategori pengeluaran');
       return;
     }
+    if (!completeAmount || Number(completeAmount) <= 0) {
+      toast.error('Nominal pencairan harus lebih dari 0');
+      return;
+    }
+    if (Number(completeAmount) > (goal?.currentAmount || 0)) {
+      toast.error('Nominal pencairan tidak boleh melebihi total tabungan saat ini');
+      return;
+    }
     try {
       await completeMutation.mutateAsync({
         goalId: id,
         data: {
           action: completeAction,
           targetId: completeTargetId,
+          amount: Number(completeAmount),
         },
       });
       toast.success(
@@ -159,7 +169,10 @@ export default function GoalDetailPage() {
           </div>
           <Button
             className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-6 shadow-sm shrink-0"
-            onClick={() => setShowCompleteDialog(true)}
+            onClick={() => {
+              setCompleteAmount(String(goal.currentAmount));
+              setShowCompleteDialog(true);
+            }}
           >
             Klaim / Cairkan Tabungan
           </Button>
@@ -182,16 +195,32 @@ export default function GoalDetailPage() {
             </div>
           </div>
           {goal.status === 'ACTIVE' && (
-            <Button
-              className="rounded-full gap-2"
-              onClick={() => {
-                setForm({ amount: '', accountId: accounts[0]?.id || '', note: '' });
-                setShowContribute(true);
-              }}
-            >
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              Kontribusi
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="rounded-full gap-2 text-xs sm:text-sm"
+                onClick={() => {
+                  setForm({ amount: '', accountId: accounts[0]?.id || '', note: '' });
+                  setShowContribute(true);
+                }}
+              >
+                <span className="material-symbols-outlined text-[18px]">add</span>
+                Kontribusi
+              </Button>
+              {goal.currentAmount > 0 && (
+                <Button
+                  variant="secondary"
+                  className="rounded-full gap-2 text-xs sm:text-sm border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  onClick={() => {
+                    setCompleteAmount(String(goal.currentAmount));
+                    setShowCompleteDialog(true);
+                  }}
+                >
+                  <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+                  Cairkan
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
@@ -376,6 +405,25 @@ export default function GoalDetailPage() {
                   <span>Belanja Langsung</span>
                 </button>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah Cairkan (Rp)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
+                <Input
+                  type="text"
+                  placeholder="5000000"
+                  className="pl-10"
+                  value={completeAmount ? formatNumber(Number(completeAmount)) : ''}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                    setCompleteAmount(raw);
+                  }}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Maksimal yang bisa dicairkan: {formatCurrency(goal.currentAmount)}
+              </p>
             </div>
 
             {completeAction === 'WITHDRAW' ? (

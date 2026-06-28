@@ -207,6 +207,34 @@ export class SavingGoalsService {
       throw new BadRequestException('No funds to withdraw or spend');
     }
 
+    const amountToWithdraw = dto.amount !== undefined ? dto.amount : Number(goal.currentAmount);
+
+    if (amountToWithdraw <= 0) {
+      throw new BadRequestException('Amount must be greater than zero');
+    }
+
+    if (amountToWithdraw > Number(goal.currentAmount)) {
+      throw new BadRequestException(
+        `Cannot withdraw more than current amount (Rp ${Number(goal.currentAmount).toLocaleString('id-ID')})`,
+      );
+    }
+
+    const newCurrentAmount = Number(goal.currentAmount) - amountToWithdraw;
+
+    // Determine new status
+    let newStatus = goal.status;
+    let completedAt = goal.completedAt;
+
+    if (newCurrentAmount < Number(goal.targetAmount)) {
+      newStatus = 'ACTIVE';
+      completedAt = null;
+    } else {
+      newStatus = 'COMPLETED';
+      if (!completedAt) {
+        completedAt = new Date();
+      }
+    }
+
     if (dto.action === 'WITHDRAW') {
       // Transfer funds back to a wallet
       // Validate target is a valid account
@@ -234,7 +262,7 @@ export class SavingGoalsService {
         // Create TRANSFER: goal pool → wallet
         await tx.transaction.create({
           data: {
-            amount: goal.currentAmount,
+            amount: amountToWithdraw,
             type: 'TRANSFER',
             description: `Pencairan goal: ${goal.name}`,
             date: new Date(),
@@ -247,13 +275,13 @@ export class SavingGoalsService {
           },
         });
 
-        // Reset goal amount and mark completed
+        // Update goal amount and status
         await tx.savingGoal.update({
           where: { id: goalId },
           data: {
-            currentAmount: 0,
-            status: 'COMPLETED',
-            completedAt: new Date(),
+            currentAmount: newCurrentAmount,
+            status: newStatus,
+            completedAt,
           },
         });
       });
@@ -271,7 +299,7 @@ export class SavingGoalsService {
         // Create EXPENSE transaction
         await tx.transaction.create({
           data: {
-            amount: goal.currentAmount,
+            amount: amountToWithdraw,
             type: 'EXPENSE',
             description: `Belanja goal: ${goal.name}`,
             date: new Date(),
@@ -283,13 +311,13 @@ export class SavingGoalsService {
           },
         });
 
-        // Reset goal amount and mark completed
+        // Update goal amount and status
         await tx.savingGoal.update({
           where: { id: goalId },
           data: {
-            currentAmount: 0,
-            status: 'COMPLETED',
-            completedAt: new Date(),
+            currentAmount: newCurrentAmount,
+            status: newStatus,
+            completedAt,
           },
         });
       });
