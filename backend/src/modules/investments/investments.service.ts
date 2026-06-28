@@ -60,8 +60,9 @@ export class InvestmentsService implements OnApplicationBootstrap {
         currentPrice = fetchedPrice;
       }
     }
-    const totalInvested = dto.totalUnits * dto.avgBuyPrice;
-    const currentValue = dto.totalUnits * currentPrice;
+    const multiplier = dto.assetType === 'STOCK' ? 100 : 1;
+    const totalInvested = dto.totalUnits * dto.avgBuyPrice * multiplier;
+    const currentValue = dto.totalUnits * currentPrice * multiplier;
 
     const asset = await this.investmentsRepository.createAsset({
       name: dto.name,
@@ -104,6 +105,7 @@ export class InvestmentsService implements OnApplicationBootstrap {
     dto: UpdateAssetDto,
   ): Promise<EnrichedAsset> {
     const existingAsset = await this.findAssetById(userId, id);
+    const multiplier = existingAsset.assetType === 'STOCK' ? 100 : 1;
 
     const updateData: Record<string, unknown> = {};
     if (dto.name !== undefined) updateData.name = dto.name;
@@ -117,19 +119,19 @@ export class InvestmentsService implements OnApplicationBootstrap {
       updateData.currentPrice = dto.currentPrice;
       updateData.currentPriceDate = new Date();
       const units = dto.totalUnits !== undefined ? dto.totalUnits : existingAsset.totalUnits;
-      updateData.currentValue = units * dto.currentPrice;
+      updateData.currentValue = units * dto.currentPrice * multiplier;
     }
 
     if (dto.totalUnits !== undefined) {
       updateData.totalUnits = dto.totalUnits;
       const price = dto.currentPrice !== undefined ? dto.currentPrice : existingAsset.currentPrice;
-      updateData.currentValue = dto.totalUnits * price;
+      updateData.currentValue = dto.totalUnits * price * multiplier;
     }
 
     if (dto.avgBuyPrice !== undefined) {
       updateData.avgBuyPrice = dto.avgBuyPrice;
       const units = dto.totalUnits !== undefined ? dto.totalUnits : existingAsset.totalUnits;
-      updateData.totalInvested = units * dto.avgBuyPrice;
+      updateData.totalInvested = units * dto.avgBuyPrice * multiplier;
     }
 
     const asset = await this.investmentsRepository.updateAsset(id, updateData);
@@ -159,7 +161,8 @@ export class InvestmentsService implements OnApplicationBootstrap {
       throw new BadRequestException('Cannot sell more units than owned');
     }
 
-    const totalAmount = dto.units * dto.pricePerUnit;
+    const multiplier = rawAsset.assetType === 'STOCK' ? 100 : 1;
+    const totalAmount = dto.units * dto.pricePerUnit * multiplier;
 
     await this.investmentsRepository.createTransaction({
       type: dto.type,
@@ -179,12 +182,12 @@ export class InvestmentsService implements OnApplicationBootstrap {
       const newTotalUnits = totalUnitsCount + dto.units;
       // Weighted average buy price
       const newTotalInvested = Number(rawAsset.totalInvested) + totalAmount;
-      const newAvgBuyPrice = newTotalUnits > 0 ? newTotalInvested / newTotalUnits : 0;
+      const newAvgBuyPrice = newTotalUnits > 0 ? newTotalInvested / (newTotalUnits * multiplier) : 0;
 
       updateData.totalUnits = newTotalUnits;
       updateData.avgBuyPrice = Math.round(newAvgBuyPrice * 100) / 100;
       updateData.totalInvested = newTotalInvested;
-      updateData.currentValue = newTotalUnits * Number(rawAsset.currentPrice);
+      updateData.currentValue = newTotalUnits * Number(rawAsset.currentPrice) * multiplier;
     } else if (dto.type === 'SELL') {
       const newTotalUnits = totalUnitsCount - dto.units;
       // Reduce totalInvested proportionally
@@ -193,7 +196,7 @@ export class InvestmentsService implements OnApplicationBootstrap {
 
       updateData.totalUnits = newTotalUnits;
       updateData.totalInvested = Math.round(newTotalInvested * 100) / 100;
-      updateData.currentValue = newTotalUnits * Number(rawAsset.currentPrice);
+      updateData.currentValue = newTotalUnits * Number(rawAsset.currentPrice) * multiplier;
       // avgBuyPrice stays the same
     }
     // DIVIDEND: no change to units or invested amount
@@ -217,10 +220,11 @@ export class InvestmentsService implements OnApplicationBootstrap {
         const price = await this.marketDataService.getPrice(asset.ticker, asset.assetType);
         if (price !== null && price !== Number(asset.currentPrice)) {
           const totalUnits = Number(asset.totalUnits);
+          const multiplier = asset.assetType === 'STOCK' ? 100 : 1;
           await this.investmentsRepository.updateAsset(asset.id, {
             currentPrice: price,
             currentPriceDate: new Date(),
-            currentValue: totalUnits * price,
+            currentValue: totalUnits * price * multiplier,
           });
         }
       }
