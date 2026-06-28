@@ -12,6 +12,7 @@ import { SavingGoalsService } from './saving-goals.service';
 import { CreateSavingGoalDto } from './dto/create-saving-goal.dto';
 import { UpdateSavingGoalDto } from './dto/update-saving-goal.dto';
 import { AddContributionDto } from './dto/add-contribution.dto';
+import { CompleteGoalDto } from './dto/complete-goal.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Saving Goals')
@@ -69,4 +70,15 @@ export class SavingGoalsController {
   ) {
     return this.savingGoalsService.addContribution(userId, id, dto);
   }
+
+  @Post(':id/complete')
+  @ApiOperation({ summary: 'Complete a saving goal (withdraw to wallet or spend)' })
+  completeGoal(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() dto: CompleteGoalDto,
+  ) {
+    return this.savingGoalsService.completeGoal(userId, id, dto);
+  }
 }
+

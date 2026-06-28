@@ -2,12 +2,16 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { SavingGoalsRepository } from './saving-goals.repository';
 import { CreateSavingGoalDto } from './dto/create-saving-goal.dto';
 import { UpdateSavingGoalDto } from './dto/update-saving-goal.dto';
 import { AddContributionDto } from './dto/add-contribution.dto';
+import { CompleteGoalDto } from './dto/complete-goal.dto';
 import { SavingGoal } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { AccountsService } from '../accounts/accounts.service';
 
 export interface EnrichedSavingGoal extends Omit<SavingGoal, 'targetAmount' | 'currentAmount' | 'monthlyTarget'> {
   targetAmount: number;
@@ -28,7 +32,11 @@ export interface EnrichedSavingGoal extends Omit<SavingGoal, 'targetAmount' | 'c
 
 @Injectable()
 export class SavingGoalsService {
-  constructor(private readonly savingGoalsRepository: SavingGoalsRepository) {}
+  constructor(
+    private readonly savingGoalsRepository: SavingGoalsRepository,
+    private readonly prisma: PrismaService,
+    private readonly accountsService: AccountsService,
+  ) {}
 
   async create(userId: string, dto: CreateSavingGoalDto): Promise<EnrichedSavingGoal> {
     const goal = await this.savingGoalsRepository.create({
@@ -99,28 +107,196 @@ export class SavingGoalsService {
   ): Promise<EnrichedSavingGoal> {
     const goal = await this.findById(userId, goalId);
 
-    await this.savingGoalsRepository.addContribution({
-      amount: dto.amount,
-      note: dto.note,
-      date: dto.date ? new Date(dto.date) : new Date(),
-      goalId,
-    });
-
-    // Update currentAmount
-    const newCurrentAmount = goal.currentAmount + dto.amount;
-    const updateData: Record<string, unknown> = {
-      currentAmount: newCurrentAmount,
-    };
-
-    // Auto-complete if target reached
-    if (newCurrentAmount >= goal.targetAmount) {
-      updateData.status = 'COMPLETED';
-      updateData.completedAt = new Date();
+    if (goal.status !== 'ACTIVE') {
+      throw new BadRequestException('Cannot add contribution to a non-active goal');
     }
 
-    const updatedGoal = await this.savingGoalsRepository.update(goalId, updateData);
+    // Validate source account balance
+    const sourceAccount = await this.accountsService.findById(userId, dto.accountId);
+    if (dto.amount > sourceAccount.balance) {
+      throw new BadRequestException(
+        `Insufficient funds in "${sourceAccount.name}". Available: Rp ${sourceAccount.balance.toLocaleString('id-ID')}`,
+      );
+    }
+
+    // Find or create transfer category
+    let transferCat = await this.prisma.category.findFirst({
+      where: {
+        type: 'TRANSFER',
+        OR: [{ userId: null }, { userId }],
+      },
+    });
+    if (!transferCat) {
+      transferCat = await this.prisma.category.create({
+        data: {
+          name: 'Transfer',
+          icon: '🔄',
+          color: '#6366f1',
+          type: 'TRANSFER',
+          isDefault: true,
+        },
+      });
+    }
+
+    const contributionDate = dto.date ? new Date(dto.date) : new Date();
+
+    // Atomic: create transaction + contribution + update goal
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1. Create TRANSFER transaction (wallet → goal virtual pool)
+      const transaction = await tx.transaction.create({
+        data: {
+          amount: dto.amount,
+          type: 'TRANSFER',
+          description: `Tabungan: ${goal.name}`,
+          date: contributionDate,
+          categoryId: transferCat!.id,
+          accountId: dto.accountId === 'main' ? null : dto.accountId,
+          destinationAccountId: null, // no destination wallet (goes to goal pool)
+          savingGoalId: goalId,
+          userId,
+          source: 'MANUAL',
+        },
+      });
+
+      // 2. Create contribution record linked to transaction + account
+      await tx.goalContribution.create({
+        data: {
+          amount: dto.amount,
+          note: dto.note,
+          date: contributionDate,
+          goalId,
+          accountId: dto.accountId === 'main' ? null : dto.accountId,
+          transactionId: transaction.id,
+        },
+      });
+
+      // 3. Update goal currentAmount
+      const newCurrentAmount = goal.currentAmount + dto.amount;
+      const updateData: Record<string, unknown> = {
+        currentAmount: newCurrentAmount,
+      };
+
+      // Auto-complete if target reached
+      if (newCurrentAmount >= goal.targetAmount) {
+        updateData.status = 'COMPLETED';
+        updateData.completedAt = new Date();
+      }
+
+      return tx.savingGoal.update({
+        where: { id: goalId },
+        data: updateData,
+      });
+    });
+
     const fullGoal = await this.savingGoalsRepository.findById(goalId);
-    return this.enrichGoal(fullGoal || updatedGoal);
+    return this.enrichGoal(fullGoal || result);
+  }
+
+  async completeGoal(
+    userId: string,
+    goalId: string,
+    dto: CompleteGoalDto,
+  ): Promise<EnrichedSavingGoal> {
+    const goal = await this.findById(userId, goalId);
+
+    if (goal.status !== 'COMPLETED' && goal.status !== 'ACTIVE') {
+      throw new BadRequestException('Goal is already cancelled');
+    }
+
+    if (goal.currentAmount <= 0) {
+      throw new BadRequestException('No funds to withdraw or spend');
+    }
+
+    if (dto.action === 'WITHDRAW') {
+      // Transfer funds back to a wallet
+      // Validate target is a valid account
+      await this.accountsService.findById(userId, dto.targetId);
+
+      let transferCat = await this.prisma.category.findFirst({
+        where: {
+          type: 'TRANSFER',
+          OR: [{ userId: null }, { userId }],
+        },
+      });
+      if (!transferCat) {
+        transferCat = await this.prisma.category.create({
+          data: {
+            name: 'Transfer',
+            icon: '🔄',
+            color: '#6366f1',
+            type: 'TRANSFER',
+            isDefault: true,
+          },
+        });
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        // Create TRANSFER: goal pool → wallet
+        await tx.transaction.create({
+          data: {
+            amount: goal.currentAmount,
+            type: 'TRANSFER',
+            description: `Pencairan goal: ${goal.name}`,
+            date: new Date(),
+            categoryId: transferCat!.id,
+            accountId: null, // from goal virtual pool (no source wallet)
+            destinationAccountId: dto.targetId === 'main' ? null : dto.targetId,
+            savingGoalId: goalId,
+            userId,
+            source: 'MANUAL',
+          },
+        });
+
+        // Reset goal amount and mark completed
+        await tx.savingGoal.update({
+          where: { id: goalId },
+          data: {
+            currentAmount: 0,
+            status: 'COMPLETED',
+            completedAt: new Date(),
+          },
+        });
+      });
+    } else if (dto.action === 'SPEND') {
+      // Create EXPENSE from goal pool to a category
+      // Validate target is a valid category
+      const category = await this.prisma.category.findUnique({
+        where: { id: dto.targetId },
+      });
+      if (!category) {
+        throw new NotFoundException('Category not found');
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        // Create EXPENSE transaction
+        await tx.transaction.create({
+          data: {
+            amount: goal.currentAmount,
+            type: 'EXPENSE',
+            description: `Belanja goal: ${goal.name}`,
+            date: new Date(),
+            categoryId: dto.targetId,
+            accountId: null,
+            savingGoalId: goalId,
+            userId,
+            source: 'MANUAL',
+          },
+        });
+
+        // Reset goal amount and mark completed
+        await tx.savingGoal.update({
+          where: { id: goalId },
+          data: {
+            currentAmount: 0,
+            status: 'COMPLETED',
+            completedAt: new Date(),
+          },
+        });
+      });
+    }
+
+    const fullGoal = await this.savingGoalsRepository.findById(goalId);
+    return this.enrichGoal(fullGoal!);
   }
 
   async getSummary(userId: string) {
@@ -169,3 +345,4 @@ export class SavingGoalsService {
     };
   }
 }
+
