@@ -76,27 +76,54 @@ export default function DashboardPage() {
     Saldo: d.balance,
   }));
 
-  const balance = summary?.allTimeBalance ?? summary?.balance ?? 0;
-  const isPositive = balance >= 0;
+  const totalCash = accounts.reduce((sum, acc) => sum + (Number(acc.balance) || 0), 0);
+  const totalSavings = Number(savingSummary?.totalSaved) || 0;
+  const totalInvestments = Number(portfolioSummary?.totalCurrentValue) || 0;
+  const totalReceivables = Number(debtSummary?.totalReceivable) || 0;
+  const totalPayables = Number(debtSummary?.totalPayable) || 0;
+  const netWorth = totalCash + totalSavings + totalInvestments + totalReceivables - totalPayables;
+  const isPositive = netWorth >= 0;
 
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
-      {/* Balance Card (Primary Bento Item) */}
-      <div className="w-full relative overflow-hidden rounded-[24px] p-6 text-primary-foreground shadow-lg flex flex-col justify-between min-h-[160px] animate-in fade-in slide-in-from-bottom-4 duration-500 bg-primary">
+      {/* Net Worth Card (Primary Bento Item) */}
+      <div className="w-full relative overflow-hidden rounded-[24px] p-6 text-primary-foreground shadow-lg flex flex-col justify-between min-h-[180px] animate-in fade-in slide-in-from-bottom-4 duration-500 bg-primary">
         <div className="flex items-center justify-between opacity-80 mb-2 z-10">
-          <span className="font-body-md text-sm uppercase tracking-wider font-semibold">Total Balance</span>
+          <span className="font-body-md text-sm uppercase tracking-wider font-semibold">Net Worth (Kekayaan Bersih)</span>
           <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
         </div>
         <div className="text-2xl sm:text-3xl md:text-[40px] font-bold tracking-tight z-10 truncate">
-          {formatCurrency(balance)}
+          {formatCurrency(netWorth)}
         </div>
         <div className="flex items-center gap-1 opacity-90 mt-2 z-10">
           <span className="material-symbols-outlined text-[16px]">
             {isPositive ? 'trending_up' : 'trending_down'}
           </span>
           <span className="font-body-sm text-sm">
-            {isPositive ? 'Positive balance' : 'Negative balance'}
+            {isPositive ? 'Kekayaan bersih positif' : 'Kekayaan bersih negatif'}
           </span>
+        </div>
+
+        {/* Assets Breakdown Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10 z-10">
+          <div className="space-y-1">
+            <p className="text-xs text-white/70 font-medium">💵 Kas & Dompet</p>
+            <p className="text-sm sm:text-base font-bold text-white">{formatCurrency(totalCash)}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-white/70 font-medium">🎯 Tabungan (Goals)</p>
+            <p className="text-sm sm:text-base font-bold text-white">{formatCurrency(totalSavings)}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-white/70 font-medium">📈 Investasi</p>
+            <p className="text-sm sm:text-base font-bold text-white">{formatCurrency(totalInvestments)}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-white/70 font-medium">🤝 Hutang & Piutang</p>
+            <p className="text-sm sm:text-base font-bold text-white">
+              {(totalReceivables - totalPayables) >= 0 ? '+' : ''}{formatCurrency(totalReceivables - totalPayables)}
+            </p>
+          </div>
         </div>
         
         {/* Background ambient decorative shapes */}
