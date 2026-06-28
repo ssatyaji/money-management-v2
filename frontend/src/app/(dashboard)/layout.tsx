@@ -51,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <AppSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
+      <div className={`transition-[margin] duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
         <AppHeader onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
 
         <main className="p-4 md:p-6 lg:p-8 pb-24 lg:pb-8">

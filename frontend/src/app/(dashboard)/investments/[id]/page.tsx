@@ -117,14 +117,14 @@ export default function AssetDetailPage() {
 
       {/* Asset Header */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-[0px_4px_12px_rgba(26,43,60,0.05)]">
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center text-3xl" style={{ backgroundColor: `${asset.color}20` }}>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center text-3xl shrink-0" style={{ backgroundColor: `${asset.color}20` }}>
               {asset.icon || '📈'}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold">{asset.name}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold">{asset.name}</h1>
                 {asset.ticker && (
                   <span className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground font-mono">{asset.ticker}</span>
                 )}
@@ -132,12 +132,12 @@ export default function AssetDetailPage() {
               <p className="text-sm text-muted-foreground mt-1">{ASSET_TYPE_LABELS[asset.assetType]}</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="rounded-full gap-1 text-xs" onClick={() => { setPriceForm(String(asset.currentPrice)); setShowUpdatePrice(true); }}>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" className="rounded-full gap-1 text-xs flex-1 sm:flex-none justify-center" onClick={() => { setPriceForm(String(asset.currentPrice)); setShowUpdatePrice(true); }}>
               <span className="material-symbols-outlined text-[16px]">edit</span>
               Update Harga
             </Button>
-            <Button className="rounded-full gap-1 text-xs" onClick={() => setShowAddTx(true)}>
+            <Button className="rounded-full gap-1 text-xs flex-1 sm:flex-none justify-center" onClick={() => setShowAddTx(true)}>
               <span className="material-symbols-outlined text-[16px]">add</span>
               Transaksi
             </Button>
