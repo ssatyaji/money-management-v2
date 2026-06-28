@@ -23,7 +23,9 @@ export class MarketDataService {
         }
         const data = await response.json();
         if (data && data.price) {
-          return Number(data.price);
+          const price = Number(data.price);
+          this.logger.log(`Successfully fetched Crypto price for ${cleanTicker} (${symbol}): ${price}`);
+          return price;
         }
       } else if (
         assetType === 'STOCK' ||
@@ -45,7 +47,9 @@ export class MarketDataService {
         const data = await response.json();
         const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
         if (price !== undefined && price !== null) {
-          return Number(price);
+          const numPrice = Number(price);
+          this.logger.log(`Successfully fetched Stock price for ${cleanTicker}: ${numPrice}`);
+          return numPrice;
         }
       }
     } catch (err: any) {

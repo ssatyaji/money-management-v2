@@ -218,7 +218,8 @@ export class InvestmentsService implements OnApplicationBootstrap {
     for (const asset of assets) {
       if (asset.ticker) {
         const price = await this.marketDataService.getPrice(asset.ticker, asset.assetType);
-        if (price !== null && price !== Number(asset.currentPrice)) {
+        if (price !== null) {
+          const isUpdated = price !== Number(asset.currentPrice);
           const totalUnits = Number(asset.totalUnits);
           const multiplier = asset.assetType === 'STOCK' ? 100 : 1;
           await this.investmentsRepository.updateAsset(asset.id, {
@@ -226,6 +227,11 @@ export class InvestmentsService implements OnApplicationBootstrap {
             currentPriceDate: new Date(),
             currentValue: totalUnits * price * multiplier,
           });
+          if (isUpdated) {
+            this.logger.log(`Price for asset "${asset.name}" (${asset.ticker}) updated from ${asset.currentPrice} to ${price}`);
+          } else {
+            this.logger.log(`Price for asset "${asset.name}" (${asset.ticker}) is up to date at ${price}`);
+          }
         }
       }
     }
