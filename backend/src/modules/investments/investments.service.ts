@@ -3,6 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Logger,
+  OnApplicationBootstrap,
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InvestmentsRepository } from './investments.repository';
@@ -34,11 +36,21 @@ export interface EnrichedAsset extends Omit<InvestmentAsset, 'totalUnits' | 'avg
 }
 
 @Injectable()
-export class InvestmentsService {
+export class InvestmentsService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(InvestmentsService.name);
+
   constructor(
     private readonly investmentsRepository: InvestmentsRepository,
     private readonly marketDataService: MarketDataService,
   ) {}
+
+  async onApplicationBootstrap() {
+    this.logger.log('Application started. Running initial sync of investment market prices...');
+    // Run sync in the background so it doesn't block server startup
+    this.syncMarketPrices().catch((err) => {
+      this.logger.warn(`Failed to run initial market price sync on bootstrap: ${err.message}`);
+    });
+  }
 
   async createAsset(userId: string, dto: CreateAssetDto): Promise<EnrichedAsset> {
     let currentPrice = dto.currentPrice;
