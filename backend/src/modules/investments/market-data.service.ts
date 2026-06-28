@@ -31,7 +31,14 @@ export class MarketDataService {
         assetType === 'BOND'
       ) {
         // Yahoo Finance price check
-        const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${cleanTicker}`);
+        let response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${cleanTicker}`);
+        
+        // Fallback for IDX / IHSG Indonesia stocks (e.g. "PTRO" -> "PTRO.JK")
+        if (!response.ok && response.status === 404 && !cleanTicker.includes('.')) {
+          this.logger.log(`Ticker ${cleanTicker} returned 404. Retrying with .JK suffix for Indonesian stock...`);
+          response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${cleanTicker}.JK`);
+        }
+
         if (!response.ok) {
           throw new Error(`Yahoo Finance API returned status ${response.status}`);
         }
