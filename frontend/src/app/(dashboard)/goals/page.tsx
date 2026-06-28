@@ -26,6 +26,7 @@ import {
   useDeleteSavingGoal,
   useAddContribution,
 } from '@/hooks/use-saving-goals';
+import { useAccounts } from '@/hooks/use-accounts';
 
 const GOAL_TYPE_LABELS: Record<string, string> = {
   SAVE_UP: 'Kumpulkan',
@@ -45,6 +46,7 @@ export default function GoalsPage() {
 
   const { data: goals = [], isLoading } = useSavingGoals();
   const { data: summary } = useSavingGoalSummary();
+  const { data: accounts = [] } = useAccounts();
   const createMutation = useCreateSavingGoal();
   const deleteMutation = useDeleteSavingGoal();
   const contributeMutation = useAddContribution();
@@ -60,6 +62,7 @@ export default function GoalsPage() {
 
   const [contributeForm, setContributeForm] = useState({
     amount: '',
+    accountId: '',
     note: '',
   });
 
@@ -86,8 +89,8 @@ export default function GoalsPage() {
   };
 
   const handleContribute = async () => {
-    if (!showContribute || !contributeForm.amount) {
-      toast.error('Isi jumlah kontribusi');
+    if (!showContribute || !contributeForm.amount || !contributeForm.accountId) {
+      toast.error('Isi jumlah kontribusi dan pilih dompet');
       return;
     }
     try {
@@ -95,14 +98,16 @@ export default function GoalsPage() {
         goalId: showContribute,
         data: {
           amount: Number(contributeForm.amount),
+          accountId: contributeForm.accountId,
           note: contributeForm.note || undefined,
         },
       });
       toast.success('Kontribusi berhasil ditambahkan! 💰');
       setShowContribute(null);
-      setContributeForm({ amount: '', note: '' });
-    } catch {
-      toast.error('Gagal menambahkan kontribusi');
+      setContributeForm({ amount: '', accountId: '', note: '' });
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || 'Gagal menambahkan kontribusi';
+      toast.error(errMsg);
     }
   };
 
@@ -304,7 +309,14 @@ export default function GoalsPage() {
                         variant="outline"
                         size="sm"
                         className="rounded-full text-xs gap-1"
-                        onClick={() => setShowContribute(goal.id)}
+                        onClick={() => {
+                          setShowContribute(goal.id);
+                          setContributeForm({
+                            amount: '',
+                            accountId: accounts[0]?.id || '',
+                            note: '',
+                          });
+                        }}
                       >
                         <span className="material-symbols-outlined text-[16px]">add</span>
                         Kontribusi
@@ -357,6 +369,21 @@ export default function GoalsPage() {
             <DialogTitle>Tambah Kontribusi</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Sumber Dompet / Wallet</Label>
+              <select
+                className="flex h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                value={contributeForm.accountId}
+                onChange={(e) => setContributeForm({ ...contributeForm, accountId: e.target.value })}
+              >
+                <option value="" disabled>Pilih dompet...</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({formatCurrency(acc.balance)})
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="space-y-2">
               <Label>Jumlah (Rp)</Label>
               <div className="relative">

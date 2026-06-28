@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,13 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatNumber } from '@/lib/utils/currency';
-import { useSavingGoalDetail, useAddContribution } from '@/hooks/use-saving-goals';
+import {
+  useSavingGoalDetail,
+  useAddContribution,
+  useCompleteSavingGoal,
+} from '@/hooks/use-saving-goals';
+import { useAccounts } from '@/hooks/use-accounts';
+import { useCategories } from '@/hooks/use-transactions';
 
 const GOAL_TYPE_LABELS: Record<string, string> = {
   SAVE_UP: 'Kumpulkan',
@@ -27,14 +33,42 @@ export default function GoalDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+
   const { data: goal, isLoading } = useSavingGoalDetail(id);
   const contributeMutation = useAddContribution();
+  const completeMutation = useCompleteSavingGoal();
+
+  const { data: accounts = [] } = useAccounts();
+  const { data: categories = [] } = useCategories('EXPENSE');
+
   const [showContribute, setShowContribute] = useState(false);
-  const [form, setForm] = useState({ amount: '', note: '' });
+  const [form, setForm] = useState({ amount: '', accountId: '', note: '' });
+
+  // Completion states
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [completeAction, setCompleteAction] = useState<'WITHDRAW' | 'SPEND'>('WITHDRAW');
+  const [completeTargetId, setCompleteTargetId] = useState('');
+
+  // Auto pre-fill account selection
+  useEffect(() => {
+    if (accounts.length > 0 && !form.accountId) {
+      setForm((prev) => ({ ...prev, accountId: accounts[0].id }));
+    }
+  }, [accounts, form.accountId]);
+
+  useEffect(() => {
+    if (completeAction === 'WITHDRAW' && accounts.length > 0) {
+      setCompleteTargetId(accounts[0].id);
+    } else if (completeAction === 'SPEND' && categories.length > 0) {
+      setCompleteTargetId(categories[0].id);
+    } else {
+      setCompleteTargetId('');
+    }
+  }, [completeAction, accounts, categories]);
 
   const handleContribute = async () => {
-    if (!form.amount) {
-      toast.error('Isi jumlah kontribusi');
+    if (!form.amount || !form.accountId) {
+      toast.error('Isi jumlah kontribusi dan pilih dompet');
       return;
     }
     try {
@@ -42,14 +76,41 @@ export default function GoalDetailPage() {
         goalId: id,
         data: {
           amount: Number(form.amount),
+          accountId: form.accountId,
           note: form.note || undefined,
         },
       });
       toast.success('Kontribusi berhasil! 💰');
       setShowContribute(false);
-      setForm({ amount: '', note: '' });
-    } catch {
-      toast.error('Gagal menambahkan kontribusi');
+      setForm({ amount: '', accountId: accounts[0]?.id || '', note: '' });
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || 'Gagal menambahkan kontribusi';
+      toast.error(errMsg);
+    }
+  };
+
+  const handleCompleteGoal = async () => {
+    if (!completeTargetId) {
+      toast.error(completeAction === 'WITHDRAW' ? 'Pilih dompet tujuan' : 'Pilih kategori pengeluaran');
+      return;
+    }
+    try {
+      await completeMutation.mutateAsync({
+        goalId: id,
+        data: {
+          action: completeAction,
+          targetId: completeTargetId,
+        },
+      });
+      toast.success(
+        completeAction === 'WITHDRAW'
+          ? 'Dana tabungan berhasil dicairkan ke dompet! 💳'
+          : 'Tabungan berhasil dibelanjakan langsung! 🛍️',
+      );
+      setShowCompleteDialog(false);
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || 'Gagal menyelesaikan goal';
+      toast.error(errMsg);
     }
   };
 
@@ -85,6 +146,26 @@ export default function GoalDetailPage() {
         Kembali ke Goals
       </button>
 
+      {/* Completion/Celebration Callout */}
+      {goal.status === 'COMPLETED' && goal.currentAmount > 0 && (
+        <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 p-6 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-emerald-700 flex items-center gap-2">
+              <span>🎉</span> Goal Tercapai!
+            </h3>
+            <p className="text-sm text-emerald-800">
+              Uang terkumpul senilai <strong>{formatCurrency(goal.currentAmount)}</strong>. Silakan pilih untuk mencairkan dana ini ke dompet Anda atau membelanjakannya langsung.
+            </p>
+          </div>
+          <Button
+            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-6 shadow-sm shrink-0"
+            onClick={() => setShowCompleteDialog(true)}
+          >
+            Klaim / Cairkan Tabungan
+          </Button>
+        </div>
+      )}
+
       {/* Goal Header */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-[0px_4px_12px_rgba(26,43,60,0.05)]">
         <div className="flex items-start justify-between mb-6">
@@ -101,7 +182,13 @@ export default function GoalDetailPage() {
             </div>
           </div>
           {goal.status === 'ACTIVE' && (
-            <Button className="rounded-full gap-2" onClick={() => setShowContribute(true)}>
+            <Button
+              className="rounded-full gap-2"
+              onClick={() => {
+                setForm({ amount: '', accountId: accounts[0]?.id || '', note: '' });
+                setShowContribute(true);
+              }}
+            >
               <span className="material-symbols-outlined text-[18px]">add</span>
               Kontribusi
             </Button>
@@ -207,6 +294,21 @@ export default function GoalDetailPage() {
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-2">
+              <Label>Sumber Dompet / Wallet</Label>
+              <select
+                className="flex h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                value={form.accountId}
+                onChange={(e) => setForm({ ...form, accountId: e.target.value })}
+              >
+                <option value="" disabled>Pilih dompet...</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({formatCurrency(acc.balance)})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
               <Label>Jumlah (Rp)</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
@@ -232,6 +334,94 @@ export default function GoalDetailPage() {
             </div>
             <Button className="w-full" disabled={contributeMutation.isPending} onClick={handleContribute}>
               {contributeMutation.isPending ? 'Menyimpan...' : 'Tambah Kontribusi'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Claim / Completion Actions Dialog */}
+      <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cairkan Dana Tabungan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Pilih Tindakan</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCompleteAction('WITHDRAW')}
+                  className={cn(
+                    'flex flex-col items-center justify-center p-3 rounded-lg border text-sm font-medium transition-all gap-1',
+                    completeAction === 'WITHDRAW'
+                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700'
+                      : 'border-border text-muted-foreground hover:border-emerald-500/50',
+                  )}
+                >
+                  <span className="material-symbols-outlined text-[24px]">account_balance_wallet</span>
+                  <span>Kembali ke Dompet</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCompleteAction('SPEND')}
+                  className={cn(
+                    'flex flex-col items-center justify-center p-3 rounded-lg border text-sm font-medium transition-all gap-1',
+                    completeAction === 'SPEND'
+                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700'
+                      : 'border-border text-muted-foreground hover:border-emerald-500/50',
+                  )}
+                >
+                  <span className="material-symbols-outlined text-[24px]">shopping_bag</span>
+                  <span>Belanja Langsung</span>
+                </button>
+              </div>
+            </div>
+
+            {completeAction === 'WITHDRAW' ? (
+              <div className="space-y-2">
+                <Label>Pilih Dompet Penerima</Label>
+                <select
+                  className="flex h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  value={completeTargetId}
+                  onChange={(e) => setCompleteTargetId(e.target.value)}
+                >
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} ({formatCurrency(acc.balance)})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Dana akan dikirimkan kembali ke dompet ini melalui transaksi bertipe TRANSFER.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Pilih Kategori Pengeluaran</Label>
+                <select
+                  className="flex h-10 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  value={completeTargetId}
+                  onChange={(e) => setCompleteTargetId(e.target.value)}
+                >
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Dana akan langsung dibelanjakan ke kategori ini melalui transaksi bertipe EXPENSE.
+                </p>
+              </div>
+            )}
+
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg mt-2"
+              disabled={completeMutation.isPending}
+              onClick={handleCompleteGoal}
+            >
+              {completeMutation.isPending ? 'Memproses...' : 'Konfirmasi Pencairan'}
             </Button>
           </div>
         </DialogContent>
