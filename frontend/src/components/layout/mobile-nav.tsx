@@ -12,7 +12,7 @@ export function MobileNav() {
     { label: 'Transaksi', href: '/transactions', icon: 'receipt_long' },
     { label: 'Budget', href: '/budgets', icon: 'savings' },
     { label: 'Goals', href: '/goals', icon: 'target' },
-    { label: 'Hutang', href: '/debts', icon: 'paid' },
+    { label: 'Hutang Piutang', href: '/debts', icon: 'paid' },
     { label: 'Investasi', href: '/investments', icon: 'trending_up' },
     { label: 'Laporan', href: '/reports/monthly', icon: 'insights' },
     { label: 'Reminder', href: '/reminders', icon: 'notifications' },
@@ -30,12 +30,12 @@ export function MobileNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center active:scale-90 transition-transform min-w-[64px] px-1 group",
+                "flex flex-col items-center justify-center active:scale-90 transition-transform min-w-[76px] shrink-0 px-1 group",
                 isActive ? "text-primary font-bold" : "text-muted-foreground hover:text-primary"
               )}
             >
               <span
-                className="material-symbols-outlined transition-colors duration-200"
+                className="material-symbols-outlined text-[22px] transition-colors duration-200"
                 style={{ fontVariationSettings: `'FILL' ${isActive ? 1 : 0}` }}
               >
                 {item.icon}
