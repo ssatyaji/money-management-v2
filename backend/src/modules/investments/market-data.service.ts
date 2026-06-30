@@ -11,8 +11,7 @@ export class MarketDataService {
 
     try {
       if (assetType === 'CRYPTO') {
-        // Binance price check
-        // Handle tickers like "BTC" -> "BTCUSDT"
+        // Binance price check in USDT
         const symbol = cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BUSD') 
           ? cleanTicker 
           : `${cleanTicker}USDT`;
@@ -23,9 +22,25 @@ export class MarketDataService {
         }
         const data = await response.json();
         if (data && data.price) {
-          const price = Number(data.price);
-          this.logger.log(`Successfully fetched Crypto price for ${cleanTicker} (${symbol}): ${price}`);
-          return price;
+          const priceInUsdt = Number(data.price);
+          
+          // Fetch live USDT to IDR exchange rate from Binance
+          let usdToIdrRate = 16000; // default fallback
+          try {
+            const rateRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDTIDR');
+            if (rateRes.ok) {
+              const rateData = await rateRes.json();
+              if (rateData && rateData.price) {
+                usdToIdrRate = Number(rateData.price);
+              }
+            }
+          } catch (rateErr: any) {
+            this.logger.warn(`Failed to fetch USDTIDR rate: ${rateErr.message}. Using fallback rate of ${usdToIdrRate}`);
+          }
+
+          const priceInIdr = priceInUsdt * usdToIdrRate;
+          this.logger.log(`Successfully fetched Crypto price for ${cleanTicker} (${symbol}): ${priceInUsdt} USDT (${priceInIdr} IDR)`);
+          return priceInIdr;
         }
       } else if (
         assetType === 'STOCK' ||
