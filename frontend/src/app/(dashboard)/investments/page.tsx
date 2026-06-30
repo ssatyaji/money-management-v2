@@ -222,27 +222,27 @@ export default function InvestmentsPage() {
               key={asset.id}
               className="rounded-2xl border border-border bg-card p-5 transition-all shadow-[0px_4px_12px_rgba(26,43,60,0.05)] card-hover"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <Link href={`/investments/${asset.id}`} className="flex items-center gap-4 min-w-0 group">
                   <div className="w-12 h-12 rounded-full bg-surface-container-low flex items-center justify-center text-2xl shrink-0">
                     {asset.icon || '📈'}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold group-hover:text-primary transition-colors truncate">{asset.name}</p>
+                      <p className="font-semibold group-hover:text-primary transition-colors truncate text-base sm:text-lg">{asset.name}</p>
                       {asset.ticker && (
                         <span className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground font-mono">
                           {asset.ticker}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                       {ASSET_TYPE_LABELS[asset.assetType]} • {asset.totalUnits} unit @ {formatCurrency(asset.currentPrice)}
                     </p>
                   </div>
                 </Link>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-right">
+                <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t border-border/40 sm:border-0 shrink-0">
+                  <div className="text-left sm:text-right">
                     <p className="text-sm font-bold">{formatCurrency(asset.currentValue)}</p>
                     <p className={cn(
                       'text-xs font-bold',
@@ -255,7 +255,10 @@ export default function InvestmentsPage() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
-                    onClick={() => setDeleteConfirmId(asset.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setDeleteConfirmId(asset.id);
+                    }}
                   >
                     <span className="material-symbols-outlined text-[18px]">delete</span>
                   </Button>

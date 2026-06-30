@@ -304,44 +304,52 @@ export default function DebtsPage() {
                   debt.isOverdue ? 'border-red-500/50 bg-red-500/5' : debt.status === 'SETTLED' ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-border',
                 )}
               >
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                   <Link href={`/debts/${debt.id}`} className="flex items-center gap-4 min-w-0 group">
                     <div className="w-12 h-12 rounded-full bg-surface-container-low flex items-center justify-center text-xl shrink-0">
                       {debt.type === 'RECEIVABLE' ? '📥' : '📤'}
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold group-hover:text-primary transition-colors truncate">{debt.personName}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold group-hover:text-primary transition-colors truncate text-base sm:text-lg">{debt.personName}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                         {debt.description || (debt.type === 'RECEIVABLE' ? 'Piutang' : 'Hutang')}
                         {debt.dueDate && ` • Jatuh tempo: ${new Date(debt.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`}
                       </p>
                     </div>
                   </Link>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {debt.isOverdue && (
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-full border text-red-500 bg-red-500/10 border-red-500/20">
-                        Overdue
+                  <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t border-border/40 sm:border-0 shrink-0">
+                    <div className="flex items-center gap-2">
+                      {debt.isOverdue && (
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-full border text-red-500 bg-red-500/10 border-red-500/20">
+                          Overdue
+                        </span>
+                      )}
+                      <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full border', statusConfig.color)}>
+                        {statusConfig.label}
                       </span>
-                    )}
-                    <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full border', statusConfig.color)}>
-                      {statusConfig.label}
-                    </span>
-                    {debt.status !== 'SETTLED' && debt.status !== 'CANCELLED' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-full text-xs gap-1"
-                        onClick={() => setShowPayment(debt.id)}
-                      >
-                        <span className="material-symbols-outlined text-[16px]">payments</span>
-                        Bayar
-                      </Button>
-                    )}
+                      {debt.status !== 'SETTLED' && debt.status !== 'CANCELLED' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full text-xs gap-1 h-8"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setShowPayment(debt.id);
+                          }}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">payments</span>
+                          Bayar
+                        </Button>
+                      )}
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
-                      onClick={() => setDeleteConfirmId(debt.id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setDeleteConfirmId(debt.id);
+                      }}
                     >
                       <span className="material-symbols-outlined text-[18px]">delete</span>
                     </Button>

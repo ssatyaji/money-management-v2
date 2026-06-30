@@ -288,45 +288,51 @@ export default function GoalsPage() {
                   goal.status === 'COMPLETED' ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-border',
                 )}
               >
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                   <Link href={`/goals/${goal.id}`} className="flex items-center gap-4 min-w-0 group">
                     <div className="w-12 h-12 rounded-full bg-surface-container-low flex items-center justify-center text-2xl shrink-0">
                       {goal.icon || '🎯'}
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold group-hover:text-primary transition-colors truncate">{goal.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold group-hover:text-primary transition-colors truncate text-base sm:text-lg">{goal.name}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                         {GOAL_TYPE_LABELS[goal.goalType]} • {formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}
                       </p>
                     </div>
                   </Link>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full border', statusConfig.color)}>
-                      {statusConfig.label}
-                    </span>
-                    {goal.status === 'ACTIVE' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-full text-xs gap-1"
-                        onClick={() => {
-                          setShowContribute(goal.id);
-                          setContributeForm({
-                            amount: '',
-                            accountId: accounts[0]?.id || '',
-                            note: '',
-                          });
-                        }}
-                      >
-                        <span className="material-symbols-outlined text-[16px]">add</span>
-                        Kontribusi
-                      </Button>
-                    )}
+                  <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t border-border/40 sm:border-0 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full border', statusConfig.color)}>
+                        {statusConfig.label}
+                      </span>
+                      {goal.status === 'ACTIVE' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full text-xs gap-1 h-8"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setShowContribute(goal.id);
+                            setContributeForm({
+                              amount: '',
+                              accountId: accounts[0]?.id || '',
+                              note: '',
+                            });
+                          }}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">add</span>
+                          Kontribusi
+                        </Button>
+                      )}
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
-                      onClick={() => setDeleteConfirmId(goal.id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setDeleteConfirmId(goal.id);
+                      }}
                     >
                       <span className="material-symbols-outlined text-[18px]">delete</span>
                     </Button>
