@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/lib/utils/currency';
 import { useCreateInvestmentAsset } from '@/hooks/use-investments';
-import type { AssetType } from '@/lib/api/investments.api';
+import { investmentsApi, type AssetType } from '@/lib/api/investments.api';
 
 const ASSET_TYPES: { value: AssetType; label: string; icon: string }[] = [
   { value: 'STOCK', label: 'Saham', icon: '📊' },
@@ -34,6 +34,30 @@ export default function AddAssetPage() {
     avgBuyPrice: '',
     currentPrice: '',
   });
+
+  const [isFetchingPrice, setIsFetchingPrice] = useState(false);
+
+  const handleFetchLivePrice = async (tickerVal?: string) => {
+    const activeTicker = tickerVal || form.ticker;
+    if (!activeTicker) return;
+    setIsFetchingPrice(true);
+    try {
+      const data = await investmentsApi.getLivePrice(activeTicker, form.assetType);
+      if (data && data.price !== null) {
+        setForm((prev) => ({
+          ...prev,
+          currentPrice: String(data.price),
+        }));
+        toast.success(`Harga live untuk ${activeTicker} berhasil diambil: Rp ${formatNumber(data.price)}`);
+      } else {
+        toast.error(`Harga live untuk ticker "${activeTicker}" tidak ditemukan.`);
+      }
+    } catch (err) {
+      toast.error('Gagal mem-fetch harga live. Silakan masukkan harga manual.');
+    } finally {
+      setIsFetchingPrice(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!form.name || !form.totalUnits || !form.avgBuyPrice || !form.currentPrice) {
@@ -105,8 +129,38 @@ export default function AddAssetPage() {
         {/* Ticker */}
         <div className="space-y-2">
           <Label>Ticker / Kode (opsional)</Label>
-          <Input placeholder="Contoh: BBCA.JK, BTC" value={form.ticker}
-            onChange={(e) => setForm({ ...form, ticker: e.target.value })} />
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Contoh: BBCA.JK, BTC" 
+              value={form.ticker}
+              onChange={(e) => setForm({ ...form, ticker: e.target.value })}
+              onBlur={() => {
+                if (form.ticker && !isFetchingPrice) {
+                  handleFetchLivePrice();
+                }
+              }}
+              className="flex-1"
+            />
+            {form.ticker && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => handleFetchLivePrice()}
+                disabled={isFetchingPrice}
+                className="gap-1 shrink-0 rounded-lg"
+              >
+                {isFetchingPrice ? (
+                  <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                ) : (
+                  <span className="material-symbols-outlined text-[18px]">sync</span>
+                )}
+                Cek Harga
+              </Button>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Masukkan ticker valid (misal: `BTC` untuk crypto, `BBCA.JK` untuk saham) untuk mengambil harga live otomatis.
+          </p>
         </div>
 
         {/* Units */}

@@ -109,4 +109,11 @@ export const investmentsApi = {
     const response = await apiClient.post<ApiResponse<InvestmentAsset>>(`/investments/assets/${assetId}/transactions`, data);
     return response.data.data;
   },
+
+  getLivePrice: async (ticker: string, assetType: AssetType): Promise<{ price: number | null }> => {
+    const response = await apiClient.get<ApiResponse<{ price: number | null }>>('/investments/price', {
+      params: { ticker, assetType },
+    });
+    return response.data.data;
+  },
 };
