@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { InvestmentsService } from './investments.service';
@@ -19,6 +20,15 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @Controller('investments')
 export class InvestmentsController {
   constructor(private readonly investmentsService: InvestmentsService) {}
+
+  @Get('price')
+  @ApiOperation({ summary: 'Fetch live asset price' })
+  getPrice(
+    @Query('ticker') ticker: string,
+    @Query('assetType') assetType: string,
+  ) {
+    return this.investmentsService.getLivePrice(ticker, assetType);
+  }
 
   @Post('assets')
   @ApiOperation({ summary: 'Add a new investment asset' })

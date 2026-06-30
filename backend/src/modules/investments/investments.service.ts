@@ -237,6 +237,11 @@ export class InvestmentsService implements OnApplicationBootstrap {
     }
   }
 
+  async getLivePrice(ticker: string, assetType: string): Promise<{ price: number | null }> {
+    const price = await this.marketDataService.getPrice(ticker, assetType);
+    return { price };
+  }
+
   async getPortfolioSummary(userId: string) {
     return this.investmentsRepository.getPortfolioSummary(userId);
   }
