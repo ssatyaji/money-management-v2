@@ -11,19 +11,29 @@ export class MarketDataService {
 
     try {
       if (assetType === 'CRYPTO') {
-        // Binance price check in USDT
-        const symbol = cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BUSD') 
-          ? cleanTicker 
-          : `${cleanTicker}USDT`;
+        const isStablecoin = ['USDT', 'USDC', 'BUSD'].includes(cleanTicker);
+        
+        let priceInUsdt = null;
 
-        const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
-        if (!response.ok) {
-          throw new Error(`Binance API returned status ${response.status}`);
+        if (isStablecoin) {
+          priceInUsdt = 1.0;
+        } else {
+          // Binance price check in USDT
+          const symbol = cleanTicker.endsWith('USDT') || cleanTicker.endsWith('BUSD') 
+            ? cleanTicker 
+            : `${cleanTicker}USDT`;
+
+          const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+          if (!response.ok) {
+            throw new Error(`Binance API returned status ${response.status}`);
+          }
+          const data = await response.json();
+          if (data && data.price) {
+            priceInUsdt = Number(data.price);
+          }
         }
-        const data = await response.json();
-        if (data && data.price) {
-          const priceInUsdt = Number(data.price);
-          
+
+        if (priceInUsdt !== null) {
           // Fetch live USDT to IDR exchange rate from Binance
           let usdToIdrRate = 16000; // default fallback
           try {
@@ -39,7 +49,7 @@ export class MarketDataService {
           }
 
           const priceInIdr = priceInUsdt * usdToIdrRate;
-          this.logger.log(`Successfully fetched Crypto price for ${cleanTicker} (${symbol}): ${priceInUsdt} USDT (${priceInIdr} IDR)`);
+          this.logger.log(`Successfully fetched Crypto price for ${cleanTicker}: ${priceInUsdt} USDT (${priceInIdr} IDR)`);
           return priceInIdr;
         }
       } else if (
