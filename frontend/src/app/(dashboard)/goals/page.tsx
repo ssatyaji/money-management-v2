@@ -57,6 +57,8 @@ export default function GoalsPage() {
     targetAmount: '',
     description: '',
     icon: '🎯',
+    deadlineType: 'months' as 'months' | 'date',
+    durationMonths: '',
     deadline: '',
   });
 
@@ -71,6 +73,16 @@ export default function GoalsPage() {
       toast.error('Isi nama dan target jumlah');
       return;
     }
+
+    let finalDeadline: string | undefined = undefined;
+    if (form.deadlineType === 'months' && form.durationMonths) {
+      const d = new Date();
+      d.setMonth(d.getMonth() + Number(form.durationMonths));
+      finalDeadline = d.toISOString().split('T')[0];
+    } else if (form.deadlineType === 'date' && form.deadline) {
+      finalDeadline = form.deadline;
+    }
+
     try {
       await createMutation.mutateAsync({
         name: form.name,
@@ -78,11 +90,20 @@ export default function GoalsPage() {
         targetAmount: Number(form.targetAmount),
         description: form.description || undefined,
         icon: form.icon || undefined,
-        deadline: form.deadline || undefined,
+        deadline: finalDeadline,
       });
       toast.success('Goal berhasil dibuat! 🎯');
       setShowCreate(false);
-      setForm({ name: '', goalType: 'SAVE_UP', targetAmount: '', description: '', icon: '🎯', deadline: '' });
+      setForm({ 
+        name: '', 
+        goalType: 'SAVE_UP', 
+        targetAmount: '', 
+        description: '', 
+        icon: '🎯', 
+        deadlineType: 'months',
+        durationMonths: '',
+        deadline: '' 
+      });
     } catch {
       toast.error('Gagal membuat goal');
     }
@@ -200,14 +221,88 @@ export default function GoalsPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Deadline (opsional)</Label>
-                <Input
-                  type="date"
-                  value={form.deadline}
-                  onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                />
+              <div className="space-y-3">
+                <Label>Target Waktu (opsional)</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, deadlineType: 'months' })}
+                    className={cn(
+                      'px-3 py-2 rounded-lg border text-sm font-medium transition-all',
+                      form.deadlineType === 'months'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-primary/50',
+                    )}
+                  >
+                    Durasi (Bulan)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, deadlineType: 'date' })}
+                    className={cn(
+                      'px-3 py-2 rounded-lg border text-sm font-medium transition-all',
+                      form.deadlineType === 'date'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-primary/50',
+                    )}
+                  >
+                    Tanggal Pasti
+                  </button>
+                </div>
+
+                {form.deadlineType === 'months' ? (
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      placeholder="Contoh: 12"
+                      value={form.durationMonths}
+                      onChange={(e) => setForm({ ...form, durationMonths: e.target.value })}
+                      className="pr-16"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Bulan</span>
+                  </div>
+                ) : (
+                  <Input
+                    type="date"
+                    value={form.deadline}
+                    onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+                  />
+                )}
               </div>
+
+              {(() => {
+                let recommendedMonthly = 0;
+                const targetAmt = Number(form.targetAmount) || 0;
+                
+                if (targetAmt > 0) {
+                  if (form.deadlineType === 'months' && form.durationMonths) {
+                    const months = Number(form.durationMonths);
+                    if (months > 0) {
+                      recommendedMonthly = Math.ceil(targetAmt / months);
+                    }
+                  } else if (form.deadlineType === 'date' && form.deadline) {
+                    const now = new Date();
+                    const targetDate = new Date(form.deadline);
+                    const diffTime = targetDate.getTime() - now.getTime();
+                    const days = Math.max(Math.ceil(diffTime / (1000 * 60 * 60 * 24)), 0);
+                    const months = Math.max(days / 30, 1);
+                    recommendedMonthly = Math.ceil(targetAmt / months);
+                  }
+                }
+
+                if (recommendedMonthly > 0) {
+                  return (
+                    <div className="rounded-lg bg-primary/10 border border-primary/20 p-3 mt-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary text-lg">lightbulb</span>
+                        <span className="text-sm font-medium text-primary">Rekomendasi Nabung</span>
+                      </div>
+                      <span className="text-sm font-bold text-primary">{formatCurrency(recommendedMonthly)} <span className="text-xs font-normal text-primary/70">/ bln</span></span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
               <Button className="w-full" disabled={createMutation.isPending} onClick={handleCreate}>
                 {createMutation.isPending ? 'Menyimpan...' : 'Buat Goal'}
