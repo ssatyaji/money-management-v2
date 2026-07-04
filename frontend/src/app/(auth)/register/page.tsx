@@ -211,7 +211,7 @@ export default function RegisterPage() {
           <form className="w-full space-y-4" onSubmit={handleSubmit(onSubmit)}>
             {step === 1 ? (
               // STEP 1 FIELDS
-              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
+              <div key="step-1" className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
                 {/* Email Field */}
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider" htmlFor="email">
@@ -288,7 +288,7 @@ export default function RegisterPage() {
               </div>
             ) : (
               // STEP 2 FIELDS
-              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
+              <div key="step-2" className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
                 <div className="grid grid-cols-2 gap-4">
                   {/* First Name */}
                   <div className="space-y-1">
