@@ -117,12 +117,13 @@ export default function RegisterPage() {
       toast.success('Akun berhasil dibuat! 🎉 Silakan cek inbox email Anda untuk kode verifikasi. Jika tidak ada, periksa folder spam atau kirim ulang di halaman verifikasi.');
       router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string; statusCode?: number } }; message?: string };
+      const err = error as { response?: { data?: { message?: string | string[]; statusCode?: number } }; message?: string };
       const statusCode = err.response?.data?.statusCode;
       const backendMsg = err.response?.data?.message;
       
       if (backendMsg) {
-        toast.error(backendMsg);
+        const errorMessage = Array.isArray(backendMsg) ? backendMsg.join(', ') : backendMsg;
+        toast.error(errorMessage);
       } else if (statusCode === 409) {
         toast.error('Email ini sudah terdaftar. Silakan masuk atau gunakan email lain.');
       } else if (statusCode === 400) {
