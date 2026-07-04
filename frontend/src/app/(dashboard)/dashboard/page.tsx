@@ -16,7 +16,7 @@ import {
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatTransactionDate } from '@/lib/utils/date';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   useTransactionSummary,
   useCategoryBreakdown,
@@ -41,6 +41,20 @@ export default function DashboardPage() {
   const year = now.getFullYear();
 
   const [chartView, setChartView] = useState<'overview' | 'forecast'>('overview');
+  const [showBalance, setShowBalance] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('show_balance');
+    if (stored !== null) {
+      setShowBalance(stored === 'true');
+    }
+  }, []);
+
+  const toggleBalance = () => {
+    const nextValue = !showBalance;
+    setShowBalance(nextValue);
+    localStorage.setItem('show_balance', String(nextValue));
+  };
 
   const { data: summary, isLoading: loadingSummary } = useTransactionSummary(month, year);
   const { data: breakdown, isLoading: loadingBreakdown } = useCategoryBreakdown(month, year);
@@ -90,10 +104,22 @@ export default function DashboardPage() {
       <div className="w-full relative overflow-hidden rounded-[24px] p-6 text-primary-foreground shadow-lg flex flex-col justify-between min-h-[180px] animate-in fade-in slide-in-from-bottom-4 duration-500 bg-primary">
         <div className="flex items-center justify-between opacity-80 mb-2 z-10">
           <span className="font-body-md text-sm uppercase tracking-wider font-semibold">Net Worth (Kekayaan Bersih)</span>
-          <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleBalance}
+              type="button"
+              className="hover:text-white/80 transition-colors p-1 rounded-lg focus:outline-none flex items-center justify-center cursor-pointer"
+              title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                {showBalance ? 'visibility' : 'visibility_off'}
+              </span>
+            </button>
+            <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+          </div>
         </div>
         <div className="text-2xl sm:text-3xl md:text-[40px] font-bold tracking-tight z-10 truncate">
-          {formatCurrency(netWorth)}
+          {showBalance ? formatCurrency(netWorth) : 'Rp ••••••'}
         </div>
         <div className="flex items-center gap-1 opacity-90 mt-2 z-10">
           <span className="material-symbols-outlined text-[16px]">
@@ -108,20 +134,26 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10 z-10">
           <div className="space-y-1">
             <p className="text-xs text-white/70 font-medium">💵 Kas & Dompet</p>
-            <p className="text-sm sm:text-base font-bold text-white">{formatCurrency(totalCash)}</p>
+            <p className="text-sm sm:text-base font-bold text-white">
+              {showBalance ? formatCurrency(totalCash) : 'Rp ••••••'}
+            </p>
           </div>
           <div className="space-y-1">
             <p className="text-xs text-white/70 font-medium">🎯 Tabungan (Goals)</p>
-            <p className="text-sm sm:text-base font-bold text-white">{formatCurrency(totalSavings)}</p>
+            <p className="text-sm sm:text-base font-bold text-white">
+              {showBalance ? formatCurrency(totalSavings) : 'Rp ••••••'}
+            </p>
           </div>
           <div className="space-y-1">
             <p className="text-xs text-white/70 font-medium">📈 Investasi</p>
-            <p className="text-sm sm:text-base font-bold text-white">{formatCurrency(totalInvestments)}</p>
+            <p className="text-sm sm:text-base font-bold text-white">
+              {showBalance ? formatCurrency(totalInvestments) : 'Rp ••••••'}
+            </p>
           </div>
           <div className="space-y-1">
             <p className="text-xs text-white/70 font-medium">🤝 Hutang & Piutang</p>
             <p className="text-sm sm:text-base font-bold text-white">
-              {(totalReceivables - totalPayables) >= 0 ? '+' : ''}{formatCurrency(totalReceivables - totalPayables)}
+              {showBalance ? `${(totalReceivables - totalPayables) >= 0 ? '+' : ''}${formatCurrency(totalReceivables - totalPayables)}` : 'Rp ••••••'}
             </p>
           </div>
         </div>
@@ -153,7 +185,7 @@ export default function DashboardPage() {
                 <div className="pl-1.5 space-y-1">
                   <p className="text-xs text-muted-foreground truncate font-medium">{acc.name}</p>
                   <p className="text-lg font-bold text-foreground truncate">
-                    {formatCurrency(acc.balance)}
+                    {showBalance ? formatCurrency(acc.balance) : 'Rp ••••••'}
                   </p>
                 </div>
               </div>
@@ -204,7 +236,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-xl sm:text-2xl md:text-3xl font-heading font-bold text-foreground truncate">
-            {formatCurrency(summary?.totalIncome ?? 0)}
+            {showBalance ? formatCurrency(summary?.totalIncome ?? 0) : 'Rp ••••••'}
           </div>
           <p className="text-sm text-muted-foreground mt-2">Total income this month</p>
         </div>
@@ -220,7 +252,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-xl sm:text-2xl md:text-3xl font-heading font-bold text-foreground truncate">
-            {formatCurrency(summary?.totalExpense ?? 0)}
+            {showBalance ? formatCurrency(summary?.totalExpense ?? 0) : 'Rp ••••••'}
           </div>
           <p className="text-sm text-muted-foreground mt-2">Total expense this month</p>
         </div>
@@ -240,9 +272,9 @@ export default function DashboardPage() {
             <span className="text-xs font-semibold text-primary">{savingSummary?.overallProgress ?? 0}%</span>
           </div>
           <div className="text-xl font-heading font-bold text-foreground truncate">
-            {formatCurrency(savingSummary?.totalSaved ?? 0)}
+            {showBalance ? formatCurrency(savingSummary?.totalSaved ?? 0) : 'Rp ••••••'}
           </div>
-          <p className="text-xs text-muted-foreground mt-2">Terkumpul dari target {formatCurrency(savingSummary?.totalTarget ?? 0)}</p>
+          <p className="text-xs text-muted-foreground mt-2">Terkumpul dari target {showBalance ? formatCurrency(savingSummary?.totalTarget ?? 0) : 'Rp ••••••'}</p>
         </Link>
 
         {/* Debt Widget */}
@@ -259,10 +291,10 @@ export default function DashboardPage() {
             ) : null}
           </div>
           <div className={cn("text-xl font-heading font-bold truncate", (debtSummary?.netPosition ?? 0) >= 0 ? "text-emerald-600" : "text-red-600")}>
-            {formatCurrency(debtSummary?.netPosition ?? 0)}
+            {showBalance ? formatCurrency(debtSummary?.netPosition ?? 0) : 'Rp ••••••'}
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Piutang: {formatCurrency(debtSummary?.totalReceivable ?? 0)} | Hutang: {formatCurrency(debtSummary?.totalPayable ?? 0)}
+            Piutang: {showBalance ? formatCurrency(debtSummary?.totalReceivable ?? 0) : 'Rp ••••••'} | Hutang: {showBalance ? formatCurrency(debtSummary?.totalPayable ?? 0) : 'Rp ••••••'}
           </p>
         </Link>
 
@@ -285,10 +317,10 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="text-xl font-heading font-bold text-foreground truncate">
-            {formatCurrency(portfolioSummary?.totalCurrentValue ?? 0)}
+            {showBalance ? formatCurrency(portfolioSummary?.totalCurrentValue ?? 0) : 'Rp ••••••'}
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Modal: {formatCurrency(portfolioSummary?.totalInvested ?? 0)} | Gain: {formatCurrency(portfolioSummary?.totalGainLoss ?? 0)}
+            Modal: {showBalance ? formatCurrency(portfolioSummary?.totalInvested ?? 0) : 'Rp ••••••'} | Gain: {showBalance ? formatCurrency(portfolioSummary?.totalGainLoss ?? 0) : 'Rp ••••••'}
           </p>
         </Link>
       </div>
@@ -296,7 +328,7 @@ export default function DashboardPage() {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cashflow Chart */}
-        <div className="lg:col-span-2 p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:border-emerald-500/10 transition-all duration-300">
+        <div className="lg:col-span-2 p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:border-emerald-500/10 transition-all duration-300 relative overflow-hidden">
           <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
             <h3 className="font-h3 text-xl font-bold text-foreground">
               {chartView === 'overview' ? 'Cashflow Overview' : 'Prediksi Arus Kas (30 Hari Ke Depan)'}
@@ -328,135 +360,151 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {chartView === 'overview' ? (
-            chartData.length === 0 ? (
-              <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
-                No transactions yet this month
+          <div className="relative">
+            {!showBalance && (
+              <div className="absolute inset-0 bg-background/20 backdrop-blur-[10px] z-20 flex flex-col items-center justify-center rounded-[20px] transition-all">
+                <span className="material-symbols-outlined text-muted-foreground text-[32px] mb-2 select-none">visibility_off</span>
+                <p className="text-sm text-muted-foreground font-semibold">Tampilkan saldo untuk melihat tren</p>
               </div>
+            )}
+            {chartView === 'overview' ? (
+              chartData.length === 0 ? (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
+                  No transactions yet this month
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'var(--card)',
+                        border: 'none',
+                        borderRadius: '12px',
+                        boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: 'var(--foreground)'
+                      }}
+                      itemStyle={{ color: 'var(--foreground)' }}
+                      formatter={(value) => formatCurrency(Number(value))}
+                    />
+                    <Area type="monotone" dataKey="Pemasukan" stroke="#10b981" fill="url(#colorIncome)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
+                    <Area type="monotone" dataKey="Pengeluaran" stroke="#ef4444" fill="url(#colorExpense)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )
             ) : (
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--card)',
-                      border: 'none',
-                      borderRadius: '12px',
-                      boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      color: 'var(--foreground)'
-                    }}
-                    itemStyle={{ color: 'var(--foreground)' }}
-                    formatter={(value) => formatCurrency(Number(value))}
-                  />
-                  <Area type="monotone" dataKey="Pemasukan" stroke="#10b981" fill="url(#colorIncome)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
-                  <Area type="monotone" dataKey="Pengeluaran" stroke="#ef4444" fill="url(#colorExpense)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            )
-          ) : (
-            forecastChartData.length === 0 ? (
-              <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
-                No forecast data available
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={forecastChartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--card)',
-                      border: 'none',
-                      borderRadius: '12px',
-                      boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      color: 'var(--foreground)'
-                    }}
-                    itemStyle={{ color: 'var(--foreground)' }}
-                    formatter={(value) => formatCurrency(Number(value))}
-                  />
-                  <Area type="monotone" dataKey="Saldo" stroke="#3b82f6" fill="url(#colorBalance)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            )
-          )}
+              forecastChartData.length === 0 ? (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
+                  No forecast data available
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={forecastChartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'var(--card)',
+                        border: 'none',
+                        borderRadius: '12px',
+                        boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: 'var(--foreground)'
+                      }}
+                      itemStyle={{ color: 'var(--foreground)' }}
+                      formatter={(value) => formatCurrency(Number(value))}
+                    />
+                    <Area type="monotone" dataKey="Saldo" stroke="#3b82f6" fill="url(#colorBalance)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )
+            )}
+          </div>
         </div>
 
         {/* Expenses Pie */}
-        <div className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:border-emerald-500/10 transition-all duration-300">
+        <div className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:border-emerald-500/10 transition-all duration-300 relative overflow-hidden">
           <h3 className="font-h3 text-xl font-bold text-foreground mb-6">Top Expenses</h3>
-          {pieData.length === 0 ? (
-            <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
-              No expenses to show
-            </div>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={85}
-                    paddingAngle={4}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {pieData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--card)',
-                      border: 'none',
-                      borderRadius: '12px',
-                      boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      color: 'var(--foreground)'
-                    }}
-                    itemStyle={{ color: 'var(--foreground)' }}
-                    formatter={(value) => formatCurrency(Number(value))}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-3 mt-4">
-                {pieData.slice(0, 4).map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="text-foreground font-medium">{item.icon} {item.name}</span>
-                    </div>
-                    <span className="font-bold text-foreground">{formatCurrency(item.value)}</span>
-                  </div>
-                ))}
+          <div className="relative">
+            {!showBalance && (
+              <div className="absolute inset-0 bg-background/20 backdrop-blur-[10px] z-20 flex flex-col items-center justify-center rounded-[20px] transition-all">
+                <span className="material-symbols-outlined text-muted-foreground text-[32px] mb-2 select-none">visibility_off</span>
+                <p className="text-sm text-muted-foreground font-semibold text-center px-4">Tampilkan saldo untuk melihat rincian</p>
               </div>
-            </>
-          )}
+            )}
+            {pieData.length === 0 ? (
+              <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
+                No expenses to show
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={85}
+                      paddingAngle={4}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {pieData.map((entry, idx) => (
+                        <Cell key={idx} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'var(--card)',
+                        border: 'none',
+                        borderRadius: '12px',
+                        boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: 'var(--foreground)'
+                      }}
+                      itemStyle={{ color: 'var(--foreground)' }}
+                      formatter={(value) => formatCurrency(Number(value))}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-3 mt-4">
+                  {pieData.slice(0, 4).map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-foreground font-medium">{item.icon} {item.name}</span>
+                      </div>
+                      <span className="font-bold text-foreground">{showBalance ? formatCurrency(item.value) : 'Rp ••••••'}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -523,7 +571,7 @@ export default function DashboardPage() {
                           tx.type === 'INCOME' ? 'text-emerald-600' : 'text-foreground'
                         )}
                       >
-                        {tx.type === 'INCOME' ? '+' : '-'}{formatCurrency(Number(tx.amount))}
+                        {tx.type === 'INCOME' ? '+' : '-'}{showBalance ? formatCurrency(Number(tx.amount)) : 'Rp ••••••'}
                       </span>
                     </div>
                   </div>
