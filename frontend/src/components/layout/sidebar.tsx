@@ -20,6 +20,7 @@ import {
   Target,
   HandCoins,
   TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,6 +35,7 @@ const menuItems = [
   { label: 'Goals', href: '/goals', icon: Target },
   { label: 'Hutang/Piutang', href: '/debts', icon: HandCoins },
   { label: 'Investasi', href: '/investments', icon: TrendingUp },
+  { label: 'AI Advisor', href: '/ai-advisor', icon: Sparkles },
   { label: 'Laporan Bulanan', href: '/reports/monthly', icon: BarChart3 },
   { label: 'Laporan Tahunan', href: '/reports/yearly', icon: CalendarDays },
   { label: 'Reminder', href: '/reminders', icon: Bell },

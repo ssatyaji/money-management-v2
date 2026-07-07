@@ -4,6 +4,8 @@ export const queryKeys = {
   },
   monthPredictor: ['month-predictor'] as const,
   alerts: ['alerts'] as const,
+  aiInsights: ['ai-insights'] as const,
+  aiSession: (id: string) => ['ai-session', id] as const,
   transactions: {
     all: ['transactions'] as const,
     list: (filters: object) => ['transactions', 'list', filters] as const,
