@@ -3,6 +3,7 @@ export const queryKeys = {
     me: ['auth', 'me'] as const,
   },
   monthPredictor: ['month-predictor'] as const,
+  alerts: ['alerts'] as const,
   transactions: {
     all: ['transactions'] as const,
     list: (filters: object) => ['transactions', 'list', filters] as const,

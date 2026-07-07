@@ -30,6 +30,7 @@ import { useSavingGoalSummary } from '@/hooks/use-saving-goals';
 import { useDebtSummary } from '@/hooks/use-debts';
 import { usePortfolioSummary } from '@/hooks/use-investments';
 import { MonthPredictorWidget } from '@/components/dashboard/month-predictor-widget';
+import { AlertCards } from '@/components/dashboard/alert-cards';
 
 const COLORS = [
   '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6',
@@ -258,6 +259,9 @@ export default function DashboardPage() {
           <p className="text-sm text-muted-foreground mt-2">Total expense this month</p>
         </div>
       </div>
+
+      {/* Alert Notifications */}
+      <AlertCards />
 
       {/* Month Predictor Widget */}
       <MonthPredictorWidget />
