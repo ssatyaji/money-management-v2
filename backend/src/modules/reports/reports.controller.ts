@@ -35,4 +35,12 @@ export class ReportsController {
   ) {
     return this.reportsService.getCashflowForecast(userId);
   }
+
+  @Get('month-predictor')
+  @ApiOperation({ summary: 'Get estimated end-of-month balance' })
+  getMonthPredictor(
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.reportsService.getMonthPredictor(userId);
+  }
 }

@@ -93,6 +93,9 @@ model User {
   savingGoals           SavingGoal[]
   debts                 Debt[]
   investmentAssets      InvestmentAsset[]
+  alerts                Alert[]
+  aiChatSessions        AiChatSession[]
+  aiInsights            AiInsight[]
 
   @@map("users")
 }
@@ -487,3 +490,56 @@ model InvestmentTransaction {
   @@index([assetId, date])
   @@map("investment_transactions")
 }
+
+model Alert {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  metadata  Json?
+  isRead    Boolean  @default(false)
+  severity  String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  @@index([userId, isRead])
+  @@map("alerts")
+}
+
+model AiChatSession {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  context   String?
+  contextId String?
+  messages  AiChatMessage[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  @@map("ai_chat_sessions")
+}
+
+model AiChatMessage {
+  id        String        @id @default(cuid())
+  sessionId String
+  session   AiChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  createdAt DateTime      @default(now())
+  @@map("ai_chat_messages")
+}
+
+model AiInsight {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  body        String
+  actionLabel String?
+  actionUrl   String?
+  isRead      Boolean  @default(false)
+  generatedAt DateTime @default(now())
+  expiresAt   DateTime
+  @@map("ai_insights")
+}
+

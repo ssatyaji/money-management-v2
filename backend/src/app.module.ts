@@ -19,6 +19,7 @@ import { RecurringTransactionsModule } from './modules/recurring-transactions/re
 import { SavingGoalsModule } from './modules/saving-goals/saving-goals.module';
 import { DebtsModule } from './modules/debts/debts.module';
 import { InvestmentsModule } from './modules/investments/investments.module';
+import { AlertsModule } from './modules/alerts/alerts.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -28,13 +29,15 @@ import jwtConfig from './config/jwt.config';
 import redisConfig from './config/redis.config';
 import mailConfig from './config/mail.config';
 import storageConfig from './config/storage.config';
+import geminiConfig from './config/gemini.config';
+import { AiAdvisorModule } from './modules/ai-advisor/ai-advisor.module';
 
 @Module({
   imports: [
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, jwtConfig, redisConfig, mailConfig, storageConfig],
+      load: [appConfig, jwtConfig, redisConfig, mailConfig, storageConfig, geminiConfig],
     }),
 
     // Rate limiting
@@ -68,6 +71,8 @@ import storageConfig from './config/storage.config';
     SavingGoalsModule,
     DebtsModule,
     InvestmentsModule,
+    AlertsModule,
+    AiAdvisorModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -325,4 +325,60 @@ export class ReportsRepository {
 
     return forecast;
   }
+
+  async getMonthPredictor(userId: string) {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const daysRemaining = endOfMonth.getDate() - now.getDate();
+
+    // Current balance
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { startingBalance: true } });
+    const wallets = await this.prisma.account.findMany({ where: { userId }, select: { startingBalance: true } });
+    const allTimeTx = await this.prisma.transaction.groupBy({ by: ['type'], where: { userId }, _sum: { amount: true } });
+    let allIncome = 0, allExpense = 0;
+    allTimeTx.forEach(t => { if (t.type === 'INCOME') allIncome = Number(t._sum.amount) || 0; if (t.type === 'EXPENSE') allExpense = Number(t._sum.amount) || 0; });
+    const startBal = Number(user?.startingBalance || 0) + wallets.reduce((s, w) => s + Number(w.startingBalance || 0), 0);
+    const currentBalance = startBal + allIncome - allExpense;
+
+    // Recurring not yet occurred this month
+    const recurring = await this.prisma.recurringTransaction.findMany({ where: { userId, isActive: true } });
+    let recurringIncome = 0, recurringExpense = 0;
+    recurring.forEach(rec => {
+      const next = new Date(rec.nextDueDate);
+      if (next >= now && next <= endOfMonth) {
+        if (rec.type === 'INCOME') recurringIncome += Number(rec.amount);
+        else if (rec.type === 'EXPENSE') recurringExpense += Number(rec.amount);
+      }
+    });
+
+    // Avg daily expense (last 30 days)
+    const thirtyAgo = new Date(); thirtyAgo.setDate(thirtyAgo.getDate() - 30);
+    const recent = await this.prisma.transaction.findMany({ where: { userId, date: { gte: thirtyAgo }, type: 'EXPENSE' }, select: { amount: true } });
+    const avgDailyExpense = recent.reduce((s, t) => s + Number(t.amount), 0) / 30;
+    const projectedDailyExpense = avgDailyExpense * daysRemaining;
+
+    // Monthly income for threshold
+    const monthTx = await this.prisma.transaction.groupBy({ by: ['type'], where: { userId, date: { gte: startOfMonth, lte: endOfMonth } }, _sum: { amount: true } });
+    let monthlyIncome = 0;
+    monthTx.forEach(t => { if (t.type === 'INCOME') monthlyIncome = Number(t._sum.amount) || 0; });
+
+    const projectedIncome = recurringIncome;
+    const projectedExpense = recurringExpense + projectedDailyExpense;
+    const estimatedEndBalance = currentBalance + projectedIncome - projectedExpense;
+    const safeToSpend = estimatedEndBalance * 0.8;
+    const threshold = monthlyIncome > 0 ? monthlyIncome : currentBalance;
+    const status = estimatedEndBalance < threshold * 0.05 ? 'DANGER' : estimatedEndBalance < threshold * 0.2 ? 'CAUTION' : 'SAFE';
+
+    return {
+      currentBalance: Math.round(currentBalance),
+      projectedIncome: Math.round(projectedIncome),
+      projectedExpense: Math.round(projectedExpense),
+      estimatedEndBalance: Math.round(estimatedEndBalance),
+      safeToSpend: Math.round(safeToSpend),
+      daysRemaining,
+      status,
+      breakdown: { recurringIncome: Math.round(recurringIncome), recurringExpense: Math.round(recurringExpense), avgDailyExpense: Math.round(avgDailyExpense), projectedDailyExpense: Math.round(projectedDailyExpense) },
+    };
+  }
 }
