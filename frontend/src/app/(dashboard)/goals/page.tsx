@@ -127,7 +127,7 @@ export default function GoalsPage() {
       setShowContribute(null);
       setContributeForm({ amount: '', accountId: '', note: '' });
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || 'Gagal menambahkan kontribusi';
+      const errMsg = err?.response?.data?.error?.message || 'Gagal menambahkan kontribusi';
       toast.error(errMsg);
     }
   };

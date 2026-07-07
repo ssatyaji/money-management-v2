@@ -117,9 +117,9 @@ export default function RegisterPage() {
       toast.success('Akun berhasil dibuat! 🎉 Silakan cek inbox email Anda untuk kode verifikasi. Jika tidak ada, periksa folder spam atau kirim ulang di halaman verifikasi.');
       router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string | string[]; statusCode?: number } }; message?: string };
-      const statusCode = err.response?.data?.statusCode;
-      const backendMsg = err.response?.data?.message;
+      const err = error as { response?: { data?: { error?: { message?: string | string[]; statusCode?: number } } }; message?: string };
+      const statusCode = err.response?.data?.error?.statusCode;
+      const backendMsg = err.response?.data?.error?.message;
       
       if (backendMsg) {
         const errorMessage = Array.isArray(backendMsg) ? backendMsg.join(', ') : backendMsg;
@@ -143,7 +143,7 @@ export default function RegisterPage() {
       toast.success('Daftar dengan Google berhasil! 🎉');
       router.push('/dashboard');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal masuk dengan Google.');
+      toast.error(error.response?.data?.error?.message || 'Gagal masuk dengan Google.');
     } finally {
       setIsLoading(false);
     }

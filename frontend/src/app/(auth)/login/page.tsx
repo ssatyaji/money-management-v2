@@ -48,7 +48,7 @@ export default function LoginPage() {
       toast.success('Login dengan Google berhasil! 🎉');
       router.push('/dashboard');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal masuk dengan Google. Silakan coba lagi.');
+      toast.error(error.response?.data?.error?.message || 'Gagal masuk dengan Google. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
     }
@@ -94,8 +94,8 @@ export default function LoginPage() {
       toast.success('Login berhasil!');
       router.push('/dashboard');
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Login gagal. Periksa email dan password Anda.');
+      const err = error as { response?: { data?: { error?: { message?: string } } } };
+      toast.error(err.response?.data?.error?.message || 'Login gagal. Periksa email dan password Anda.');
     } finally {
       setIsLoading(false);
     }

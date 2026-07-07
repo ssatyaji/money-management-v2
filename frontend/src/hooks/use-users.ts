@@ -30,7 +30,7 @@ export const useUpdateUser = () => {
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'Gagal memperbarui pengguna';
+      const message = error.response?.data?.error?.message || 'Gagal memperbarui pengguna';
       toast.error(message);
     },
   });
@@ -47,7 +47,7 @@ export const useDeleteUser = () => {
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'Gagal menghapus pengguna';
+      const message = error.response?.data?.error?.message || 'Gagal menghapus pengguna';
       toast.error(message);
     },
   });

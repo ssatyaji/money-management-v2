@@ -48,7 +48,7 @@ function VerifyEmailForm() {
       toast.success('Email berhasil diverifikasi! Selamat datang 🎉');
       router.push('/dashboard');
     } catch (error: any) {
-      const msg = error.response?.data?.message || error.message || 'Verifikasi OTP gagal.';
+      const msg = error.response?.data?.error?.message || error.message || 'Verifikasi OTP gagal.';
       toast.error(msg);
     } finally {
       setIsLoading(false);
@@ -71,7 +71,7 @@ function VerifyEmailForm() {
       toast.success('Kode OTP verifikasi baru telah dikirim ke email Anda 📧');
     } catch (error: any) {
       setResendCooldown(0); // Reset cooldown on failure
-      const msg = error.response?.data?.message || 'Gagal mengirim ulang OTP. Silakan coba lagi.';
+      const msg = error.response?.data?.error?.message || 'Gagal mengirim ulang OTP. Silakan coba lagi.';
       toast.error(msg);
     } finally {
       setIsResending(false);

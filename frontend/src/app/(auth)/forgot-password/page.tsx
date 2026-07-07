@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
       setStep(2);
       toast.success('Kode OTP reset password telah dikirim ke email Anda 📧');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal mengirim kode verifikasi.');
+      toast.error(error.response?.data?.error?.message || 'Gagal mengirim kode verifikasi.');
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +95,7 @@ export default function ForgotPasswordPage() {
       toast.success('Kata sandi berhasil diperbarui! Silakan masuk kembali 🎉');
       router.push('/login');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal mereset kata sandi.');
+      toast.error(error.response?.data?.error?.message || 'Gagal mereset kata sandi.');
     } finally {
       setIsLoading(false);
     }

@@ -194,7 +194,7 @@ function ScanReceiptTab() {
         handleClear();
       },
       onError: (error: any) => {
-        toast.error(error.response?.data?.message || 'Gagal menyimpan transaksi struk.');
+        toast.error(error.response?.data?.error?.message || 'Gagal menyimpan transaksi struk.');
       }
     });
   };
@@ -623,7 +623,7 @@ function ImportStatementTab() {
           if (fileInputRef.current) fileInputRef.current.value = '';
         },
         onError: (error: any) => {
-          toast.error(error.response?.data?.message || 'Gagal mengimport transaksi');
+          toast.error(error.response?.data?.error?.message || 'Gagal mengimport transaksi');
         },
       },
     );

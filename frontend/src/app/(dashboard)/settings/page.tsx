@@ -172,7 +172,7 @@ function SettingsPageContent() {
       setCurrentPassword('');
       setNewPassword('');
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Gagal memperbarui kata sandi';
+      const msg = error.response?.data?.error?.message || 'Gagal memperbarui kata sandi';
       toast.error(msg);
     } finally {
       setIsChangingPassword(false);
@@ -263,7 +263,7 @@ function SettingsPageContent() {
       toast.success('Akun Anda berhasil dihapus 😢');
       await logout();
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Gagal menghapus akun';
+      const msg = error.response?.data?.error?.message || 'Gagal menghapus akun';
       toast.error(msg);
     } finally {
       setIsDeletingAccount(false);

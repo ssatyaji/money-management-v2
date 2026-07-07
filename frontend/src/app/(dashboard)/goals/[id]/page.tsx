@@ -141,7 +141,7 @@ export default function GoalDetailPage() {
       setShowContribute(false);
       setForm({ amount: '', accountId: accounts[0]?.id || '', note: '' });
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || 'Gagal menambahkan kontribusi';
+      const errMsg = err?.response?.data?.error?.message || 'Gagal menambahkan kontribusi';
       toast.error(errMsg);
     }
   };
@@ -175,7 +175,7 @@ export default function GoalDetailPage() {
       );
       setShowCompleteDialog(false);
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || 'Gagal menyelesaikan goal';
+      const errMsg = err?.response?.data?.error?.message || 'Gagal menyelesaikan goal';
       toast.error(errMsg);
     }
   };
