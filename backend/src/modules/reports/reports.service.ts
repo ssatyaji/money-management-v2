@@ -16,4 +16,8 @@ export class ReportsService {
   async getCashflowForecast(userId: string) {
     return this.reportsRepository.getCashflowForecast(userId);
   }
+
+  async getMonthPredictor(userId: string) {
+    return this.reportsRepository.getMonthPredictor(userId);
+  }
 }
