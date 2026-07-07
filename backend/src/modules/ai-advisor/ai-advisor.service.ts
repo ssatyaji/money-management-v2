@@ -43,7 +43,7 @@ export class AiAdvisorService {
     });
 
     const ctx = await this.buildFinancialContext(userId, session.context, session.contextId);
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const result = await model.generateContent(`${this.getSystemPrompt(ctx)}\n\nPertanyaan: ${content}`);
     const reply = result.response.text();
 
@@ -65,7 +65,7 @@ export class AiAdvisorService {
   async generateInsightsForUser(userId: string) {
     const ctx = await this.buildFinancialContext(userId, 'GENERAL', null);
     await this.prisma.aiInsight.deleteMany({ where: { userId } });
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const prompt = `${this.getSystemPrompt(ctx)}\n\nBerikan TEPAT 3 insight keuangan dalam format JSON array (tanpa markdown):\n[{"title":"max 8 kata","body":"2-3 kalimat actionable","actionLabel":null,"actionUrl":null}]`;
 
     try {
@@ -172,10 +172,10 @@ export class AiAdvisorService {
     return `Saldo: Rp${Math.round(bal).toLocaleString('id-ID')}\nPemasukan bulan ini: Rp${Math.round(mi).toLocaleString('id-ID')}\nPengeluaran bulan ini: Rp${Math.round(me).toLocaleString('id-ID')}\nTop kategori: ${topCat
       .map((c) => `${c.name}(Rp${Math.round(c.total).toLocaleString('id-ID')})`)
       .join(', ')}\nGoals: ${goals
-      .map((g) => `${g.name}(${Math.round((Number(g.currentAmount) / Number(g.targetAmount)) * 100)}%)`)
-      .join(', ') || 'Tidak ada'}\nUtang: ${debts
-      .map((d) => `${d.type === 'RECEIVABLE' ? 'Piutang' : 'Utang'} ke ${d.personName}`)
-      .join(', ') || 'Tidak ada'}${extra}`;
+        .map((g) => `${g.name}(${Math.round((Number(g.currentAmount) / Number(g.targetAmount)) * 100)}%)`)
+        .join(', ') || 'Tidak ada'}\nUtang: ${debts
+          .map((d) => `${d.type === 'RECEIVABLE' ? 'Piutang' : 'Utang'} ke ${d.personName}`)
+          .join(', ') || 'Tidak ada'}${extra}`;
   }
 
   private getSystemPrompt(ctx: string): string {
