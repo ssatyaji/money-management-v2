@@ -29,6 +29,7 @@ import { SkeletonDashboard } from '@/components/ui/skeleton-dashboard';
 import { useSavingGoalSummary } from '@/hooks/use-saving-goals';
 import { useDebtSummary } from '@/hooks/use-debts';
 import { usePortfolioSummary } from '@/hooks/use-investments';
+import { MonthPredictorWidget } from '@/components/dashboard/month-predictor-widget';
 
 const COLORS = [
   '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6',
@@ -257,6 +258,9 @@ export default function DashboardPage() {
           <p className="text-sm text-muted-foreground mt-2">Total expense this month</p>
         </div>
       </div>
+
+      {/* Month Predictor Widget */}
+      <MonthPredictorWidget />
 
       {/* Feature Summary Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
