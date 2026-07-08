@@ -82,7 +82,7 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
         
         <div className="flex flex-col">
           <span className="font-body-sm text-xs text-muted-foreground">{greeting}</span>
-          <span className="font-h1 text-lg font-bold text-foreground tracking-tight hidden sm:block">Zayn Finance</span>
+          <span className="font-h1 text-lg font-bold text-foreground tracking-tight hidden sm:block">{user?.name || 'User'}</span>
           <span className="font-h1 text-lg font-bold text-foreground tracking-tight sm:hidden">{user?.name?.split(' ')[0] || 'User'}</span>
         </div>
       </div>
