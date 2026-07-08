@@ -41,6 +41,7 @@ const transactionSchema = z.object({
   description: z.string().optional(),
   note: z.string().optional(),
   date: z.string().min(1, 'Tanggal wajib diisi'),
+  time: z.string().min(1, 'Waktu wajib diisi'),
   categoryId: z.string().optional(),
   accountId: z.string().optional(),
   destinationAccountId: z.string().optional(),
@@ -99,6 +100,7 @@ export default function NewTransactionPage() {
     defaultValues: {
       type: 'EXPENSE',
       date: new Date().toISOString().split('T')[0],
+      time: `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`,
       amount: undefined,
       categoryId: '',
       accountId: 'main',
@@ -123,15 +125,15 @@ export default function NewTransactionPage() {
   const onSubmit = async (data: TransactionFormValues) => {
     try {
       const [year, month, day] = data.date.split('-').map(Number);
-      const now = new Date();
+      const [hours, minutes] = (data.time || '00:00').split(':').map(Number);
       const transactionDate = new Date(
         year,
         month - 1,
         day,
-        now.getHours(),
-        now.getMinutes(),
-        now.getSeconds(),
-        now.getMilliseconds()
+        hours,
+        minutes,
+        0,
+        0
       );
 
       await createMutation.mutateAsync({
@@ -395,54 +397,63 @@ export default function NewTransactionPage() {
               </div>
             )}
 
-            {/* Date */}
-            <div className="space-y-2 flex flex-col">
-              <Label>Tanggal</Label>
-              <Controller
-                name="date"
-                control={control}
-                render={({ field }) => {
-                  const dateValue = field.value ? new Date(field.value) : new Date();
-                  return (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className={cn(
-                            'w-full pl-3 text-left font-normal h-9 bg-background border-input hover:bg-accent/50 justify-start',
-                            !field.value && 'text-muted-foreground',
-                            errors.date && 'border-destructive'
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="truncate">
-                            {field.value ? (
-                              format(dateValue, 'EEEE, dd MMMM yyyy', { locale: id })
-                            ) : (
-                              <span>Pilih Tanggal</span>
+            {/* Date & Time */}
+            <div className="space-y-2">
+              <Label>Tanggal &amp; Waktu</Label>
+              <div className="flex gap-2">
+                {/* Date Picker */}
+                <Controller
+                  name="date"
+                  control={control}
+                  render={({ field }) => {
+                    const dateValue = field.value ? new Date(field.value) : new Date();
+                    return (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={cn(
+                              'flex-1 pl-3 text-left font-normal h-9 bg-background border-input hover:bg-accent/50 justify-start',
+                              !field.value && 'text-muted-foreground',
+                              errors.date && 'border-destructive'
                             )}
-                          </span>
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={dateValue}
-                          onSelect={(date) => {
-                            if (date) {
-                              const formattedDate = format(date, 'yyyy-MM-dd');
-                              field.onChange(formattedDate);
-                            }
-                          }}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  );
-                }}
-              />
-              {errors.date && (
-                <p className="text-sm text-destructive">{errors.date.message}</p>
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="truncate">
+                              {field.value ? (
+                                format(dateValue, 'dd MMM yyyy', { locale: id })
+                              ) : (
+                                <span>Pilih Tanggal</span>
+                              )}
+                            </span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={dateValue}
+                            onSelect={(date) => {
+                              if (date) {
+                                const formattedDate = format(date, 'yyyy-MM-dd');
+                                field.onChange(formattedDate);
+                              }
+                            }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    );
+                  }}
+                />
+                {/* Time Input */}
+                <Input
+                  type="time"
+                  className={cn('w-32 h-9 bg-background border-input', errors.time && 'border-destructive')}
+                  {...register('time')}
+                />
+              </div>
+              {(errors.date || errors.time) && (
+                <p className="text-sm text-destructive">{errors.date?.message || errors.time?.message}</p>
               )}
             </div>
 
