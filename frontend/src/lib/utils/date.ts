@@ -22,7 +22,7 @@ export function formatRelativeDate(date: string | Date): string {
 }
 
 /**
- * Format date for display in transaction lists
+ * Format date for display in transaction lists (always includes time)
  */
 export function formatTransactionDate(date: string | Date): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
@@ -30,5 +30,17 @@ export function formatTransactionDate(date: string | Date): string {
   if (isToday(d)) return `Hari ini, ${format(d, 'HH:mm')}`;
   if (isYesterday(d)) return `Kemarin, ${format(d, 'HH:mm')}`;
 
-  return format(d, 'dd MMM yyyy', { locale: id });
+  return format(d, 'dd MMM yyyy, HH:mm', { locale: id });
+}
+
+/**
+ * Format date for transaction detail view (full day name + time)
+ */
+export function formatTransactionDateFull(date: string | Date): string {
+  const d = typeof date === 'string' ? parseISO(date) : date;
+
+  if (isToday(d)) return `Hari ini, ${format(d, 'HH:mm')}`;
+  if (isYesterday(d)) return `Kemarin, ${format(d, 'HH:mm')}`;
+
+  return format(d, 'EEEE, dd MMMM yyyy • HH:mm', { locale: id });
 }

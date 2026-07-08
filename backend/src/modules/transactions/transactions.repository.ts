@@ -28,7 +28,7 @@ export class TransactionsRepository {
         skip,
         take,
         where,
-        orderBy: orderBy || { date: 'desc' },
+        orderBy: orderBy || [{ date: 'desc' }, { createdAt: 'desc' }],
         include: { category: true, account: true, destinationAccount: true },
       }),
       this.prisma.transaction.count({ where }),

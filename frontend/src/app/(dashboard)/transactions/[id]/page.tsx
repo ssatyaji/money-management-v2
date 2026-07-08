@@ -28,7 +28,7 @@ import {
 
 import { useTransaction, useDeleteTransaction } from '@/hooks/use-transactions';
 import { formatCurrency } from '@/lib/utils/currency';
-import { formatTransactionDate } from '@/lib/utils/date';
+import { formatTransactionDate, formatTransactionDateFull } from '@/lib/utils/date';
 import { cn } from '@/lib/utils';
 
 export default function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -161,7 +161,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 <span className="font-medium">Tanggal</span>
               </div>
               <span className="font-medium text-foreground text-right">
-                {formatTransactionDate(transaction.date)}
+                {formatTransactionDateFull(transaction.date)}
               </span>
             </div>
 
