@@ -46,3 +46,7 @@ plan/
 agent/
 prompt.txt
 prompt-apps.txt
+
+# Superpowers agent directories
+.superpowers/
+docs/superpowers/
