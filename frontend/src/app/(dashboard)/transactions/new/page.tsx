@@ -400,57 +400,61 @@ export default function NewTransactionPage() {
             {/* Date & Time */}
             <div className="space-y-2">
               <Label>Tanggal &amp; Waktu</Label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {/* Date Picker */}
-                <Controller
-                  name="date"
-                  control={control}
-                  render={({ field }) => {
-                    const dateValue = field.value ? new Date(field.value) : new Date();
-                    return (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className={cn(
-                              'flex-1 pl-3 text-left font-normal h-9 bg-background border-input hover:bg-accent/50 justify-start',
-                              !field.value && 'text-muted-foreground',
-                              errors.date && 'border-destructive'
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="truncate">
-                              {field.value ? (
-                                format(dateValue, 'dd MMM yyyy', { locale: id })
-                              ) : (
-                                <span>Pilih Tanggal</span>
+                <div className="sm:col-span-2">
+                  <Controller
+                    name="date"
+                    control={control}
+                    render={({ field }) => {
+                      const dateValue = field.value ? new Date(field.value) : new Date();
+                      return (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className={cn(
+                                'w-full pl-3 text-left font-normal h-9 bg-background border-input hover:bg-accent/50 justify-start',
+                                !field.value && 'text-muted-foreground',
+                                errors.date && 'border-destructive'
                               )}
-                            </span>
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={dateValue}
-                            onSelect={(date) => {
-                              if (date) {
-                                const formattedDate = format(date, 'yyyy-MM-dd');
-                                field.onChange(formattedDate);
-                              }
-                            }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    );
-                  }}
-                />
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="truncate">
+                                {field.value ? (
+                                  format(dateValue, 'dd MMM yyyy', { locale: id })
+                                ) : (
+                                  <span>Pilih Tanggal</span>
+                                )}
+                              </span>
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={dateValue}
+                              onSelect={(date) => {
+                                if (date) {
+                                  const formattedDate = format(date, 'yyyy-MM-dd');
+                                  field.onChange(formattedDate);
+                                }
+                              }}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      );
+                    }}
+                  />
+                </div>
                 {/* Time Input */}
-                <Input
-                  type="time"
-                  className={cn('w-32 h-9 bg-background border-input', errors.time && 'border-destructive')}
-                  {...register('time')}
-                />
+                <div className="sm:col-span-1">
+                  <Input
+                    type="time"
+                    className={cn('w-full h-9 bg-background border-input', errors.time && 'border-destructive')}
+                    {...register('time')}
+                  />
+                </div>
               </div>
               {(errors.date || errors.time) && (
                 <p className="text-sm text-destructive">{errors.date?.message || errors.time?.message}</p>
