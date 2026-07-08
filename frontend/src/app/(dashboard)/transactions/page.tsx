@@ -190,23 +190,23 @@ export default function TransactionsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Transaksi</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Kelola pemasukan dan pengeluaran Anda</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Transaksi</h1>
+          <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">Kelola pemasukan dan pengeluaran Anda</p>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto overflow-x-auto hide-scrollbar w-full sm:w-auto pb-1 sm:pb-0">
-          <Link href="/transactions/recurring" className="shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          <Link href="/transactions/recurring">
             <Button variant="outline" className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/5 cursor-pointer">
               <Clock className="w-4 h-4" />
               <span className="hidden sm:inline">Tagihan Berulang</span>
             </Button>
           </Link>
-          <Button variant="outline" className="gap-2 cursor-pointer shrink-0" onClick={() => setIsExportDialogOpen(true)}>
+          <Button variant="outline" className="gap-2 cursor-pointer" onClick={() => setIsExportDialogOpen(true)}>
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">Unduh Laporan</span>
           </Button>
-          <Link href="/transactions/new" className="shrink-0">
+          <Link href="/transactions/new">
             <Button className="gap-2 cursor-pointer">
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Tambah Transaksi</span>

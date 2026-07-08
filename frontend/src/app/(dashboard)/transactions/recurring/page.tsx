@@ -164,21 +164,21 @@ export default function RecurringTransactionsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/transactions" className="shrink-0">
+          <Link href="/transactions">
             <Button variant="ghost" size="icon" className="rounded-lg">
               <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Tagihan Berulang & Langganan</h1>
-            <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">Kelola transaksi otomatis yang terjadwal</p>
+            <h1 className="text-lg sm:text-2xl font-bold">Tagihan Berulang & Langganan</h1>
+            <p className="text-muted-foreground mt-1 text-xs sm:text-sm">Kelola transaksi otomatis yang terjadwal</p>
           </div>
         </div>
-        <Button onClick={() => setIsOpen(true)} className="gap-2 self-end sm:self-auto shrink-0">
+        <Button onClick={() => setIsOpen(true)} className="gap-2 shrink-0">
           <Plus className="w-4 h-4" />
-          <span>Tambah Tagihan</span>
+          <span className="hidden sm:inline">Tambah Tagihan</span>
         </Button>
       </div>
 
