@@ -44,3 +44,16 @@ export function formatTransactionDateFull(date: string | Date): string {
 
   return format(d, 'EEEE, dd MMMM yyyy • HH:mm', { locale: id });
 }
+
+/**
+ * Format date for grouping header in transaction list
+ */
+export function formatGroupHeaderDate(date: string | Date): string {
+  const d = typeof date === 'string' ? parseISO(date) : date;
+
+  const formattedDateStr = format(d, 'dd MMMM yyyy', { locale: id });
+  if (isToday(d)) return `Hari Ini — ${formattedDateStr}`;
+  if (isYesterday(d)) return `Kemarin — ${formattedDateStr}`;
+
+  return format(d, 'EEEE — dd MMMM yyyy', { locale: id });
+}

@@ -12,6 +12,8 @@ import {
   ChevronRight,
   Download,
   Clock,
+  CalendarDays,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,12 +35,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/currency';
-import { formatTransactionDate } from '@/lib/utils/date';
+import { formatTransactionDate, formatGroupHeaderDate } from '@/lib/utils/date';
 import { useTransactions } from '@/hooks/use-transactions';
 import { transactionsApi, type TransactionFilters } from '@/lib/api/transactions.api';
+import { startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, format } from 'date-fns';
+
 
 export default function TransactionsPage() {
   const [filters, setFilters] = useState<TransactionFilters>({
@@ -47,6 +53,13 @@ export default function TransactionsPage() {
   });
   const [searchInput, setSearchInput] = useState('');
   const [activeType, setActiveType] = useState<string | undefined>();
+
+  // Date range states
+  const [datePreset, setDatePreset] = useState<string>('all');
+  const [customRange, setCustomRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
+  });
 
   // Export states
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
@@ -60,6 +73,19 @@ export default function TransactionsPage() {
   const transactions = data?.data || [];
   const meta = data?.meta;
 
+  // Group transactions by date (yyyy-MM-dd)
+  const groupedTransactions = transactions.reduce((groups: { [key: string]: typeof transactions }, tx) => {
+    const dateKey = tx.date.split('T')[0]; // Get date part only
+    if (!groups[dateKey]) {
+      groups[dateKey] = [];
+    }
+    groups[dateKey].push(tx);
+    return groups;
+  }, {});
+
+  // Sorted date keys in descending order
+  const dateKeys = Object.keys(groupedTransactions).sort((a, b) => b.localeCompare(a));
+
   const handleSearch = () => {
     setFilters((prev) => ({ ...prev, search: searchInput || undefined, page: 1 }));
   };
@@ -71,6 +97,70 @@ export default function TransactionsPage() {
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
+  };
+
+  const handlePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    let startDate: string | undefined = undefined;
+    let endDate: string | undefined = undefined;
+
+    const now = new Date();
+
+    if (preset === 'this-month') {
+      const start = startOfMonth(now);
+      const end = endOfMonth(now);
+      startDate = format(start, 'yyyy-MM-dd');
+      endDate = format(end, 'yyyy-MM-dd');
+    } else if (preset === 'last-month') {
+      const lastMonth = subMonths(now, 1);
+      const start = startOfMonth(lastMonth);
+      const end = endOfMonth(lastMonth);
+      startDate = format(start, 'yyyy-MM-dd');
+      endDate = format(end, 'yyyy-MM-dd');
+    } else if (preset === 'last-3-months') {
+      const start = startOfMonth(subMonths(now, 2));
+      startDate = format(start, 'yyyy-MM-dd');
+      endDate = format(now, 'yyyy-MM-dd');
+    } else if (preset === 'this-year') {
+      const start = startOfYear(now);
+      const end = endOfYear(now);
+      startDate = format(start, 'yyyy-MM-dd');
+      endDate = format(end, 'yyyy-MM-dd');
+    } else if (preset === 'custom') {
+      // Don't update filter yet, let user pick from Calendar
+      return;
+    }
+
+    // Reset custom range if not 'custom'
+    setCustomRange({ from: undefined, to: undefined });
+
+    setFilters((prev) => ({
+      ...prev,
+      startDate,
+      endDate,
+      page: 1,
+    }));
+  };
+
+  const handleCustomRangeChange = (range: any) => {
+    setCustomRange(range || { from: undefined, to: undefined });
+    if (range?.from) {
+      const startDate = format(range.from, 'yyyy-MM-dd');
+      const endDate = range.to ? format(range.to, 'yyyy-MM-dd') : startDate;
+      setFilters((prev) => ({
+        ...prev,
+        startDate,
+        endDate,
+        page: 1,
+      }));
+    } else {
+      setFilters((prev) => ({
+        ...prev,
+        startDate: undefined,
+        endDate: undefined,
+        page: 1,
+      }));
+    }
   };
 
   const handleExport = async () => {
@@ -131,7 +221,7 @@ export default function TransactionsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Cari transaksi..."
-            className="pl-9"
+            className="pl-9 h-9"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -139,11 +229,77 @@ export default function TransactionsPage() {
         </div>
 
         <div className="flex gap-2">
+          {/* Date Filter Popover */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 h-9 border-border/80 bg-background text-xs font-semibold cursor-pointer shrink-0"
+              >
+                <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                <span>
+                  {datePreset === 'all' && 'Semua Waktu'}
+                  {datePreset === 'this-month' && 'Bulan Ini'}
+                  {datePreset === 'last-month' && 'Bulan Lalu'}
+                  {datePreset === 'last-3-months' && '3 Bulan Terakhir'}
+                  {datePreset === 'this-year' && 'Tahun Ini'}
+                  {datePreset === 'custom' && (
+                    customRange?.from ? (
+                      customRange.to ? (
+                        `${format(customRange.from, 'dd MMM yyyy')} - ${format(customRange.to, 'dd MMM yyyy')}`
+                      ) : (
+                        format(customRange.from, 'dd MMM yyyy')
+                      )
+                    ) : (
+                      'Pilih Tanggal'
+                    )
+                  )}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-3 bg-card border border-border rounded-xl shadow-[0px_8px_24px_rgba(26,43,60,0.1)] z-50" align="end">
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Periode Waktu</label>
+                  <Select value={datePreset} onValueChange={handlePresetChange}>
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Pilih Periode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Waktu</SelectItem>
+                      <SelectItem value="this-month">Bulan Ini</SelectItem>
+                      <SelectItem value="last-month">Bulan Lalu</SelectItem>
+                      <SelectItem value="last-3-months">3 Bulan Terakhir</SelectItem>
+                      <SelectItem value="this-year">Tahun Ini</SelectItem>
+                      <SelectItem value="custom">Rentang Kustom (Pilih Kalender)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {datePreset === 'custom' && (
+                  <div className="pt-2 border-t border-border/50">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pilih Rentang Tanggal</label>
+                    <div className="rounded-lg border border-border/50 bg-background/50 p-1 flex justify-center">
+                      <Calendar
+                        mode="range"
+                        selected={customRange}
+                        onSelect={(range) => handleCustomRangeChange(range)}
+                        numberOfMonths={1}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Button
             variant={activeType === undefined ? 'default' : 'outline'}
             size="sm"
             onClick={() => handleTypeFilter(undefined)}
-            className="text-xs"
+            className="text-xs h-9 cursor-pointer"
           >
             <Filter className="w-3 h-3 mr-1" />
             Semua
@@ -152,7 +308,7 @@ export default function TransactionsPage() {
             variant={activeType === 'INCOME' ? 'default' : 'outline'}
             size="sm"
             onClick={() => handleTypeFilter('INCOME')}
-            className={cn('text-xs', activeType === 'INCOME' && 'bg-emerald-600 hover:bg-emerald-700')}
+            className={cn('text-xs h-9 cursor-pointer', activeType === 'INCOME' && 'bg-emerald-600 hover:bg-emerald-700')}
           >
             <TrendingUp className="w-3 h-3 mr-1" />
             Pemasukan
@@ -161,7 +317,7 @@ export default function TransactionsPage() {
             variant={activeType === 'EXPENSE' ? 'default' : 'outline'}
             size="sm"
             onClick={() => handleTypeFilter('EXPENSE')}
-            className={cn('text-xs', activeType === 'EXPENSE' && 'bg-red-600 hover:bg-red-700')}
+            className={cn('text-xs h-9 cursor-pointer', activeType === 'EXPENSE' && 'bg-red-600 hover:bg-red-700')}
           >
             <TrendingDown className="w-3 h-3 mr-1" />
             Pengeluaran
@@ -170,30 +326,30 @@ export default function TransactionsPage() {
       </div>
 
       {/* Transactions List */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        {isLoading ? (
-          <div className="divide-y divide-border">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between px-4 py-3.5">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="w-10 h-10 rounded-lg" />
-                  <div className="space-y-1.5">
-                    <Skeleton className="w-32 h-4" />
-                    <Skeleton className="w-24 h-3" />
-                  </div>
+      {isLoading ? (
+        <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center justify-between px-4 py-3.5">
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-lg" />
+                <div className="space-y-1.5">
+                  <Skeleton className="w-32 h-4" />
+                  <Skeleton className="w-24 h-3" />
                 </div>
-                <Skeleton className="w-24 h-5" />
               </div>
-            ))}
-          </div>
-        ) : transactions.length === 0 ? (
+              <Skeleton className="w-24 h-5" />
+            </div>
+          ))}
+        </div>
+      ) : transactions.length === 0 ? (
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
               <Filter className="w-7 h-7 text-muted-foreground" />
             </div>
             <p className="font-medium">Belum ada transaksi</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Mulai catat transaksi pertama Anda
+              Tidak ada transaksi yang cocok dengan filter aktif
             </p>
             <Link href="/transactions/new" className="mt-4">
               <Button size="sm" className="gap-2">
@@ -201,98 +357,115 @@ export default function TransactionsPage() {
               </Button>
             </Link>
           </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {transactions.map((tx) => (
-              <Link
-                key={tx.id}
-                href={`/transactions/${tx.id}`}
-                className="flex items-center justify-between px-4 py-3.5 hover:bg-accent/50 transition-colors gap-4"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
-                    style={{
-                      backgroundColor: tx.category?.color
-                        ? `${tx.category.color}15`
-                        : undefined,
-                    }}
-                  >
-                    {tx.category?.icon || '📦'}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {tx.description || tx.category?.name || 'Transaksi'}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatTransactionDate(tx.date)}
-                      </span>
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
-                        {tx.type === 'TRANSFER' ? 'Transfer' : tx.category?.name}
-                      </Badge>
-                      {tx.type === 'TRANSFER' ? (
-                        <div className="flex items-center gap-1.5">
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
-                            {tx.account?.name || 'Saldo Utama'}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">➔</span>
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
-                            {tx.destinationAccount?.name || 'Saldo Utama'}
-                          </Badge>
-                        </div>
-                      ) : (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-muted/60 text-muted-foreground border-none whitespace-nowrap">
-                          {tx.account?.name || 'Saldo Utama'}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <span
-                  className={cn(
-                    'text-sm font-semibold whitespace-nowrap shrink-0 text-right',
-                    tx.type === 'INCOME' ? 'text-emerald-500' : (tx.type === 'EXPENSE' ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'),
-                  )}
-                >
-                  {tx.type === 'INCOME' ? '+' : (tx.type === 'EXPENSE' ? '-' : '')}
-                  {formatCurrency(Number(tx.amount))}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {dateKeys.map((dateKey) => (
+            <div key={dateKey} className="space-y-2">
+              {/* Group Header */}
+              <div className="flex items-center justify-between px-1 text-xs font-semibold text-muted-foreground select-none">
+                <span>{formatGroupHeaderDate(dateKey)}</span>
+                <span className="text-[10px] bg-muted dark:bg-slate-800 px-2 py-0.5 rounded-full font-medium">
+                  {groupedTransactions[dateKey].length} Transaksi
                 </span>
-              </Link>
-            ))}
-          </div>
-        )}
+              </div>
+              {/* Transactions in Group */}
+              <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border shadow-[0px_2px_8px_rgba(26,43,60,0.02)]">
+                {groupedTransactions[dateKey].map((tx) => {
+                  const timeStr = format(new Date(tx.date), 'HH:mm');
+                  return (
+                    <Link
+                      key={tx.id}
+                      href={`/transactions/${tx.id}`}
+                      className="flex items-center justify-between px-4 py-3.5 hover:bg-accent/50 transition-colors gap-4"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
+                          style={{
+                            backgroundColor: tx.category?.color
+                              ? `${tx.category.color}15`
+                              : undefined,
+                          }}
+                        >
+                          {tx.category?.icon || '📦'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {tx.description || tx.category?.name || 'Transaksi'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                              Pukul {timeStr}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
+                              {tx.type === 'TRANSFER' ? 'Transfer' : tx.category?.name}
+                            </Badge>
+                            {tx.type === 'TRANSFER' ? (
+                              <div className="flex items-center gap-1.5">
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
+                                  {tx.account?.name || 'Saldo Utama'}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">➔</span>
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
+                                  {tx.destinationAccount?.name || 'Saldo Utama'}
+                                </Badge>
+                              </div>
+                            ) : (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-muted/60 text-muted-foreground border-none whitespace-nowrap">
+                                {tx.account?.name || 'Saldo Utama'}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
 
-        {/* Pagination */}
-        {meta && meta.totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/30">
-            <p className="text-xs text-muted-foreground">
-              {meta.total} transaksi · Halaman {meta.page} dari {meta.totalPages}
-            </p>
-            <div className="flex gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={meta.page <= 1}
-                onClick={() => handlePageChange(meta.page - 1)}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={meta.page >= meta.totalPages}
-                onClick={() => handlePageChange(meta.page + 1)}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+                      <span
+                        className={cn(
+                          'text-sm font-semibold whitespace-nowrap shrink-0 text-right',
+                          tx.type === 'INCOME' ? 'text-emerald-500' : (tx.type === 'EXPENSE' ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'),
+                        )}
+                      >
+                        {tx.type === 'INCOME' ? '+' : (tx.type === 'EXPENSE' ? '-' : '')}
+                        {formatCurrency(Number(tx.amount))}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {meta && meta.totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-border bg-card shadow-[0px_2px_8px_rgba(26,43,60,0.02)]">
+          <p className="text-xs text-muted-foreground">
+            {meta.total} transaksi · Halaman {meta.page} dari {meta.totalPages}
+          </p>
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={meta.page <= 1}
+              onClick={() => handlePageChange(meta.page - 1)}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={meta.page >= meta.totalPages}
+              onClick={() => handlePageChange(meta.page + 1)}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Export Dialog */}
       <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
