@@ -235,7 +235,10 @@ export default function TransactionsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2 h-9 border-border/80 bg-background text-xs font-semibold cursor-pointer shrink-0"
+                className={cn(
+                  "gap-2 h-9 border-border/80 bg-background text-xs font-semibold cursor-pointer shrink-0 transition-all hover:bg-accent/50",
+                  datePreset !== 'all' && "border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                )}
               >
                 <CalendarDays className="w-4 h-4 text-muted-foreground" />
                 <span>
@@ -259,38 +262,63 @@ export default function TransactionsPage() {
                 <ChevronDown className="w-3.5 h-3.5 text-muted-foreground opacity-60" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-3 bg-card border border-border rounded-xl shadow-[0px_8px_24px_rgba(26,43,60,0.1)] z-50" align="end">
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Periode Waktu</label>
-                  <Select value={datePreset} onValueChange={handlePresetChange}>
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Pilih Periode" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Waktu</SelectItem>
-                      <SelectItem value="this-month">Bulan Ini</SelectItem>
-                      <SelectItem value="last-month">Bulan Lalu</SelectItem>
-                      <SelectItem value="last-3-months">3 Bulan Terakhir</SelectItem>
-                      <SelectItem value="this-year">Tahun Ini</SelectItem>
-                      <SelectItem value="custom">Rentang Kustom (Pilih Kalender)</SelectItem>
-                    </SelectContent>
-                  </Select>
+            <PopoverContent className="w-auto p-0 bg-card border border-border rounded-2xl shadow-[0px_10px_30px_rgba(26,43,60,0.12)] z-50 overflow-hidden" align="end">
+              <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-border">
+                {/* Left Panel: Presets List */}
+                <div className="w-full sm:w-44 p-3 bg-muted/15 flex flex-col gap-1 shrink-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1 mb-1 block">
+                    Periode Cepat
+                  </span>
+                  {[
+                    { id: 'all', label: 'Semua Waktu' },
+                    { id: 'this-month', label: 'Bulan Ini' },
+                    { id: 'last-month', label: 'Bulan Lalu' },
+                    { id: 'last-3-months', label: '3 Bulan Terakhir' },
+                    { id: 'this-year', label: 'Tahun Ini' },
+                    { id: 'custom', label: 'Rentang Kustom' },
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handlePresetChange(p.id)}
+                      className={cn(
+                        "w-full text-left px-3 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer",
+                        datePreset === p.id
+                          ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                          : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
                 </div>
 
-                {datePreset === 'custom' && (
-                  <div className="pt-2 border-t border-border/50">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pilih Rentang Tanggal</label>
-                    <div className="rounded-lg border border-border/50 bg-background/50 p-1 flex justify-center">
-                      <Calendar
-                        mode="range"
-                        selected={customRange}
-                        onSelect={(range) => handleCustomRangeChange(range)}
-                        numberOfMonths={1}
-                      />
-                    </div>
+                {/* Right Panel: Calendar Visualizer */}
+                <div className="p-3 flex flex-col justify-between items-center bg-card select-none">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-full mb-1 text-center sm:text-left sm:px-2">
+                    {datePreset === 'custom' ? 'Pilih Rentang Tanggal' : 'Visualisasi Periode'}
+                  </span>
+                  <div className="rounded-xl border border-border/40 p-1 bg-background/30">
+                    <Calendar
+                      mode="range"
+                      selected={customRange}
+                      onSelect={(range) => {
+                        setDatePreset('custom');
+                        handleCustomRangeChange(range);
+                      }}
+                      numberOfMonths={1}
+                      className={cn(
+                        "transition-opacity duration-200",
+                        datePreset !== 'custom' && "pointer-events-none opacity-50"
+                      )}
+                    />
                   </div>
-                )}
+                  {datePreset === 'custom' && (
+                    <p className="text-[10px] text-muted-foreground mt-2 w-full text-center">
+                      * Pilih tanggal mulai &amp; tanggal selesai pada kalender.
+                    </p>
+                  )}
+                </div>
               </div>
             </PopoverContent>
           </Popover>
