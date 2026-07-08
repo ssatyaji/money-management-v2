@@ -38,7 +38,6 @@ const menuItems = [
   { label: 'AI Advisor', href: '/ai-advisor', icon: Sparkles },
   { label: 'Laporan Bulanan', href: '/reports/monthly', icon: BarChart3 },
   { label: 'Laporan Tahunan', href: '/reports/yearly', icon: CalendarDays },
-  { label: 'Reminder', href: '/reminders', icon: Bell },
   { label: 'Scan & Import', href: '/scan/receipt', icon: ScanLine },
   { label: 'Pengaturan', href: '/settings', icon: Settings },
 ];

@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, IsBoolean, IsDateString, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional, IsBoolean, IsDateString, IsEnum, Min, Max, IsInt } from 'class-validator';
 import { TransactionType, RecurringFrequency } from '@prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -47,4 +47,15 @@ export class CreateRecurringTransactionDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiProperty({
+    example: 1,
+    required: false,
+    description: 'Days before nextDueDate to send push notification. null = disabled.',
+  })
+  @IsInt()
+  @Min(0)
+  @Max(30)
+  @IsOptional()
+  notifyBeforeDays?: number | null;
 }

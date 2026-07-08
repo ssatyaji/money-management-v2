@@ -16,7 +16,6 @@ export function MobileNav() {
     { label: 'Investasi', href: '/investments', icon: 'trending_up' },
     { label: 'AI Advisor', href: '/ai-advisor', icon: 'auto_awesome' },
     { label: 'Laporan', href: '/reports/monthly', icon: 'insights' },
-    { label: 'Reminder', href: '/reminders', icon: 'notifications' },
     { label: 'Scanner', href: '/scan/receipt', icon: 'document_scanner' },
     { label: 'Pengaturan', href: '/settings', icon: 'settings' },
   ];

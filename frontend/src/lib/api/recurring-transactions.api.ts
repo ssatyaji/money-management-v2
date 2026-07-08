@@ -13,6 +13,7 @@ export interface RecurringTransaction {
   nextDueDate: string;
   isActive: boolean;
   lastTriggered?: string;
+  notifyBeforeDays?: number | null;
   categoryId: string;
   category: Category;
   accountId: string;
@@ -29,6 +30,7 @@ export interface CreateRecurringTransactionInput {
   categoryId: string;
   accountId: string;
   isActive?: boolean;
+  notifyBeforeDays?: number | null;
 }
 
 export const recurringTransactionsApi = {

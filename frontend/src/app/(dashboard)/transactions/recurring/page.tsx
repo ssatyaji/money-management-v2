@@ -18,11 +18,13 @@ import {
   TrendingUp,
   TrendingDown,
   Clock,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -60,6 +62,8 @@ const recurringSchema = z.object({
   categoryId: z.string().min(1, 'Kategori wajib dipilih'),
   accountId: z.string().min(1, 'Dompet wajib dipilih'),
   isActive: z.boolean(),
+  enableNotification: z.boolean(),
+  notifyBeforeDays: z.number().min(0, 'Minimal 0 hari').max(30, 'Maksimal 30 hari').optional().nullable(),
 });
 
 type RecurringFormValues = z.infer<typeof recurringSchema>;
@@ -96,10 +100,13 @@ export default function RecurringTransactionsPage() {
       categoryId: '',
       accountId: 'main',
       isActive: true,
+      enableNotification: false,
+      notifyBeforeDays: 1,
     },
   });
 
   const watchedCategoryId = watch('categoryId');
+  const watchedEnableNotification = watch('enableNotification');
 
   const onTypeChange = (type: 'INCOME' | 'EXPENSE') => {
     setSelectedType(type);
@@ -110,8 +117,16 @@ export default function RecurringTransactionsPage() {
   const onSubmit = async (data: RecurringFormValues) => {
     try {
       await createMutation.mutateAsync({
-        ...data,
+        amount: data.amount,
+        type: data.type,
+        description: data.description,
+        note: data.note,
+        frequency: data.frequency,
         startDate: new Date(data.startDate).toISOString(),
+        categoryId: data.categoryId,
+        accountId: data.accountId,
+        isActive: data.isActive,
+        notifyBeforeDays: data.enableNotification ? Number(data.notifyBeforeDays) : null,
       });
       toast.success('Tagihan berulang berhasil ditambahkan! 🎉');
       setIsOpen(false);
@@ -228,6 +243,15 @@ export default function RecurringTransactionsPage() {
                         {item.frequency === 'MONTHLY' && 'Bulanan'}
                         {item.frequency === 'YEARLY' && 'Tahunan'}
                       </span>
+                      {item.notifyBeforeDays !== null && item.notifyBeforeDays !== undefined && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium" title={`Pengingat dikirim ${item.notifyBeforeDays} hari sebelum jatuh tempo`}>
+                            <Bell className="w-3.5 h-3.5 shrink-0" />
+                            Ingatkan H-{item.notifyBeforeDays}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -435,6 +459,44 @@ export default function RecurringTransactionsPage() {
                 />
                 {errors.categoryId && <p className="text-xs text-destructive mt-0.5">{errors.categoryId.message}</p>}
               </div>
+            </div>
+
+            {/* Notification Toggle */}
+            <div className="space-y-3 border-y border-border/50 py-3 my-1">
+              <div className="flex items-center gap-2">
+                <Controller
+                  name="enableNotification"
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="enableNotification"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="rounded-md"
+                    />
+                  )}
+                />
+                <Label htmlFor="enableNotification" className="text-sm font-normal cursor-pointer flex items-center gap-1.5">
+                  <Bell className="w-4 h-4 text-amber-500" />
+                  Aktifkan Pengingat Tagihan
+                </Label>
+              </div>
+
+              {watchedEnableNotification && (
+                <div className="space-y-1.5 pl-6">
+                  <Label htmlFor="notifyBeforeDays" className="text-xs">Ingatkan Sebelum Jatuh Tempo (Hari)</Label>
+                  <Input
+                    id="notifyBeforeDays"
+                    type="number"
+                    min={0}
+                    max={30}
+                    placeholder="1"
+                    className="rounded-xl h-9 w-24"
+                    {...register('notifyBeforeDays', { valueAsNumber: true })}
+                  />
+                  {errors.notifyBeforeDays && <p className="text-xs text-destructive">{errors.notifyBeforeDays.message}</p>}
+                </div>
+              )}
             </div>
 
             {/* Note */}

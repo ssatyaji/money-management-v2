@@ -291,6 +291,10 @@ model RecurringTransaction {
   isActive      Boolean            @default(true)
   lastTriggered DateTime?
 
+  // Notification fields (merged from Reminders feature)
+  notifyBeforeDays  Int?      // null = no notification; 1 = notify 1 day before due
+  lastNotifiedDate  DateTime? // tracks last notification to prevent duplicates
+
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
 
