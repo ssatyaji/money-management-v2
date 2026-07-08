@@ -1,6 +1,6 @@
 import apiClient from './client';
 import type { ApiResponse } from '@/types/api.types';
-import type { OcrUploadResult, OcrStatus, OcrResult } from '@/types/bank-statement.types';
+import type { OcrUploadResult, OcrStatus, OcrResult, OcrReceipt } from '@/types/bank-statement.types';
 
 export const ocrApi = {
   /**
@@ -17,6 +17,14 @@ export const ocrApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000, // 60s timeout for OCR processing
     });
+    return response.data.data;
+  },
+
+  /**
+   * Get all OCR receipt history.
+   */
+  getAll: async (): Promise<OcrReceipt[]> => {
+    const response = await apiClient.get<ApiResponse<OcrReceipt[]>>('/ocr/receipt');
     return response.data.data;
   },
 

@@ -87,6 +87,7 @@ model User {
   budgets               Budget[]
   reminders             Reminder[]
   bankStatements        BankStatement[]
+  ocrReceipts           OcrReceipt[]
   pushSubscriptions     PushSubscription[]
   accounts              Account[]
   recurringTransactions RecurringTransaction[]
@@ -224,6 +225,25 @@ model BankStatement {
 
   @@index([userId, status])
   @@map("bank_statements")
+}
+
+model OcrReceipt {
+  id          String           @id @default(uuid())
+  fileName    String
+  filePath    String
+  status      ProcessingStatus @default(PENDING)
+  processedAt DateTime?
+  description String?
+  result      Json?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@map("ocr_receipts")
 }
 
 model PushSubscription {

@@ -79,6 +79,16 @@ export interface OcrResult {
   result: ParsedReceipt;
 }
 
+export interface OcrReceipt {
+  id: string;
+  fileName: string;
+  status: ProcessingStatus;
+  processedAt: string | null;
+  description: string | null;
+  result: ParsedReceipt | null;
+  createdAt: string;
+}
+
 export const BANK_LABELS: Record<BankName, string> = {
   PERMATA: 'Bank Permata',
   JAGO: 'Bank Jago',

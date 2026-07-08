@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/currency';
-import { useUploadReceipt } from '@/hooks/use-ocr';
+import { useUploadReceipt, useOcrReceipts } from '@/hooks/use-ocr';
 import { useCategories, useCreateTransaction } from '@/hooks/use-transactions';
 import { useAccounts } from '@/hooks/use-accounts';
 import {
@@ -37,6 +37,7 @@ import type {
   ParsedReceipt,
   ParsedTransaction,
   BankStatement,
+  OcrReceipt,
   BANK_LABELS as BankLabelsType,
 } from '@/types/bank-statement.types';
 
@@ -860,9 +861,10 @@ function ImportStatementTab() {
 // ─── History Tab Component ──────────────────────────────────────────────────
 
 function UploadHistoryTab() {
-  const { data: statements, isLoading } = useBankStatements();
+  const { data: statements = [], isLoading: isLoadingStatements } = useBankStatements();
+  const { data: ocrReceipts = [], isLoading: isLoadingOcr } = useOcrReceipts();
 
-  if (isLoading) {
+  if (isLoadingStatements || isLoadingOcr) {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
@@ -872,7 +874,13 @@ function UploadHistoryTab() {
     );
   }
 
-  if (!statements || statements.length === 0) {
+  // Merge and sort by createdAt descending
+  const unifiedHistory = [
+    ...statements.map((stmt) => ({ ...stmt, isOcr: false })),
+    ...ocrReceipts.map((rec) => ({ ...rec, isOcr: true })),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  if (unifiedHistory.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-card p-12 text-center">
         <span className="material-symbols-outlined text-4xl text-muted-foreground/50 mb-3 block">history</span>
@@ -886,27 +894,17 @@ function UploadHistoryTab() {
 
   return (
     <div className="space-y-3">
-      {statements.map((stmt: BankStatement) => {
-        const statusConfig = STATUS_CONFIG[stmt.status] || STATUS_CONFIG.PENDING;
+      {unifiedHistory.map((item) => {
+        const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG.PENDING;
+        const isOcr = item.isOcr;
 
-        let label = BANK_LABELS[stmt.bankName] || stmt.bankName;
-        let isOcr = false;
-
-        if (stmt.errorMessage) {
-          try {
-            const parsedError = JSON.parse(stmt.errorMessage);
-            if (parsedError.type === 'OCR_RECEIPT') {
-              label = 'Scan Struk (OCR)';
-              isOcr = true;
-            }
-          } catch {
-            // Ignore parse errors, fallback to default
-          }
-        }
+        const label = isOcr
+          ? 'Scan Struk (OCR)'
+          : (BANK_LABELS[(item as any).bankName as BankName] || (item as any).bankName);
 
         return (
           <div
-            key={stmt.id}
+            key={item.id}
             className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/20 transition-colors"
           >
             <div className="flex items-center gap-4 min-w-0 w-full sm:w-auto">
@@ -917,13 +915,13 @@ function UploadHistoryTab() {
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{stmt.fileName}</p>
+                <p className="font-medium text-sm truncate">{item.fileName}</p>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <Badge variant="outline" className="text-xs whitespace-nowrap">
                     {label}
                   </Badge>
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {new Date(stmt.createdAt).toLocaleDateString('id-ID', {
+                    {new Date(item.createdAt).toLocaleDateString('id-ID', {
                       day: '2-digit',
                       month: 'short',
                       year: 'numeric',
@@ -936,9 +934,9 @@ function UploadHistoryTab() {
             </div>
 
             <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0 w-full sm:w-auto border-t border-border/50 sm:border-0 pt-2 sm:pt-0">
-              {stmt._count && stmt._count.transactions > 0 && (
+              {!isOcr && (item as any)._count && (item as any)._count.transactions > 0 && (
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {stmt._count.transactions} transaksi
+                  {(item as any)._count.transactions} transaksi
                 </span>
               )}
               <Badge className={cn('text-xs gap-1', statusConfig.color)}>

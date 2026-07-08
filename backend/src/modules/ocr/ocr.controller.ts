@@ -62,6 +62,12 @@ export class OcrController {
     return this.ocrService.processReceipt(userId, file, dto.description);
   }
 
+  @Get('receipt')
+  @ApiOperation({ summary: 'Get all OCR receipt uploads for the user' })
+  async findAll(@CurrentUser('id') userId: string) {
+    return this.ocrService.findAll(userId);
+  }
+
   @Get('receipt/:id/status')
   @ApiOperation({ summary: 'Get OCR processing status' })
   async getStatus(@CurrentUser('id') userId: string, @Param('id') id: string) {

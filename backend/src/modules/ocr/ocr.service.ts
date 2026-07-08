@@ -73,24 +73,16 @@ export class OcrService {
     // Parse the OCR text
     const parsed = this.ocrParser.parseReceiptText(rawText);
 
-    // Store the result in a simple JSON structure
-    // We'll use a lightweight approach: store in memory/return directly
-    // For persistence, we create a record to track the upload
-    const record = await this.prisma.bankStatement.create({
+    // Store the result in dedicated ocr_receipts table
+    const record = await this.prisma.ocrReceipt.create({
       data: {
         fileName: file.originalname,
         filePath: filePath,
-        bankName: 'PERMATA', // Placeholder — OCR doesn't have a bank
         status: 'COMPLETED',
         processedAt: new Date(),
         userId,
-        // We store parsed data in errorMessage field as JSON (pragmatic approach)
-        // In a production app, you'd have a dedicated OcrResult table
-        errorMessage: JSON.stringify({
-          type: 'OCR_RECEIPT',
-          description: description || null,
-          result: parsed,
-        }),
+        description: description || null,
+        result: parsed as any,
       },
     });
 
@@ -100,10 +92,28 @@ export class OcrService {
   }
 
   /**
+   * Get all OCR receipts for a user.
+   */
+  async findAll(userId: string) {
+    return this.prisma.ocrReceipt.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        fileName: true,
+        status: true,
+        processedAt: true,
+        description: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  /**
    * Get OCR processing status by ID.
    */
   async getStatus(userId: string, id: string) {
-    const record = await this.prisma.bankStatement.findFirst({
+    const record = await this.prisma.ocrReceipt.findFirst({
       where: { id, userId },
       select: { id: true, status: true, processedAt: true, fileName: true },
     });
@@ -119,7 +129,7 @@ export class OcrService {
    * Get OCR result by ID.
    */
   async getResult(userId: string, id: string) {
-    const record = await this.prisma.bankStatement.findFirst({
+    const record = await this.prisma.ocrReceipt.findFirst({
       where: { id, userId },
     });
 
@@ -127,25 +137,16 @@ export class OcrService {
       throw new NotFoundException('Record tidak ditemukan');
     }
 
-    if (record.status !== 'COMPLETED' || !record.errorMessage) {
+    if (record.status !== 'COMPLETED' || !record.result) {
       throw new BadRequestException('Hasil OCR belum tersedia');
     }
 
-    try {
-      const data = JSON.parse(record.errorMessage);
-      if (data.type !== 'OCR_RECEIPT') {
-        throw new BadRequestException('Record ini bukan hasil OCR');
-      }
-      return {
-        id: record.id,
-        fileName: record.fileName,
-        status: record.status,
-        processedAt: record.processedAt,
-        result: data.result as ParsedReceipt,
-      };
-    } catch (error: any) {
-      if (error instanceof BadRequestException) throw error;
-      throw new BadRequestException('Gagal membaca hasil OCR');
-    }
+    return {
+      id: record.id,
+      fileName: record.fileName,
+      status: record.status,
+      processedAt: record.processedAt,
+      result: record.result as unknown as ParsedReceipt,
+    };
   }
 }

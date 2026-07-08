@@ -36,6 +36,7 @@ export const queryKeys = {
   ocr: {
     status: (id: string) => ['ocr', 'status', id] as const,
     result: (id: string) => ['ocr', 'result', id] as const,
+    all: ['ocr-receipts'] as const,
   },
   bankStatements: {
     all: ['bank-statements'] as const,
