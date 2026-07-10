@@ -102,6 +102,9 @@ export default function DashboardPage() {
 
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
+      {/* Alert Notifications */}
+      <AlertCards />
+
       {/* Net Worth Card (Primary Bento Item) */}
       <div className="w-full relative overflow-hidden rounded-[24px] p-6 text-primary-foreground shadow-lg flex flex-col justify-between min-h-[180px] animate-in fade-in slide-in-from-bottom-4 duration-500 bg-primary">
         <div className="flex items-center justify-between opacity-80 mb-2 z-10">
@@ -259,9 +262,6 @@ export default function DashboardPage() {
           <p className="text-sm text-muted-foreground mt-2">Total expense this month</p>
         </div>
       </div>
-
-      {/* Alert Notifications */}
-      <AlertCards />
 
       {/* Month Predictor Widget */}
       <MonthPredictorWidget />
