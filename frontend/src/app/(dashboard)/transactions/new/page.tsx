@@ -400,9 +400,9 @@ export default function NewTransactionPage() {
             {/* Date & Time */}
             <div className="space-y-2">
               <Label>Tanggal &amp; Waktu</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="flex flex-row gap-2 w-full overflow-hidden">
                 {/* Date Picker */}
-                <div className="sm:col-span-2">
+                <div className="flex-1 min-w-0">
                   <Controller
                     name="date"
                     control={control}
@@ -448,7 +448,7 @@ export default function NewTransactionPage() {
                   />
                 </div>
                 {/* Time Input */}
-                <div className="sm:col-span-1">
+                <div className="shrink-0 w-[130px]">
                   <Input
                     type="time"
                     className={cn('w-full h-9 bg-background border-input', errors.time && 'border-destructive')}
