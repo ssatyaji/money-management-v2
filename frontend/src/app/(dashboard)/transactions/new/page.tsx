@@ -400,7 +400,7 @@ export default function NewTransactionPage() {
             {/* Date & Time */}
             <div className="space-y-2">
               <Label>Tanggal &amp; Waktu</Label>
-              <div className="flex flex-row gap-2 w-full overflow-hidden">
+              <div className="flex flex-col sm:flex-row gap-2 w-full">
                 {/* Date Picker */}
                 <div className="flex-1 min-w-0">
                   <Controller
@@ -447,14 +447,47 @@ export default function NewTransactionPage() {
                     }}
                   />
                 </div>
-                {/* Time Input */}
-                <div className="shrink-0 w-[130px]">
-                  <Input
-                    type="time"
-                    className={cn('w-full h-9 bg-background border-input', errors.time && 'border-destructive')}
-                    {...register('time')}
-                  />
-                </div>
+                {/* Time Picker: two selects (Hour + Minute) */}
+                <Controller
+                  name="time"
+                  control={control}
+                  render={({ field }) => {
+                    const [hh, mm] = (field.value || '00:00').split(':');
+                    const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+                    const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+                    return (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Select
+                          value={hh}
+                          onValueChange={(val) => field.onChange(`${val}:${mm}`)}
+                        >
+                          <SelectTrigger className={cn('w-[72px] h-9 bg-background', errors.time && 'border-destructive')}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[200px]">
+                            {hours.map((h) => (
+                              <SelectItem key={h} value={h}>{h}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-muted-foreground font-semibold text-sm">:</span>
+                        <Select
+                          value={mm}
+                          onValueChange={(val) => field.onChange(`${hh}:${val}`)}
+                        >
+                          <SelectTrigger className={cn('w-[72px] h-9 bg-background', errors.time && 'border-destructive')}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[200px]">
+                            {minutes.map((m) => (
+                              <SelectItem key={m} value={m}>{m}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  }}
+                />
               </div>
               {(errors.date || errors.time) && (
                 <p className="text-sm text-destructive">{errors.date?.message || errors.time?.message}</p>
