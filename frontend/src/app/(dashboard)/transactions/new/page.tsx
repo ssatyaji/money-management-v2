@@ -354,127 +354,134 @@ export default function NewTransactionPage() {
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tanggal &amp; Waktu</span>
 
-          {/* Quick Date Chips */}
-          <Controller
-            name="date"
-            control={control}
-            render={({ field }) => {
-              const today = new Date().toISOString().split('T')[0];
-              const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-              const isToday = field.value === today;
-              const isYesterday = field.value === yesterday;
-              const isOther = !isToday && !isYesterday;
+          {/* Unified date+time container */}
+          <div className="rounded-xl border border-border bg-muted/40 overflow-hidden">
 
-              // Format dd Mmm for 'other' chip label
-              const otherLabel = isOther && field.value
-                ? new Date(field.value + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-                : 'Lainnya';
+            {/* Date chips row */}
+            <Controller
+              name="date"
+              control={control}
+              render={({ field }) => {
+                const today = new Date().toISOString().split('T')[0];
+                const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                const isToday = field.value === today;
+                const isYesterday = field.value === yesterday;
+                const isOther = !isToday && !isYesterday;
 
-              return (
-                <div className="flex flex-col gap-2">
-                  {/* Chip row */}
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => { field.onChange(today); setShowDatePicker(false); }}
-                      className={cn(
-                        'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border',
-                        isToday
-                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                          : 'bg-muted/60 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
-                      )}
-                    >
-                      <span className="material-symbols-outlined text-[15px]">today</span>
-                      Hari ini
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { field.onChange(yesterday); setShowDatePicker(false); }}
-                      className={cn(
-                        'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border',
-                        isYesterday
-                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                          : 'bg-muted/60 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
-                      )}
-                    >
-                      Kemarin
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowDatePicker(!showDatePicker)}
-                      className={cn(
-                        'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border',
-                        isOther
-                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                          : 'bg-muted/60 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
-                      )}
-                    >
-                      <span className="material-symbols-outlined text-[15px]">calendar_month</span>
-                      {otherLabel}
-                    </button>
+                const otherLabel = isOther && field.value
+                  ? new Date(field.value + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+                  : 'Pilih tanggal';
+
+                return (
+                  <div className="flex flex-col">
+                    {/* Chip row */}
+                    <div className="flex items-stretch divide-x divide-border">
+                      <button
+                        type="button"
+                        onClick={() => { field.onChange(today); setShowDatePicker(false); }}
+                        className={cn(
+                          'flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold transition-all duration-200',
+                          isToday
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        <span className="material-symbols-outlined text-[15px] leading-none">today</span>
+                        Hari ini
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { field.onChange(yesterday); setShowDatePicker(false); }}
+                        className={cn(
+                          'flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold transition-all duration-200',
+                          isYesterday
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        Kemarin
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowDatePicker(!showDatePicker)}
+                        className={cn(
+                          'flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold transition-all duration-200',
+                          isOther
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        <span className="material-symbols-outlined text-[15px] leading-none">calendar_month</span>
+                        {otherLabel}
+                      </button>
+                    </div>
+
+                    {/* Expandable date input */}
+                    {(showDatePicker || isOther) && (
+                      <div className="border-t border-border px-3 py-2">
+                        <input
+                          type="date"
+                          value={field.value}
+                          onChange={(e) => { field.onChange(e.target.value); setShowDatePicker(false); }}
+                          className="w-full bg-transparent text-foreground text-sm font-medium focus:outline-none"
+                          autoFocus
+                        />
+                      </div>
+                    )}
                   </div>
+                );
+              }}
+            />
 
-                  {/* Expandable date picker */}
-                  {(showDatePicker || isOther) && (
+            {/* Divider */}
+            <div className="border-t border-border" />
+
+            {/* Time row */}
+            <Controller
+              name="time"
+              control={control}
+              render={({ field }) => {
+                const [hh, mm] = (field.value || '00:00').split(':');
+                return (
+                  <div className="flex items-center gap-2 px-4 py-2.5">
+                    <span className="material-symbols-outlined text-[18px] text-muted-foreground leading-none shrink-0">schedule</span>
                     <input
-                      type="date"
-                      value={field.value}
-                      onChange={(e) => { field.onChange(e.target.value); setShowDatePicker(false); }}
-                      className={cn(inputCls(!!errors.date), 'block')}
-                      autoFocus
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={2}
+                      value={hh}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        const v = raw === '' ? '00' : String(Math.min(23, parseInt(raw))).padStart(2, '0');
+                        field.onChange(`${v}:${mm}`);
+                      }}
+                      className={cn(
+                        'w-12 bg-transparent text-center font-bold text-base focus:outline-none focus:bg-muted rounded-lg py-0.5 transition-colors',
+                        errors.time ? 'text-destructive' : 'text-foreground'
+                      )}
                     />
-                  )}
-                </div>
-              );
-            }}
-          />
-
-          {/* Time — two number inputs */}
-          <Controller
-            name="time"
-            control={control}
-            render={({ field }) => {
-              const [hh, mm] = (field.value || '00:00').split(':');
-              const setH = (raw: string) => {
-                const v = Math.min(23, Math.max(0, parseInt(raw) || 0));
-                field.onChange(`${String(v).padStart(2, '0')}:${mm}`);
-              };
-              const setM = (raw: string) => {
-                const v = Math.min(59, Math.max(0, parseInt(raw) || 0));
-                field.onChange(`${hh}:${String(v).padStart(2, '0')}`);
-              };
-              return (
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-xs font-semibold text-muted-foreground w-6 shrink-0">Jam</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={23}
-                    value={parseInt(hh)}
-                    onChange={(e) => setH(e.target.value)}
-                    inputMode="numeric"
-                    className={cn(
-                      inputCls(!!errors.time),
-                      'w-16 text-center font-bold text-lg py-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
-                    )}
-                  />
-                  <span className="text-muted-foreground font-bold text-xl select-none">:</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={59}
-                    value={parseInt(mm)}
-                    onChange={(e) => setM(e.target.value)}
-                    inputMode="numeric"
-                    className={cn(
-                      inputCls(!!errors.time),
-                      'w-16 text-center font-bold text-lg py-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
-                    )}
-                  />
-                </div>
-              );
-            }}
-          />
+                    <span className="text-muted-foreground font-bold text-base select-none">:</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={2}
+                      value={mm}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        const v = raw === '' ? '00' : String(Math.min(59, parseInt(raw))).padStart(2, '0');
+                        field.onChange(`${hh}:${v}`);
+                      }}
+                      className={cn(
+                        'w-12 bg-transparent text-center font-bold text-base focus:outline-none focus:bg-muted rounded-lg py-0.5 transition-colors',
+                        errors.time ? 'text-destructive' : 'text-foreground'
+                      )}
+                    />
+                    <span className="text-xs text-muted-foreground ml-1 select-none">WIB</span>
+                  </div>
+                );
+              }}
+            />
+          </div>
 
           {(errors.date || errors.time) && (
             <p className="text-xs text-destructive">{errors.date?.message || errors.time?.message}</p>
