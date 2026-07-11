@@ -1,39 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft,
-  TrendingUp,
-  TrendingDown,
-  CalendarIcon,
-  ArrowLeftRight,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useCategories, useCreateTransaction } from '@/hooks/use-transactions';
-import { useAccounts } from '@/hooks/use-accounts';
+import { useAccounts } from '@/hooks/use-accounts'
 import { formatNumber, formatCurrency } from '@/lib/utils/currency';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
 
 const transactionSchema = z.object({
   amount: z.number().min(1, 'Jumlah harus lebih dari 0'),
@@ -48,38 +24,51 @@ const transactionSchema = z.object({
 }).superRefine((data, ctx) => {
   if (data.type === 'TRANSFER') {
     if (!data.accountId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Dompet asal wajib dipilih',
-        path: ['accountId'],
-      });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Dompet asal wajib dipilih', path: ['accountId'] });
     }
     if (!data.destinationAccountId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Dompet tujuan wajib dipilih',
-        path: ['destinationAccountId'],
-      });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Dompet tujuan wajib dipilih', path: ['destinationAccountId'] });
     }
     if (data.accountId && data.destinationAccountId && data.accountId === data.destinationAccountId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Dompet tujuan tidak boleh sama dengan dompet asal',
-        path: ['destinationAccountId'],
-      });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Dompet tujuan tidak boleh sama dengan dompet asal', path: ['destinationAccountId'] });
     }
   } else {
     if (!data.categoryId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Kategori wajib dipilih',
-        path: ['categoryId'],
-      });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Kategori wajib dipilih', path: ['categoryId'] });
     }
   }
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
+
+// ─── Reusable field wrapper ───────────────────────────────────────────────────
+function FieldWrapper({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+      {children}
+      {error && <p className="text-xs text-destructive mt-0.5">{error}</p>}
+    </div>
+  );
+}
+
+// ─── Input base style ─────────────────────────────────────────────────────────
+const inputCls = (hasError?: boolean) =>
+  cn(
+    'w-full bg-muted/60 dark:bg-muted/40 text-foreground border border-border rounded-xl px-4 py-3 text-sm font-medium',
+    'placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
+    'transition-all duration-200',
+    hasError && 'border-destructive focus:border-destructive focus:ring-destructive/20'
+  );
+
+// ─── Native select style ──────────────────────────────────────────────────────
+const selectCls = (hasError?: boolean) =>
+  cn(
+    'w-full appearance-none bg-muted/60 dark:bg-muted/40 text-foreground border border-border rounded-xl px-4 py-3 pr-10 text-sm font-medium',
+    'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
+    'transition-all duration-200 cursor-pointer',
+    hasError && 'border-destructive'
+  );
 
 export default function NewTransactionPage() {
   const router = useRouter();
@@ -103,7 +92,7 @@ export default function NewTransactionPage() {
       time: `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`,
       amount: undefined,
       categoryId: '',
-      accountId: 'main',
+      accountId: '',
       destinationAccountId: '',
     },
   });
@@ -126,15 +115,7 @@ export default function NewTransactionPage() {
     try {
       const [year, month, day] = data.date.split('-').map(Number);
       const [hours, minutes] = (data.time || '00:00').split(':').map(Number);
-      const transactionDate = new Date(
-        year,
-        month - 1,
-        day,
-        hours,
-        minutes,
-        0,
-        0
-      );
+      const transactionDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
       await createMutation.mutateAsync({
         amount: data.amount,
@@ -154,395 +135,328 @@ export default function NewTransactionPage() {
     }
   };
 
+  // Type button config
+  const typeButtons: { type: 'INCOME' | 'EXPENSE' | 'TRANSFER'; label: string; icon: string; activeClass: string }[] = [
+    { type: 'INCOME',   label: 'Pemasukan',  icon: 'trending_up',   activeClass: 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+    { type: 'EXPENSE',  label: 'Pengeluaran', icon: 'trending_down', activeClass: 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400' },
+    { type: 'TRANSFER', label: 'Transfer',   icon: 'swap_horiz',    activeClass: 'border-primary bg-primary/10 text-primary' },
+  ];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href="/transactions">
-          <Button variant="ghost" size="icon" className="rounded-lg">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold">Tambah Transaksi</h1>
-          <p className="text-muted-foreground text-sm">Catat pemasukan atau pengeluaran baru</p>
+    <div className="max-w-2xl mx-auto">
+      {/* Page Header */}
+      <div className="flex items-center gap-3 mb-8">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+        >
+          <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+        </button>
+        <div className="flex-1">
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Tambah Transaksi</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Catat pemasukan atau pengeluaran baru</p>
         </div>
       </div>
 
-      <Card className="border-border/50">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Detail Transaksi</CardTitle>
-        </CardHeader>
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-5">
-            {/* Type Toggle */}
-            <div className="space-y-2">
-              <Label>Tipe Transaksi</Label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => onTypeChange('INCOME')}
-                  className={cn(
-                    'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-4 sm:py-3 rounded-lg border-2 transition-all font-medium text-xs sm:text-sm',
-                    selectedType === 'INCOME'
-                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600'
-                      : 'border-border text-muted-foreground hover:border-emerald-500/50',
-                  )}
-                >
-                  <TrendingUp className="w-4 h-4 shrink-0" />
-                  Pemasukan
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onTypeChange('EXPENSE')}
-                  className={cn(
-                    'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-4 sm:py-3 rounded-lg border-2 transition-all font-medium text-xs sm:text-sm',
-                    selectedType === 'EXPENSE'
-                      ? 'border-red-500 bg-red-500/10 text-red-600'
-                      : 'border-border text-muted-foreground hover:border-red-500/50',
-                  )}
-                >
-                  <TrendingDown className="w-4 h-4 shrink-0" />
-                  Pengeluaran
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onTypeChange('TRANSFER')}
-                  className={cn(
-                    'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 sm:px-4 sm:py-3 rounded-lg border-2 transition-all font-medium text-xs sm:text-sm',
-                    selectedType === 'TRANSFER'
-                      ? 'border-indigo-500 bg-indigo-500/10 text-indigo-600'
-                      : 'border-border text-muted-foreground hover:border-indigo-500/50',
-                  )}
-                >
-                  <ArrowLeftRight className="w-4 h-4 shrink-0" />
-                  Transfer
-                </button>
+        {/* ── Transaction Type ────────────────────────────── */}
+        <FieldWrapper label="Tipe Transaksi">
+          <div className="grid grid-cols-3 gap-2">
+            {typeButtons.map(({ type, label, icon, activeClass }) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => onTypeChange(type)}
+                className={cn(
+                  'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-2 rounded-xl border-2 text-xs sm:text-sm font-semibold transition-all duration-200',
+                  selectedType === type
+                    ? activeClass
+                    : 'border-border text-muted-foreground hover:border-border/80 hover:bg-muted/40'
+                )}
+              >
+                <span className="material-symbols-outlined text-[18px] shrink-0">{icon}</span>
+                {label}
+              </button>
+            ))}
+          </div>
+        </FieldWrapper>
+
+        {/* ── Amount ──────────────────────────────────────── */}
+        <FieldWrapper label="Jumlah (Rp)" error={errors.amount?.message}>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold pointer-events-none select-none">
+              Rp
+            </span>
+            <Controller
+              name="amount"
+              control={control}
+              render={({ field: { onChange, value, ...fieldProps } }) => {
+                const displayValue = value !== undefined && value !== null ? formatNumber(Number(value)) : '';
+                return (
+                  <input
+                    {...fieldProps}
+                    id="amount"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="0"
+                    className={cn(inputCls(!!errors.amount), 'pl-10 text-lg font-bold', selectedType === 'TRANSFER' && selectedSourceAccount && 'pr-16')}
+                    value={displayValue}
+                    onChange={(e) => {
+                      const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                      onChange(rawValue ? Number(rawValue) : undefined);
+                    }}
+                  />
+                );
+              }}
+            />
+            {selectedType === 'TRANSFER' && selectedSourceAccount && (
+              <button
+                type="button"
+                onClick={() => setValue('amount', selectedSourceAccount.balance)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 px-2 py-1 rounded-lg transition-colors"
+              >
+                Max
+              </button>
+            )}
+          </div>
+        </FieldWrapper>
+
+        {/* ── Category ─────────────────────────────────────── */}
+        {selectedType !== 'TRANSFER' && (
+          <FieldWrapper label="Kategori" error={errors.categoryId?.message}>
+            {loadingCategories ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />
+                ))}
               </div>
-            </div>
-
-            {/* Amount */}
-            <div className="space-y-2">
-              <Label htmlFor="amount">Jumlah (Rp)</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
-                  Rp
-                </span>
-                <Controller
-                  name="amount"
-                  control={control}
-                  render={({ field: { onChange, value, ...fieldProps } }) => {
-                    const displayValue = value !== undefined && value !== null ? formatNumber(Number(value)) : '';
-                    return (
-                      <Input
-                        {...fieldProps}
-                        id="amount"
-                        type="text"
-                        placeholder="0"
-                        className={cn(
-                          'pl-10 text-lg font-semibold', 
-                          errors.amount && 'border-destructive',
-                          selectedType === 'TRANSFER' && selectedSourceAccount && 'pr-16'
-                        )}
-                        value={displayValue}
-                        onChange={(e) => {
-                          const rawValue = e.target.value.replace(/[^0-9]/g, '');
-                          const numValue = rawValue ? Number(rawValue) : undefined;
-                          onChange(numValue);
-                        }}
-                      />
-                    );
-                  }}
-                />
-                {selectedType === 'TRANSFER' && selectedSourceAccount && (
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {categories.map((cat) => (
                   <button
+                    key={cat.id}
                     type="button"
-                    onClick={() => setValue('amount', selectedSourceAccount.balance)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 px-2 py-1 rounded transition-colors"
+                    onClick={() => setValue('categoryId', cat.id)}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border text-xs font-semibold transition-all duration-200',
+                      watchedCategoryId === cat.id
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-border/80 hover:bg-muted/40'
+                    )}
                   >
-                    Max
+                    <span className="text-xl">{cat.icon || '📦'}</span>
+                    <span className="truncate w-full text-center leading-tight">{cat.name}</span>
                   </button>
-                )}
-              </div>
-              {errors.amount && (
-                <p className="text-sm text-destructive">{errors.amount.message}</p>
-              )}
-            </div>
-
-            {/* Category */}
-            {selectedType !== 'TRANSFER' && (
-              <div className="space-y-2">
-                <Label>Kategori</Label>
-                {loadingCategories ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    {[...Array(6)].map((_, i) => (
-                      <div key={i} className="h-12 rounded-lg bg-muted animate-pulse" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {categories.map((cat) => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setValue('categoryId', cat.id)}
-                        className={cn(
-                          'flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg border text-xs font-medium transition-all',
-                          watchedCategoryId === cat.id
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border text-muted-foreground hover:border-primary/50',
-                        )}
-                      >
-                        <span className="text-lg">{cat.icon || '📦'}</span>
-                        <span className="truncate w-full text-center">{cat.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {errors.categoryId && (
-                  <p className="text-sm text-destructive">{errors.categoryId.message}</p>
-                )}
+                ))}
               </div>
             )}
+          </FieldWrapper>
+        )}
 
-            {/* Account Selector (For Income / Expense) */}
-            {selectedType !== 'TRANSFER' && accounts.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="accountId">Dompet / Rekening</Label>
+        {/* ── Wallet (Income / Expense) ────────────────────── */}
+        {selectedType !== 'TRANSFER' && accounts.length > 0 && (
+          <FieldWrapper label="Dompet / Rekening">
+            <div className="relative">
+              <Controller
+                name="accountId"
+                control={control}
+                render={({ field }) => (
+                  <select
+                    className={selectCls()}
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                  >
+                    <option value="">Pilih Dompet (Opsional)</option>
+                    {accounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>{acc.name}</option>
+                    ))}
+                  </select>
+                )}
+              />
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none text-[20px]">
+                expand_more
+              </span>
+            </div>
+          </FieldWrapper>
+        )}
+
+        {/* ── Transfer Wallets ────────────────────────────── */}
+        {selectedType === 'TRANSFER' && accounts.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Source */}
+            <FieldWrapper label="Dompet Asal" error={errors.accountId?.message}>
+              <div className="relative">
                 <Controller
                   name="accountId"
                   control={control}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="Pilih Dompet (Opsional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {accounts.map((acc) => (
-                          <SelectItem key={acc.id} value={acc.id}>
-                            {acc.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <select
+                      className={selectCls(!!errors.accountId)}
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                    >
+                      <option value="">Pilih Dompet Asal</option>
+                      {accounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>{acc.name}</option>
+                      ))}
+                    </select>
                   )}
                 />
+                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none text-[20px]">
+                  expand_more
+                </span>
               </div>
-            )}
-
-            {/* Source and Destination Wallet Selectors for Transfer */}
-            {selectedType === 'TRANSFER' && accounts.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="accountId">Dompet Asal</Label>
-                  <Controller
-                    name="accountId"
-                    control={control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value || ''}>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Pilih Dompet Asal" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {accounts.map((acc) => (
-                            <SelectItem key={acc.id} value={acc.id}>
-                              {acc.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {selectedSourceAccount && (
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      Saldo tersedia: <strong className="text-indigo-600 dark:text-indigo-400 font-semibold">{formatCurrency(selectedSourceAccount.balance)}</strong>
-                    </p>
-                  )}
-                  {errors.accountId && (
-                    <p className="text-sm text-destructive">{errors.accountId.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="destinationAccountId">Dompet Tujuan</Label>
-                  <Controller
-                    name="destinationAccountId"
-                    control={control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value || ''}>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Pilih Dompet Tujuan" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {accounts.map((acc) => (
-                            <SelectItem key={acc.id} value={acc.id}>
-                              {acc.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {selectedDestAccount && (
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      Saldo saat ini: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">{formatCurrency(selectedDestAccount.balance)}</strong>
-                    </p>
-                  )}
-                  {errors.destinationAccountId && (
-                    <p className="text-sm text-destructive">{errors.destinationAccountId.message}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Date & Time */}
-            <div className="space-y-2">
-              <Label>Tanggal &amp; Waktu</Label>
-              <div className="flex flex-col sm:flex-row gap-2 w-full">
-                {/* Date Picker */}
-                <div className="flex-1 min-w-0">
-                  <Controller
-                    name="date"
-                    control={control}
-                    render={({ field }) => {
-                      const dateValue = field.value ? new Date(field.value) : new Date();
-                      return (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className={cn(
-                                'w-full pl-3 text-left font-normal h-9 bg-background border-input hover:bg-accent/50 justify-start',
-                                !field.value && 'text-muted-foreground',
-                                errors.date && 'border-destructive'
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
-                              <span className="truncate">
-                                {field.value ? (
-                                  format(dateValue, 'dd MMM yyyy', { locale: id })
-                                ) : (
-                                  <span>Pilih Tanggal</span>
-                                )}
-                              </span>
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={dateValue}
-                              onSelect={(date) => {
-                                if (date) {
-                                  const formattedDate = format(date, 'yyyy-MM-dd');
-                                  field.onChange(formattedDate);
-                                }
-                              }}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      );
-                    }}
-                  />
-                </div>
-                {/* Time Picker: two selects (Hour + Minute) */}
-                <Controller
-                  name="time"
-                  control={control}
-                  render={({ field }) => {
-                    const [hh, mm] = (field.value || '00:00').split(':');
-                    const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-                    const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
-                    return (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Select
-                          value={hh}
-                          onValueChange={(val) => field.onChange(`${val}:${mm}`)}
-                        >
-                          <SelectTrigger className={cn('w-[72px] h-9 bg-background', errors.time && 'border-destructive')}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-[200px]">
-                            {hours.map((h) => (
-                              <SelectItem key={h} value={h}>{h}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <span className="text-muted-foreground font-semibold text-sm">:</span>
-                        <Select
-                          value={mm}
-                          onValueChange={(val) => field.onChange(`${hh}:${val}`)}
-                        >
-                          <SelectTrigger className={cn('w-[72px] h-9 bg-background', errors.time && 'border-destructive')}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-[200px]">
-                            {minutes.map((m) => (
-                              <SelectItem key={m} value={m}>{m}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    );
-                  }}
-                />
-              </div>
-              {(errors.date || errors.time) && (
-                <p className="text-sm text-destructive">{errors.date?.message || errors.time?.message}</p>
+              {selectedSourceAccount && (
+                <p className="text-[11px] text-muted-foreground">
+                  Saldo tersedia:{' '}
+                  <strong className="text-primary font-semibold">{formatCurrency(selectedSourceAccount.balance)}</strong>
+                </p>
               )}
-            </div>
+            </FieldWrapper>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Deskripsi</Label>
-              <Input
-                id="description"
-                placeholder="Misal: Belanja bulanan di Indomaret"
-                {...register('description')}
-              />
-            </div>
+            {/* Destination */}
+            <FieldWrapper label="Dompet Tujuan" error={errors.destinationAccountId?.message}>
+              <div className="relative">
+                <Controller
+                  name="destinationAccountId"
+                  control={control}
+                  render={({ field }) => (
+                    <select
+                      className={selectCls(!!errors.destinationAccountId)}
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                    >
+                      <option value="">Pilih Dompet Tujuan</option>
+                      {accounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>{acc.name}</option>
+                      ))}
+                    </select>
+                  )}
+                />
+                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none text-[20px]">
+                  expand_more
+                </span>
+              </div>
+              {selectedDestAccount && (
+                <p className="text-[11px] text-muted-foreground">
+                  Saldo saat ini:{' '}
+                  <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">{formatCurrency(selectedDestAccount.balance)}</strong>
+                </p>
+              )}
+            </FieldWrapper>
+          </div>
+        )}
 
-            {/* Note */}
-            <div className="space-y-2">
-              <Label htmlFor="note">Catatan (opsional)</Label>
-              <Textarea
-                id="note"
-                placeholder="Catatan tambahan..."
-                rows={3}
-                {...register('note')}
-              />
-            </div>
-
-            {/* Submit */}
-            <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => router.back()}
-              >
-                Batal
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1"
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    Menyimpan...
-                  </span>
-                ) : (
-                  'Simpan Transaksi'
+        {/* ── Date & Time ──────────────────────────────────── */}
+        <FieldWrapper label="Tanggal & Waktu" error={errors.date?.message || errors.time?.message}>
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Date — native input with icon overlay */}
+            <div className="relative flex-1 min-w-0">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none text-[20px] z-10">
+                calendar_today
+              </span>
+              <input
+                type="date"
+                {...register('date')}
+                className={cn(
+                  inputCls(!!errors.date),
+                  'pl-11 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer'
                 )}
-              </Button>
+              />
             </div>
-          </CardContent>
-        </form>
-      </Card>
+
+            {/* Time — two selects */}
+            <Controller
+              name="time"
+              control={control}
+              render={({ field }) => {
+                const [hh, mm] = (field.value || '00:00').split(':');
+                const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+                const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+                return (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="relative w-[90px]">
+                      <select
+                        className={selectCls(!!errors.time)}
+                        value={hh}
+                        onChange={(e) => field.onChange(`${e.target.value}:${mm}`)}
+                      >
+                        {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                      </select>
+                      <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none text-[16px]">
+                        expand_more
+                      </span>
+                    </div>
+                    <span className="text-muted-foreground font-bold text-base select-none">:</span>
+                    <div className="relative w-[90px]">
+                      <select
+                        className={selectCls(!!errors.time)}
+                        value={mm}
+                        onChange={(e) => field.onChange(`${hh}:${e.target.value}`)}
+                      >
+                        {minutes.map((m) => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none text-[16px]">
+                        expand_more
+                      </span>
+                    </div>
+                  </div>
+                );
+              }}
+            />
+          </div>
+        </FieldWrapper>
+
+        {/* ── Description ──────────────────────────────────── */}
+        <FieldWrapper label="Deskripsi">
+          <input
+            id="description"
+            type="text"
+            placeholder="Misal: Belanja bulanan di Indomaret"
+            className={inputCls()}
+            {...register('description')}
+          />
+        </FieldWrapper>
+
+        {/* ── Note ─────────────────────────────────────────── */}
+        <FieldWrapper label="Catatan (opsional)">
+          <textarea
+            id="note"
+            placeholder="Catatan tambahan..."
+            rows={3}
+            className={cn(inputCls(), 'resize-y min-h-[88px]')}
+            {...register('note')}
+          />
+        </FieldWrapper>
+
+        {/* ── Actions ──────────────────────────────────────── */}
+        <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 mt-2 border-t border-border/40">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex-1 sm:flex-none sm:w-1/3 border border-border text-foreground font-semibold text-sm py-3 px-6 rounded-xl hover:bg-muted/60 transition-all duration-200 active:scale-[0.98]"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            disabled={createMutation.isPending}
+            className="flex-1 bg-primary text-primary-foreground font-bold text-sm py-3 px-6 rounded-xl hover:opacity-90 transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {createMutation.isPending ? (
+              <>
+                <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                Menyimpan...
+              </>
+            ) : (
+              'Simpan Transaksi'
+            )}
+          </button>
+        </div>
+
+      </form>
     </div>
   );
 }
