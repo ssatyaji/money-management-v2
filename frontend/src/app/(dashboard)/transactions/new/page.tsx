@@ -73,6 +73,7 @@ const selectCls = (hasError?: boolean) =>
 export default function NewTransactionPage() {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<'INCOME' | 'EXPENSE' | 'TRANSFER'>('EXPENSE');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const { data: categories = [], isLoading: loadingCategories } = useCategories(selectedType);
   const { data: accounts = [] } = useAccounts();
   const createMutation = useCreateTransaction();
@@ -350,64 +351,135 @@ export default function NewTransactionPage() {
         )}
 
         {/* ── Date & Time ──────────────────────────────────── */}
-        <FieldWrapper label="Tanggal & Waktu" error={errors.date?.message || errors.time?.message}>
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Date — native input with icon overlay */}
-            <div className="relative flex-1 min-w-0">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none text-[20px] z-10">
-                calendar_today
-              </span>
-              <input
-                type="date"
-                {...register('date')}
-                className={cn(
-                  inputCls(!!errors.date),
-                  'pl-11 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer'
-                )}
-              />
-            </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tanggal &amp; Waktu</span>
 
-            {/* Time — two selects */}
-            <Controller
-              name="time"
-              control={control}
-              render={({ field }) => {
-                const [hh, mm] = (field.value || '00:00').split(':');
-                const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-                const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
-                return (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="relative w-[90px]">
-                      <select
-                        className={selectCls(!!errors.time)}
-                        value={hh}
-                        onChange={(e) => field.onChange(`${e.target.value}:${mm}`)}
-                      >
-                        {hours.map((h) => <option key={h} value={h}>{h}</option>)}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none text-[16px]">
-                        expand_more
-                      </span>
-                    </div>
-                    <span className="text-muted-foreground font-bold text-base select-none">:</span>
-                    <div className="relative w-[90px]">
-                      <select
-                        className={selectCls(!!errors.time)}
-                        value={mm}
-                        onChange={(e) => field.onChange(`${hh}:${e.target.value}`)}
-                      >
-                        {minutes.map((m) => <option key={m} value={m}>{m}</option>)}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none text-[16px]">
-                        expand_more
-                      </span>
-                    </div>
+          {/* Quick Date Chips */}
+          <Controller
+            name="date"
+            control={control}
+            render={({ field }) => {
+              const today = new Date().toISOString().split('T')[0];
+              const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+              const isToday = field.value === today;
+              const isYesterday = field.value === yesterday;
+              const isOther = !isToday && !isYesterday;
+
+              // Format dd Mmm for 'other' chip label
+              const otherLabel = isOther && field.value
+                ? new Date(field.value + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+                : 'Lainnya';
+
+              return (
+                <div className="flex flex-col gap-2">
+                  {/* Chip row */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { field.onChange(today); setShowDatePicker(false); }}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border',
+                        isToday
+                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                          : 'bg-muted/60 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">today</span>
+                      Hari ini
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { field.onChange(yesterday); setShowDatePicker(false); }}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border',
+                        isYesterday
+                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                          : 'bg-muted/60 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      Kemarin
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDatePicker(!showDatePicker)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border',
+                        isOther
+                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                          : 'bg-muted/60 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">calendar_month</span>
+                      {otherLabel}
+                    </button>
                   </div>
-                );
-              }}
-            />
-          </div>
-        </FieldWrapper>
+
+                  {/* Expandable date picker */}
+                  {(showDatePicker || isOther) && (
+                    <input
+                      type="date"
+                      value={field.value}
+                      onChange={(e) => { field.onChange(e.target.value); setShowDatePicker(false); }}
+                      className={cn(inputCls(!!errors.date), 'block')}
+                      autoFocus
+                    />
+                  )}
+                </div>
+              );
+            }}
+          />
+
+          {/* Time — two number inputs */}
+          <Controller
+            name="time"
+            control={control}
+            render={({ field }) => {
+              const [hh, mm] = (field.value || '00:00').split(':');
+              const setH = (raw: string) => {
+                const v = Math.min(23, Math.max(0, parseInt(raw) || 0));
+                field.onChange(`${String(v).padStart(2, '0')}:${mm}`);
+              };
+              const setM = (raw: string) => {
+                const v = Math.min(59, Math.max(0, parseInt(raw) || 0));
+                field.onChange(`${hh}:${String(v).padStart(2, '0')}`);
+              };
+              return (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-xs font-semibold text-muted-foreground w-6 shrink-0">Jam</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={parseInt(hh)}
+                    onChange={(e) => setH(e.target.value)}
+                    inputMode="numeric"
+                    className={cn(
+                      inputCls(!!errors.time),
+                      'w-16 text-center font-bold text-lg py-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
+                    )}
+                  />
+                  <span className="text-muted-foreground font-bold text-xl select-none">:</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={59}
+                    value={parseInt(mm)}
+                    onChange={(e) => setM(e.target.value)}
+                    inputMode="numeric"
+                    className={cn(
+                      inputCls(!!errors.time),
+                      'w-16 text-center font-bold text-lg py-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
+                    )}
+                  />
+                </div>
+              );
+            }}
+          />
+
+          {(errors.date || errors.time) && (
+            <p className="text-xs text-destructive">{errors.date?.message || errors.time?.message}</p>
+          )}
+        </div>
 
         {/* ── Description ──────────────────────────────────── */}
         <FieldWrapper label="Deskripsi">
