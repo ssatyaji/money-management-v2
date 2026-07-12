@@ -66,7 +66,7 @@ export function AppSidebar({ isOpen, onToggle }: SidebarProps) {
           </div>
           {isOpen && (
             <span className="text-lg font-bold gradient-text whitespace-nowrap">
-              MoneyApp
+              Zayn Finance
             </span>
           )}
         </div>
