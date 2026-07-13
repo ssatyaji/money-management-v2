@@ -31,11 +31,37 @@ import { useDebtSummary } from '@/hooks/use-debts';
 import { usePortfolioSummary } from '@/hooks/use-investments';
 import { MonthPredictorWidget } from '@/components/dashboard/month-predictor-widget';
 import { AlertCards } from '@/components/dashboard/alert-cards';
+import { GlowCard } from '@/components/ui/glow-card';
 
 const COLORS = [
   '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6',
   '#8b5cf6', '#ef4444', '#14b8a6', '#f97316', '#06b6d4',
 ];
+
+const generateSparklinePoints = (id: string, balance: number, startingBalance: number) => {
+  const seed = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const points = [];
+  const count = 8;
+  const range = Math.max(Math.abs(balance - startingBalance), 100000);
+  
+  for (let i = 0; i < count; i++) {
+    const progress = i / (count - 1);
+    const sineVal = Math.sin(progress * Math.PI * 1.5 + (seed % 10)) * 0.3;
+    const noiseVal = Math.cos(progress * Math.PI * 3.5 + (seed % 7)) * 0.1;
+    const base = startingBalance + (balance - startingBalance) * progress;
+    const variation = range * (sineVal + noiseVal) * (1 - progress * 0.6);
+    points.push(base + variation);
+  }
+  
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const divisor = (max - min) === 0 ? 1 : (max - min);
+  
+  return points.map((p, idx) => ({
+    x: (idx / (count - 1)) * 100,
+    y: 35 - ((p - min) / divisor) * 25 - 5
+  }));
+};
 
 export default function DashboardPage() {
   const now = new Date();
@@ -178,23 +204,43 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
-            {accounts.map((acc) => (
-              <div
-                key={acc.id}
-                className="min-w-[180px] sm:min-w-[220px] rounded-2xl border border-border/70 bg-card/65 backdrop-blur-md p-4 shadow-sm hover:shadow-md hover:scale-[1.02] hover:border-emerald-500/20 transition-all duration-300 flex flex-col justify-between relative overflow-hidden shrink-0"
-              >
-                <div
-                  className="absolute left-0 top-0 bottom-0 w-1.5"
-                  style={{ backgroundColor: acc.color || '#3b82f6' }}
-                />
-                <div className="pl-1.5 space-y-1">
-                  <p className="text-xs text-muted-foreground truncate font-medium">{acc.name}</p>
-                  <p className="text-lg font-bold text-foreground truncate">
-                    {showBalance ? formatCurrency(acc.balance) : 'Rp ••••••'}
-                  </p>
-                </div>
-              </div>
-            ))}
+            {accounts.map((acc) => {
+              const sparkPoints = generateSparklinePoints(acc.id, Number(acc.balance) || 0, Number(acc.startingBalance) || 0);
+              const pathData = `M ${sparkPoints.map(p => `${p.x} ${p.y}`).join(' L ')}`;
+              const areaData = `${pathData} L 100 40 L 0 40 Z`;
+
+              return (
+                <GlowCard
+                  key={acc.id}
+                  className="min-w-[180px] sm:min-w-[220px] p-4 flex flex-col justify-between relative overflow-hidden shrink-0"
+                >
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1.5 z-10"
+                    style={{ backgroundColor: acc.color || '#3b82f6' }}
+                  />
+                  <div className="pl-1.5 space-y-1 z-10 relative">
+                    <p className="text-xs text-muted-foreground truncate font-medium">{acc.name}</p>
+                    <p className="text-lg font-bold text-foreground truncate">
+                      {showBalance ? formatCurrency(acc.balance) : 'Rp ••••••'}
+                    </p>
+                  </div>
+
+                  {/* Deterministic Sparkline */}
+                  <div className="absolute bottom-0 left-0 right-0 h-10 opacity-60 pointer-events-none z-0">
+                    <svg viewBox="0 0 100 40" className="w-full h-full" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id={`grad-${acc.id}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={acc.color || '#3b82f6'} stopOpacity="0.15" />
+                          <stop offset="100%" stopColor={acc.color || '#3b82f6'} stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      <path d={areaData} fill={`url(#grad-${acc.id})`} />
+                      <path d={pathData} fill="none" stroke={acc.color || '#3b82f6'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </GlowCard>
+              );
+            })}
           </div>
         </div>
       )}
