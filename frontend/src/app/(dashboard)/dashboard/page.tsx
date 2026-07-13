@@ -315,68 +315,120 @@ export default function DashboardPage() {
       {/* Feature Summary Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Saving Goals Widget */}
-        <Link href="/goals" className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:scale-[1.01] hover:border-primary/20 transition-all duration-300 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3 text-indigo-600">
-              <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
-                <span className="material-symbols-outlined text-[20px]">target</span>
+        <GlowCard className="p-0 hover:border-primary/20">
+          <Link href="/goals" className="p-6 block w-full h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3 text-indigo-600">
+                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
+                  <span className="material-symbols-outlined text-[20px]">target</span>
+                </div>
+                <span className="font-body-sm font-semibold">Saving Goals</span>
               </div>
-              <span className="font-body-sm font-semibold">Saving Goals</span>
             </div>
-            <span className="text-xs font-semibold text-primary">{savingSummary?.overallProgress ?? 0}%</span>
-          </div>
-          <div className="text-xl font-heading font-bold text-foreground truncate">
-            {showBalance ? formatCurrency(savingSummary?.totalSaved ?? 0) : 'Rp ••••••'}
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">Terkumpul dari target {showBalance ? formatCurrency(savingSummary?.totalTarget ?? 0) : 'Rp ••••••'}</p>
-        </Link>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="text-xl font-heading font-bold text-foreground truncate">
+                  {showBalance ? formatCurrency(savingSummary?.totalSaved ?? 0) : 'Rp ••••••'}
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+                  Terkumpul dari target {showBalance ? formatCurrency(savingSummary?.totalTarget ?? 0) : 'Rp ••••••'}
+                </p>
+              </div>
+              
+              {/* Semi-circular gauge */}
+              {(() => {
+                const progress = Math.min(savingSummary?.overallProgress ?? 0, 100);
+                const strokeDasharray = 125.6; // Perimeter of radius 40 semi-circle (PI * 40)
+                const strokeDashoffset = strokeDasharray - (strokeDasharray * progress) / 100;
+                return (
+                  <div className="relative w-20 h-10 shrink-0 flex items-center justify-center">
+                    <svg viewBox="0 0 100 50" className="w-full h-full">
+                      <defs>
+                        <linearGradient id="savingsGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#6366f1" />
+                          <stop offset="100%" stopColor="#10b981" />
+                        </linearGradient>
+                      </defs>
+                      <path 
+                        d="M 10 50 A 40 40 0 0 1 90 50" 
+                        fill="none" 
+                        stroke="var(--border)" 
+                        strokeWidth="8" 
+                        strokeLinecap="round" 
+                        opacity="0.15"
+                      />
+                      <path 
+                        d="M 10 50 A 40 40 0 0 1 90 50" 
+                        fill="none" 
+                        stroke="url(#savingsGradient)" 
+                        strokeWidth="8" 
+                        strokeLinecap="round" 
+                        strokeDasharray={strokeDasharray}
+                        strokeDashoffset={strokeDashoffset}
+                        className="transition-[stroke-dashoffset] duration-1000 ease-out"
+                      />
+                    </svg>
+                    <div className="absolute bottom-0 text-[10px] font-bold text-foreground">
+                      {progress}%
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </Link>
+        </GlowCard>
 
         {/* Debt Widget */}
-        <Link href="/debts" className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:scale-[1.01] hover:border-primary/20 transition-all duration-300 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3 text-amber-600">
-              <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10">
-                <span className="material-symbols-outlined text-[20px]">paid</span>
+        <GlowCard className="p-0 hover:border-primary/20">
+          <Link href="/debts" className="p-6 block w-full h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3 text-amber-600">
+                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10">
+                  <span className="material-symbols-outlined text-[20px]">paid</span>
+                </div>
+                <span className="font-body-sm font-semibold">Hutang & Piutang</span>
               </div>
-              <span className="font-body-sm font-semibold">Hutang & Piutang</span>
+              {debtSummary?.overdueCount && debtSummary.overdueCount > 0 ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-600">{debtSummary.overdueCount} Overdue</span>
+              ) : null}
             </div>
-            {debtSummary?.overdueCount && debtSummary.overdueCount > 0 ? (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-600">{debtSummary.overdueCount} Overdue</span>
-            ) : null}
-          </div>
-          <div className={cn("text-xl font-heading font-bold truncate", (debtSummary?.netPosition ?? 0) >= 0 ? "text-emerald-600" : "text-red-600")}>
-            {showBalance ? formatCurrency(debtSummary?.netPosition ?? 0) : 'Rp ••••••'}
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Piutang: {showBalance ? formatCurrency(debtSummary?.totalReceivable ?? 0) : 'Rp ••••••'} | Hutang: {showBalance ? formatCurrency(debtSummary?.totalPayable ?? 0) : 'Rp ••••••'}
-          </p>
-        </Link>
+            <div className={cn("text-xl font-heading font-bold truncate", (debtSummary?.netPosition ?? 0) >= 0 ? "text-emerald-600" : "text-red-600")}>
+              {showBalance ? formatCurrency(debtSummary?.netPosition ?? 0) : 'Rp ••••••'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Piutang: {showBalance ? formatCurrency(debtSummary?.totalReceivable ?? 0) : 'Rp ••••••'} | Hutang: {showBalance ? formatCurrency(debtSummary?.totalPayable ?? 0) : 'Rp ••••••'}
+            </p>
+          </Link>
+        </GlowCard>
 
         {/* Investment Widget */}
-        <Link href="/investments" className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:scale-[1.01] hover:border-primary/20 transition-all duration-300 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3 text-violet-600">
-              <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10">
-                <span className="material-symbols-outlined text-[20px]">trending_up</span>
+        <GlowCard className="p-0 hover:border-primary/20">
+          <Link href="/investments" className="p-6 block w-full h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3 text-violet-600">
+                <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10">
+                  <span className="material-symbols-outlined text-[20px]">trending_up</span>
+                </div>
+                <span className="font-body-sm font-semibold">Investasi</span>
               </div>
-              <span className="font-body-sm font-semibold">Investasi</span>
+              <span className={cn(
+                "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                (portfolioSummary?.totalGainLoss ?? 0) >= 0
+                  ? "bg-emerald-500/10 text-emerald-600"
+                  : "bg-red-500/10 text-red-600"
+              )}>
+                {(portfolioSummary?.totalGainLossPercent ?? 0) >= 0 ? '+' : ''}{portfolioSummary?.totalGainLossPercent ?? 0}%
+              </span>
             </div>
-            <span className={cn(
-              "text-[10px] font-bold px-2 py-0.5 rounded-full",
-              (portfolioSummary?.totalGainLoss ?? 0) >= 0
-                ? "bg-emerald-500/10 text-emerald-600"
-                : "bg-red-500/10 text-red-600"
-            )}>
-              {(portfolioSummary?.totalGainLossPercent ?? 0) >= 0 ? '+' : ''}{portfolioSummary?.totalGainLossPercent ?? 0}%
-            </span>
-          </div>
-          <div className="text-xl font-heading font-bold text-foreground truncate">
-            {showBalance ? formatCurrency(portfolioSummary?.totalCurrentValue ?? 0) : 'Rp ••••••'}
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Modal: {showBalance ? formatCurrency(portfolioSummary?.totalInvested ?? 0) : 'Rp ••••••'} | Gain: {showBalance ? formatCurrency(portfolioSummary?.totalGainLoss ?? 0) : 'Rp ••••••'}
-          </p>
-        </Link>
+            <div className="text-xl font-heading font-bold text-foreground truncate">
+              {showBalance ? formatCurrency(portfolioSummary?.totalCurrentValue ?? 0) : 'Rp ••••••'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Modal: {showBalance ? formatCurrency(portfolioSummary?.totalInvested ?? 0) : 'Rp ••••••'} | Gain: {showBalance ? formatCurrency(portfolioSummary?.totalGainLoss ?? 0) : 'Rp ••••••'}
+            </p>
+          </Link>
+        </GlowCard>
       </div>
 
       {/* Charts Section */}
