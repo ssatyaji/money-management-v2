@@ -49,5 +49,5 @@ export const getActivityLogs = async (params: {
   action?: string;
 }): Promise<PaginatedResponse<ActivityLog>> => {
   const response = await apiClient.get('/admin/logs', { params });
-  return response.data.data || response.data;
+  return response.data;
 };
