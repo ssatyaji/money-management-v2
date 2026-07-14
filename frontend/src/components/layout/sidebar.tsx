@@ -49,7 +49,6 @@ const adminItems = [
   { label: 'Admin Panel', href: '/admin', icon: Shield, exact: true },
   { label: 'Manajemen Pengguna', href: '/admin/users', icon: Users, exact: false },
   { label: 'Log Aktivitas', href: '/admin/logs', icon: Terminal, exact: false },
-  { label: 'Biaya Platform', href: '/admin/expenses', icon: Receipt, exact: false },
 ];
 
 export function AppSidebar({ isOpen, onToggle }: SidebarProps) {

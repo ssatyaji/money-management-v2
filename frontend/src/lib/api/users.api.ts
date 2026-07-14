@@ -6,6 +6,8 @@ export interface User {
   name: string;
   role: 'USER' | 'ADMIN';
   isVerified: boolean;
+  lastLoginAt?: string;
+  lastActivityAt?: string;
   createdAt: string;
   updatedAt: string;
 }

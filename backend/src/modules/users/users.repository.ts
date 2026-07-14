@@ -43,6 +43,8 @@ export class UsersRepository {
           role: true,
           avatar: true,
           isEmailVerified: true,
+          lastLoginAt: true,
+          lastActivityAt: true,
           createdAt: true,
           updatedAt: true,
         },

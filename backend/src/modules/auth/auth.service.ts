@@ -58,6 +58,7 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.updateRefreshToken(user.id, tokens.refreshToken);
+    await this.usersService.update(user.id, { lastLoginAt: new Date(), lastActivityAt: new Date() });
 
     this.logger.log(`User registered: ${user.email}`);
     await this.activityLogService.log(user.id, 'USER_REGISTER', `Pendaftaran akun sukses: ${user.email}`);
@@ -98,6 +99,7 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.updateRefreshToken(user.id, tokens.refreshToken);
+    await this.usersService.update(user.id, { lastLoginAt: new Date(), lastActivityAt: new Date() });
 
     this.logger.log(`User logged in: ${user.email}`);
     await this.activityLogService.log(user.id, 'USER_LOGIN', `Login sukses: ${user.email}`);
@@ -173,6 +175,9 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.updateRefreshToken(user.id, tokens.refreshToken);
+    await this.usersService.update(user.id, { lastLoginAt: new Date(), lastActivityAt: new Date() });
+
+    await this.activityLogService.log(user.id, 'USER_LOGIN', `Login sukses via Google: ${user.email}`);
 
     return {
       user: {

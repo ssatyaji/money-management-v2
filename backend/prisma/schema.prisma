@@ -98,6 +98,8 @@ model User {
   aiChatSessions        AiChatSession[]
   aiInsights            AiInsight[]
   activityLogs          ActivityLog[]
+  lastLoginAt           DateTime?
+  lastActivityAt        DateTime?
 
   @@map("users")
 }
@@ -581,19 +583,5 @@ model ActivityLog {
   @@index([action])
   @@index([createdAt])
   @@map("activity_logs")
-}
-
-model PlatformExpense {
-  id          String   @id @default(uuid())
-  description String
-  amount      Decimal  @db.Decimal(15, 2)
-  category    String   // e.g. "HOSTING", "API_COST", "MARKETING", "SALARY", "OTHERS"
-  date        DateTime @default(now())
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([date])
-  @@map("platform_expenses")
 }
 
