@@ -176,7 +176,7 @@ export default function AdminUsersPage() {
                   <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'} className="text-[10px] px-2 py-0">
                     {user.role}
                   </Badge>
-                  {user.isVerified ? (
+                  {user.isEmailVerified ? (
                     <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/10 text-[10px] px-2 py-0">
                       Verified
                     </Badge>
@@ -242,7 +242,7 @@ export default function AdminUsersPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {user.isVerified ? (
+                    {user.isEmailVerified ? (
                       <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/10">
                         Verified
                       </Badge>
