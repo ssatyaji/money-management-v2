@@ -32,7 +32,7 @@ import {
 const userSchema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter'),
   role: z.enum(['USER', 'ADMIN']),
-  isVerified: z.boolean(),
+  isEmailVerified: z.boolean(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -51,7 +51,7 @@ export function UserDialog({ user, isOpen, onClose }: UserDialogProps) {
     defaultValues: {
       name: '',
       role: 'USER',
-      isVerified: false,
+      isEmailVerified: false,
     },
   });
 
@@ -60,7 +60,7 @@ export function UserDialog({ user, isOpen, onClose }: UserDialogProps) {
       form.reset({
         name: user.name,
         role: user.role,
-        isVerified: user.isVerified,
+        isEmailVerified: user.isEmailVerified,
       });
     }
   }, [user, isOpen, form]);
@@ -125,7 +125,7 @@ export function UserDialog({ user, isOpen, onClose }: UserDialogProps) {
 
             <FormField
               control={form.control}
-              name="isVerified"
+              name="isEmailVerified"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                   <div className="space-y-0.5">

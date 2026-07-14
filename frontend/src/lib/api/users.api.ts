@@ -5,7 +5,7 @@ export interface User {
   email: string;
   name: string;
   role: 'USER' | 'ADMIN';
-  isVerified: boolean;
+  isEmailVerified: boolean;
   lastLoginAt?: string;
   lastActivityAt?: string;
   createdAt: string;
@@ -43,7 +43,7 @@ export const getUser = async (id: string): Promise<User> => {
 export interface UpdateUserDto {
   name?: string;
   role?: 'USER' | 'ADMIN';
-  isVerified?: boolean;
+  isEmailVerified?: boolean;
   startingBalance?: number;
   firstName?: string;
   lastName?: string;
