@@ -32,7 +32,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
 export default function AdminUsersPage() {
@@ -44,6 +44,40 @@ export default function AdminUsersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const getOnlineStatus = (user: User) => {
+    if (!user.lastActivityAt) return <Badge variant="outline" className="text-muted-foreground bg-muted/10 border-muted/20 text-[11px]">Offline</Badge>;
+    const lastActive = new Date(user.lastActivityAt);
+    const now = new Date();
+    const isOnline = now.getTime() - lastActive.getTime() < 5 * 60 * 1000;
+
+    if (isOnline) {
+      return (
+        <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/10 gap-1.5 flex items-center w-fit font-bold text-[11px]">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+          </span>
+          Online
+        </Badge>
+      );
+    }
+
+    return (
+      <span className="text-xs text-muted-foreground font-medium">
+        Aktif {formatDistanceToNow(lastActive, { addSuffix: true, locale: id })}
+      </span>
+    );
+  };
+
+  const getLastLogin = (user: User) => {
+    if (!user.lastLoginAt) return <span className="text-xs text-muted-foreground italic">Belum pernah login</span>;
+    return (
+      <span className="text-xs text-muted-foreground font-medium">
+        {format(new Date(user.lastLoginAt), 'dd MMM yyyy HH:mm', { locale: id })}
+      </span>
+    );
+  };
 
   const handleEdit = (user: User) => {
     setSelectedUser(user);
@@ -127,6 +161,16 @@ export default function AdminUsersPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+              <div className="flex flex-col gap-2 text-xs border-t border-border/50 pt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Keaktifan:</span>
+                  {getOnlineStatus(user)}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Login Terakhir:</span>
+                  {getLastLogin(user)}
+                </div>
+              </div>
               <div className="flex items-center justify-between pt-3 border-t border-border/50">
                 <div className="flex gap-2">
                   <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'} className="text-[10px] px-2 py-0">
@@ -143,7 +187,7 @@ export default function AdminUsersPage() {
                   )}
                 </div>
                 <span className="text-muted-foreground text-xs">
-                  {format(new Date(user.createdAt), 'dd MMM yyyy', { locale: id })}
+                  Gabung: {format(new Date(user.createdAt), 'dd MMM yyyy', { locale: id })}
                 </span>
               </div>
             </div>
@@ -159,6 +203,8 @@ export default function AdminUsersPage() {
               <TableHead>Pengguna</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Aktivitas Terakhir</TableHead>
+              <TableHead>Login Terakhir</TableHead>
               <TableHead>Bergabung Pada</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
@@ -166,13 +212,13 @@ export default function AdminUsersPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Memuat data pengguna...
                 </TableCell>
               </TableRow>
             ) : !data?.data || data.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Tidak ada pengguna ditemukan.
                 </TableCell>
               </TableRow>
@@ -205,6 +251,12 @@ export default function AdminUsersPage() {
                         Unverified
                       </Badge>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    {getOnlineStatus(user)}
+                  </TableCell>
+                  <TableCell>
+                    {getLastLogin(user)}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {format(new Date(user.createdAt), 'dd MMM yyyy', { locale: id })}

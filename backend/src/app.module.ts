@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
+import { UserActivityInterceptor } from './common/interceptors/user-activity.interceptor';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { CategoriesModule } from './modules/categories/categories.module';
@@ -90,6 +91,11 @@ import { AiAdvisorModule } from './modules/ai-advisor/ai-advisor.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    // Global user activity tracking
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: UserActivityInterceptor,
     },
   ],
 })

@@ -2,11 +2,12 @@
 
 import { useAdminStats } from '@/hooks/use-admin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Activity, Target, BellRing, TrendingUp, TrendingDown } from 'lucide-react';
+import { Users, Activity, Target, BellRing, TrendingUp, TrendingDown, Eye, CalendarDays } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
 
 export default function AdminDashboardPage() {
-  const { data: stats, isLoading } = useAdminStats();
+  // Poll stats every 15 seconds to simulate real-time online count
+  const { data: stats, isLoading } = useAdminStats({ refetchInterval: 15000 });
 
   if (isLoading) {
     return (
@@ -15,8 +16,8 @@ export default function AdminDashboardPage() {
           <div className="h-8 w-48 bg-muted rounded"></div>
           <div className="h-4 w-32 bg-muted rounded mt-2"></div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="h-4 w-24 bg-muted rounded"></div>
@@ -39,14 +40,52 @@ export default function AdminDashboardPage() {
         <p className="text-muted-foreground mt-1">Statistik global platform Zayn Finance</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* Row 1: Real-time & User Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="relative overflow-hidden border border-emerald-500/20 bg-emerald-500/5 shadow-[0px_4px_20px_rgba(16,185,129,0.05)]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Users Online</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-bold tracking-wider">Real-time</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+              {stats?.onlineUsers || 0}
+            </div>
+            <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">
+              Aktif dalam 5 menit terakhir
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Aktif Hari Ini</CardTitle>
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.activeToday || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Pengguna aktif sejak awal hari
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.users || 0}</div>
+            <div className="text-3xl font-bold">{stats?.users || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Seluruh akun terdaftar
+            </p>
           </CardContent>
         </Card>
 
@@ -56,10 +95,16 @@ export default function AdminDashboardPage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.transactions || 0}</div>
+            <div className="text-3xl font-bold">{stats?.transactions || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Jumlah transaksi tercatat di database
+            </p>
           </CardContent>
         </Card>
+      </div>
 
+      {/* Row 2: Features Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Budgets</CardTitle>

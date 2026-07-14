@@ -89,6 +89,8 @@ export class UsersService {
       role?: Role;
       isEmailVerified?: boolean;
       avatar?: string | null;
+      lastLoginAt?: Date;
+      lastActivityAt?: Date;
     },
   ): Promise<User> {
     await this.findById(id); // Throws if not found
