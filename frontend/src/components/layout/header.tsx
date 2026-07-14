@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useTheme } from 'next-themes';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Menu, Sun, Moon, LogOut, User, Settings, Bell, BellOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -25,7 +26,9 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
+  const pathname = usePathname();
   const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications();
+  const isAdminRoute = pathname.startsWith('/admin');
   const [greeting, setGreeting] = useState('Selamat Datang');
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -82,8 +85,15 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
         
         <div className="flex flex-col">
           <span className="font-body-sm text-xs text-muted-foreground">{greeting}</span>
-          <span className="font-h1 text-lg font-bold text-foreground tracking-tight hidden sm:block">{user?.name || 'User'}</span>
-          <span className="font-h1 text-lg font-bold text-foreground tracking-tight sm:hidden">{user?.name?.split(' ')[0] || 'User'}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-h1 text-lg font-bold text-foreground tracking-tight hidden sm:block">{user?.name || 'User'}</span>
+            <span className="font-h1 text-lg font-bold text-foreground tracking-tight sm:hidden">{user?.name?.split(' ')[0] || 'User'}</span>
+            {isAdminRoute && (
+              <Badge variant="destructive" className="bg-rose-500 hover:bg-rose-600 text-white rounded-full text-[10px] py-0 px-2 font-semibold">
+                Admin Mode
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 
