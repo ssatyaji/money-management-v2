@@ -12,6 +12,7 @@ import { FilterTransactionDto } from './dto/filter-transaction.dto';
 import { PaginatedResult } from '../../common/interfaces/pagination.interface';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AccountsService } from '../accounts/accounts.service';
+import { ActivityLogService } from '../admin/activity-log.service';
 
 @Injectable()
 export class TransactionsService {
@@ -19,6 +20,7 @@ export class TransactionsService {
     private readonly transactionsRepository: TransactionsRepository,
     private readonly prisma: PrismaService,
     private readonly accountsService: AccountsService,
+    private readonly activityLogService: ActivityLogService,
   ) {}
 
   async create(userId: string, dto: CreateTransactionDto) {
@@ -61,7 +63,7 @@ export class TransactionsService {
       categoryId = transferCat.id;
     }
 
-    return this.transactionsRepository.create({
+    const transaction = await this.transactionsRepository.create({
       amount: dto.amount,
       type: dto.type,
       description: dto.description,
@@ -75,6 +77,14 @@ export class TransactionsService {
       userId,
       source: 'MANUAL',
     });
+
+    await this.activityLogService.log(
+      userId,
+      'CREATE_TRANSACTION',
+      `Membuat transaksi: ${transaction.type} - Rp ${Number(transaction.amount).toLocaleString('id-ID')} (${transaction.description || 'Tanpa deskripsi'})`
+    );
+
+    return transaction;
   }
 
   async findAll(
@@ -231,8 +241,14 @@ export class TransactionsService {
   }
 
   async remove(userId: string, id: string) {
-    await this.findById(userId, id);
-    return this.transactionsRepository.delete(id);
+    const transaction = await this.findById(userId, id);
+    const result = await this.transactionsRepository.delete(id);
+    await this.activityLogService.log(
+      userId,
+      'DELETE_TRANSACTION',
+      `Menghapus transaksi: ${transaction.type} - Rp ${Number(transaction.amount).toLocaleString('id-ID')} (${transaction.description || 'Tanpa deskripsi'})`
+    );
+    return result;
   }
 
   async getSummary(userId: string, month: number, year: number) {

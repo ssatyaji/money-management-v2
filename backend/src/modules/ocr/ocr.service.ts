@@ -10,6 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { OcrParserService, ParsedReceipt } from './ocr-parser.service';
 import * as path from 'path';
 import * as fs from 'fs';
+import { ActivityLogService } from '../admin/activity-log.service';
 
 @Injectable()
 export class OcrService {
@@ -20,6 +21,7 @@ export class OcrService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly ocrParser: OcrParserService,
+    private readonly activityLogService: ActivityLogService,
   ) {
     this.uploadDir = this.configService.get<string>(
       'storage.uploadDir',
@@ -87,6 +89,11 @@ export class OcrService {
     });
 
     this.logger.log(`OCR completed for receipt ${record.id}`);
+    await this.activityLogService.log(
+      userId,
+      'OCR_PROCESS',
+      `Proses struk sukses: ${file.originalname} (Total: Rp ${parsed.total ? Number(parsed.total).toLocaleString('id-ID') : 0})`
+    );
 
     return { id: record.id, result: parsed };
   }

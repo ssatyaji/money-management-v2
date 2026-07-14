@@ -14,6 +14,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { OtpService } from './otp.service';
+import { ActivityLogService } from '../admin/activity-log.service';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly otpService: OtpService,
+    private readonly activityLogService: ActivityLogService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -58,6 +60,7 @@ export class AuthService {
     await this.updateRefreshToken(user.id, tokens.refreshToken);
 
     this.logger.log(`User registered: ${user.email}`);
+    await this.activityLogService.log(user.id, 'USER_REGISTER', `Pendaftaran akun sukses: ${user.email}`);
 
     return {
       user: {
@@ -97,6 +100,7 @@ export class AuthService {
     await this.updateRefreshToken(user.id, tokens.refreshToken);
 
     this.logger.log(`User logged in: ${user.email}`);
+    await this.activityLogService.log(user.id, 'USER_LOGIN', `Login sukses: ${user.email}`);
 
     return {
       user: {

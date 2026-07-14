@@ -97,6 +97,7 @@ model User {
   alerts                Alert[]
   aiChatSessions        AiChatSession[]
   aiInsights            AiInsight[]
+  activityLogs          ActivityLog[]
 
   @@map("users")
 }
@@ -565,5 +566,34 @@ model AiInsight {
   generatedAt DateTime @default(now())
   expiresAt   DateTime
   @@map("ai_insights")
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String   // e.g. "USER_LOGIN", "CREATE_TRANSACTION", "OCR_PROCESS", "DELETE_ACCOUNT"
+  details   String?  // Informasi detail (JSON string atau deskripsi teks)
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model PlatformExpense {
+  id          String   @id @default(uuid())
+  description String
+  amount      Decimal  @db.Decimal(15, 2)
+  category    String   // e.g. "HOSTING", "API_COST", "MARKETING", "SALARY", "OTHERS"
+  date        DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@map("platform_expenses")
 }
 
