@@ -11,20 +11,21 @@
 ## Global Constraints
 
 - Full support for both **Light Mode** (`bg-[#f8fafc]`, `bg-white`, `border-slate-200/70`) and **Dark Mode** (`dark:bg-[#0b0f17]`, `dark:bg-[#151c2c]`, `dark:border-slate-800/80`).
+- Preserve **exact existing sidebar menu labels & routes** (Dashboard, Transaksi, Budget, Goals, Hutang/Piutang, Investasi, AI Advisor, Laporan Bulanan, Laporan Tahunan, Scan & Import, Pengaturan, plus Admin items).
 - Use `Inter` / `Manrope` typography with clean font weights (`font-bold tracking-tight`, `font-extrabold`).
 - Mobile responsiveness (`< lg:` breakpoint retains mobile navigation & drawer).
 - No hardcoded currency math; consume existing `formatCurrency`, `useTransactionSummary`, `useAccounts`, `useCategoryBreakdown`, `useDailyTrend`, `useRecentTransactions` hooks.
 
 ---
 
-### Task 1: Create Adaptive Light/Dark Boltz Sidebar Component
+### Task 1: Create Adaptive Light/Dark Boltz Sidebar Component (Preserving Existing Menu Labels)
 
 **Files:**
 - Create: `frontend/src/components/layout/boltz-sidebar.tsx`
 - Modify: `frontend/src/app/(dashboard)/layout.tsx`
 
 **Interfaces:**
-- Consumes: `useAuth()` hook for user profile.
+- Consumes: `useAuth()` hook for user profile and role check.
 - Produces: `<BoltzSidebar />` component for `lg:` screens.
 
 - [ ] **Step 1: Create `frontend/src/components/layout/boltz-sidebar.tsx`**
@@ -38,29 +39,41 @@ import { useAuth } from '@/providers/auth-provider';
 import {
   LayoutDashboard,
   ArrowLeftRight,
-  PieChart,
+  PiggyBank,
   Target,
   HandCoins,
   TrendingUp,
-  FileText,
-  Bot,
+  Sparkles,
+  BarChart3,
+  CalendarDays,
+  ScanLine,
   Settings,
-  HelpCircle,
+  Shield,
+  Users,
+  Terminal,
   LogOut,
   Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const navItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Transaksi', href: '/transactions', icon: ArrowLeftRight },
-  { name: 'Anggaran', href: '/budgets', icon: PieChart },
-  { name: 'Target Tabungan', href: '/goals', icon: Target },
-  { name: 'Utang & Piutang', href: '/debts', icon: HandCoins },
-  { name: 'Investasi', href: '/investments', icon: TrendingUp },
-  { name: 'Laporan', href: '/reports/monthly', icon: FileText },
-  { name: 'AI Advisor', href: '/ai-advisor', icon: Bot },
-  { name: 'Pengaturan', href: '/settings', icon: Settings },
+const menuItems = [
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Transaksi', href: '/transactions', icon: ArrowLeftRight },
+  { label: 'Budget', href: '/budgets', icon: PiggyBank },
+  { label: 'Goals', href: '/goals', icon: Target },
+  { label: 'Hutang/Piutang', href: '/debts', icon: HandCoins },
+  { label: 'Investasi', href: '/investments', icon: TrendingUp },
+  { label: 'AI Advisor', href: '/ai-advisor', icon: Sparkles },
+  { label: 'Laporan Bulanan', href: '/reports/monthly', icon: BarChart3 },
+  { label: 'Laporan Tahunan', href: '/reports/yearly', icon: CalendarDays },
+  { label: 'Scan & Import', href: '/scan/receipt', icon: ScanLine },
+  { label: 'Pengaturan', href: '/settings', icon: Settings },
+];
+
+const adminItems = [
+  { label: 'Admin Panel', href: '/admin', icon: Shield, exact: true },
+  { label: 'Manajemen Pengguna', href: '/admin/users', icon: Users, exact: false },
+  { label: 'Log Aktivitas', href: '/admin/logs', icon: Terminal, exact: false },
 ];
 
 export function BoltzSidebar() {
@@ -99,7 +112,7 @@ export function BoltzSidebar() {
 
       {/* Navigation Links */}
       <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto custom-scrollbar">
-        {navItems.map((item) => {
+        {menuItems.map((item) => {
           const isActive =
             pathname === item.href ||
             (item.href !== '/dashboard' && pathname.startsWith(item.href));
@@ -109,7 +122,7 @@ export function BoltzSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-medium transition-all duration-200 group',
+                'flex items-center justify-between px-4 py-2.5 rounded-2xl text-xs font-medium transition-all duration-200 group',
                 isActive
                   ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50',
@@ -122,11 +135,44 @@ export function BoltzSidebar() {
                     isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400',
                   )}
                 />
-                <span>{item.name}</span>
+                <span>{item.label}</span>
               </div>
             </Link>
           );
         })}
+
+        {/* Admin Section */}
+        {user?.role === 'ADMIN' && (
+          <>
+            <div className="h-px bg-slate-100 dark:bg-slate-800 my-3" />
+            {adminItems.map((item) => {
+              const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center justify-between px-4 py-2.5 rounded-2xl text-xs font-medium transition-all duration-200 group',
+                    isActive
+                      ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50',
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon
+                      className={cn(
+                        'w-4 h-4 transition-transform group-hover:scale-110',
+                        isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400',
+                      )}
+                    />
+                    <span>{item.label}</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </>
+        )}
       </nav>
 
       {/* Footer Logout */}
@@ -148,7 +194,7 @@ export function BoltzSidebar() {
 
 ```bash
 git add frontend/src/components/layout/boltz-sidebar.tsx
-git commit -m "feat(ui): add adaptive BoltzSidebar component"
+git commit -m "feat(ui): add adaptive BoltzSidebar component with exact existing menu items"
 ```
 
 ---
@@ -183,7 +229,7 @@ export function BoltzHeader() {
         <input
           type="text"
           placeholder="Cari transaksi, dompet... ⌘K"
-          className="w-full h-11 pl-10 pr-4 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 focus:border-blue-500 rounded-2xl text-xs transition-all outline-none"
+          className="w-full h-11 pl-10 pr-4 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 focus:border-blue-500 rounded-2xl text-xs transition-all outline-none text-slate-900 dark:text-slate-100"
         />
       </div>
 
@@ -427,7 +473,7 @@ git commit -m "feat(ui): add BoltzStatCards and BoltzWalletCards components"
 
 ---
 
-### Task 4: Assemble Page & Run Build Verification
+### Task 4: Assemble Full Dashboard Page & Run Build Verification
 
 **Files:**
 - Modify: `frontend/src/app/(dashboard)/dashboard/page.tsx`
