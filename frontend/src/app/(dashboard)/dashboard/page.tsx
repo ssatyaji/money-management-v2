@@ -44,6 +44,7 @@ import {
   ChevronDown,
   ArrowRight,
   CheckCircle2,
+  Plus,
 } from 'lucide-react';
 
 const COLORS = [
@@ -167,7 +168,16 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-7">
+    <div className="w-full max-w-7xl mx-auto space-y-7 relative">
+      {/* Mobile Floating Action Button (FAB) */}
+      <Link
+        href="/transactions/new"
+        className="fixed bottom-24 right-5 z-40 lg:hidden w-13 h-13 rounded-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-xl shadow-blue-600/40 flex items-center justify-center transition-all active:scale-95 border-2 border-white dark:border-slate-900"
+        title="Tambah Transaksi Baru"
+      >
+        <Plus className="w-6 h-6" />
+      </Link>
+
       {/* Alert Notifications */}
       <AlertCards />
 
