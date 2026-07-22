@@ -19,6 +19,8 @@ import { PDFParse } from 'pdf-parse';
 import * as path from 'path';
 import * as fs from 'fs';
 
+import { AccountsService } from '../accounts/accounts.service';
+
 /**
  * Extract text from a PDF buffer using pdf-parse v2.
  */
@@ -42,6 +44,7 @@ export class BankStatementsService {
     private readonly parserFactory: ParserFactory,
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly accountsService: AccountsService,
   ) {
     this.uploadDir = this.configService.get<string>(
       'storage.uploadDir',
@@ -215,6 +218,23 @@ export class BankStatementsService {
       throw new BadRequestException(
         'Tidak ada transaksi yang dipilih untuk diimport',
       );
+    }
+
+    // Validate wallet/account ownership for all target account IDs
+    const targetAccountIds = new Set<string>();
+    if (dto.accountId && dto.accountId !== 'main') {
+      targetAccountIds.add(dto.accountId);
+    }
+    if (dto.accountMap) {
+      Object.values(dto.accountMap).forEach((accId) => {
+        if (accId && accId !== 'main') {
+          targetAccountIds.add(accId);
+        }
+      });
+    }
+
+    for (const targetAccId of targetAccountIds) {
+      await this.accountsService.findById(userId, targetAccId);
     }
 
     // Get a default category for uncategorized transactions

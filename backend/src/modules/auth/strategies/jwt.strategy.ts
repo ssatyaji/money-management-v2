@@ -13,6 +13,14 @@ export interface JwtPayload {
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(configService: ConfigService) {
     const secret = configService.get<string>('jwt.accessSecret');
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (isProduction && (!secret || secret === 'fallback-secret')) {
+      throw new Error(
+        'JWT Access Secret must be configured in production environment',
+      );
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
