@@ -52,8 +52,8 @@ export function formatGroupHeaderDate(date: string | Date): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
 
   const formattedDateStr = format(d, 'dd MMMM yyyy', { locale: id });
-  if (isToday(d)) return `Hari Ini — ${formattedDateStr}`;
-  if (isYesterday(d)) return `Kemarin — ${formattedDateStr}`;
+  if (isToday(d)) return `Hari Ini, ${formattedDateStr}`;
+  if (isYesterday(d)) return `Kemarin, ${formattedDateStr}`;
 
-  return format(d, 'EEEE — dd MMMM yyyy', { locale: id });
+  return format(d, 'EEEE, dd MMMM yyyy', { locale: id });
 }

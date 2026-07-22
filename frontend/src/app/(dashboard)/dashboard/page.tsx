@@ -26,50 +26,45 @@ import {
 } from '@/hooks/use-transactions';
 import { useAccounts } from '@/hooks/use-accounts';
 import { SkeletonDashboard } from '@/components/ui/skeleton-dashboard';
-import { useSavingGoalSummary } from '@/hooks/use-saving-goals';
+import { useSavingGoalSummary, useSavingGoals } from '@/hooks/use-saving-goals';
 import { useDebtSummary } from '@/hooks/use-debts';
 import { usePortfolioSummary } from '@/hooks/use-investments';
-import { MonthPredictorWidget } from '@/components/dashboard/month-predictor-widget';
 import { AlertCards } from '@/components/dashboard/alert-cards';
-import { GlowCard } from '@/components/ui/glow-card';
+import { BoltzStatCards } from '@/components/dashboard/boltz-stat-cards';
+import { BoltzWalletCards } from '@/components/dashboard/boltz-wallet-cards';
+import {
+  Calendar,
+  Eye,
+  EyeOff,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Target,
+  HandCoins,
+  TrendingUp,
+  ChevronDown,
+  ArrowRight,
+  CheckCircle2,
+  Plus,
+} from 'lucide-react';
 
 const COLORS = [
   '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6',
   '#8b5cf6', '#ef4444', '#14b8a6', '#f97316', '#06b6d4',
 ];
 
-const generateSparklinePoints = (id: string, balance: number, startingBalance: number) => {
-  const seed = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const points = [];
-  const count = 8;
-  const range = Math.max(Math.abs(balance - startingBalance), 100000);
-  
-  for (let i = 0; i < count; i++) {
-    const progress = i / (count - 1);
-    const sineVal = Math.sin(progress * Math.PI * 1.5 + (seed % 10)) * 0.3;
-    const noiseVal = Math.cos(progress * Math.PI * 3.5 + (seed % 7)) * 0.1;
-    const base = startingBalance + (balance - startingBalance) * progress;
-    const variation = range * (sineVal + noiseVal) * (1 - progress * 0.6);
-    points.push(base + variation);
-  }
-  
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const divisor = (max - min) === 0 ? 1 : (max - min);
-  
-  return points.map((p, idx) => ({
-    x: (idx / (count - 1)) * 100,
-    y: 35 - ((p - min) / divisor) * 25 - 5
-  }));
-};
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
 
 export default function DashboardPage() {
   const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
 
-  const [chartView, setChartView] = useState<'overview' | 'forecast'>('overview');
   const [showBalance, setShowBalance] = useState(false);
+  const [periodTab, setPeriodTab] = useState<'today' | 'weekly' | 'monthly'>('monthly');
 
   useEffect(() => {
     const stored = localStorage.getItem('show_balance');
@@ -84,17 +79,32 @@ export default function DashboardPage() {
     localStorage.setItem('show_balance', String(nextValue));
   };
 
-  const { data: summary, isLoading: loadingSummary } = useTransactionSummary(month, year);
-  const { data: breakdown, isLoading: loadingBreakdown } = useCategoryBreakdown(month, year);
-  const { data: dailyTrend, isLoading: loadingTrend } = useDailyTrend(month, year);
-  const { data: recentTx, isLoading: loadingRecent } = useRecentTransactions(7);
+  // Calculate previous month for Month-over-Month (MoM) comparison
+  const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
+  const prevYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+
+  const { data: summary, isLoading: loadingSummary } = useTransactionSummary(selectedMonth, selectedYear);
+  const { data: prevSummary } = useTransactionSummary(prevMonth, prevYear);
+  const { data: breakdown, isLoading: loadingBreakdown } = useCategoryBreakdown(selectedMonth, selectedYear);
+  const { data: dailyTrend, isLoading: loadingTrend } = useDailyTrend(selectedMonth, selectedYear);
+  const { data: recentTx, isLoading: loadingRecent } = useRecentTransactions(50);
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
   const { data: forecastData, isLoading: loadingForecast } = useCashflowForecast();
   const { data: savingSummary, isLoading: loadingSaving } = useSavingGoalSummary();
+  const { data: savingGoals = [] } = useSavingGoals();
   const { data: debtSummary, isLoading: loadingDebts } = useDebtSummary();
   const { data: portfolioSummary, isLoading: loadingPortfolio } = usePortfolioSummary();
 
-  const isLoading = loadingSummary || loadingBreakdown || loadingTrend || loadingRecent || loadingAccounts || loadingForecast || loadingSaving || loadingDebts || loadingPortfolio;
+  const isLoading =
+    loadingSummary ||
+    loadingBreakdown ||
+    loadingTrend ||
+    loadingRecent ||
+    loadingAccounts ||
+    loadingForecast ||
+    loadingSaving ||
+    loadingDebts ||
+    loadingPortfolio;
 
   if (isLoading) {
     return <SkeletonDashboard />;
@@ -108,14 +118,9 @@ export default function DashboardPage() {
   }));
 
   const chartData = (dailyTrend || []).map((d) => ({
-    date: d.date.slice(5), // "MM-DD"
+    date: d.date.slice(5),
     Pemasukan: d.income,
     Pengeluaran: d.expense,
-  }));
-
-  const forecastChartData = (forecastData || []).map((d) => ({
-    date: d.date.slice(5), // "MM-DD"
-    Saldo: d.balance,
   }));
 
   const totalCash = accounts.reduce((sum, acc) => sum + (Number(acc.balance) || 0), 0);
@@ -123,568 +128,545 @@ export default function DashboardPage() {
   const totalInvestments = Number(portfolioSummary?.totalCurrentValue) || 0;
   const totalReceivables = Number(debtSummary?.totalReceivable) || 0;
   const totalPayables = Number(debtSummary?.totalPayable) || 0;
-  const netWorth = totalCash + totalSavings + totalInvestments + totalReceivables - totalPayables;
-  const isPositive = netWorth >= 0;
+
+  // ─── Dynamic Month-over-Month (MoM) Calculations ──────────────────────────
+  const curIncome = Number(summary?.totalIncome) || 0;
+  const prevInc = Number(prevSummary?.totalIncome) || 0;
+  const incomeTrendPct = prevInc > 0 ? ((curIncome - prevInc) / prevInc) * 100 : 0;
+
+  const curExpense = Number(summary?.totalExpense) || 0;
+  const prevExp = Number(prevSummary?.totalExpense) || 0;
+  const expenseTrendPct = prevExp > 0 ? ((curExpense - prevExp) / prevExp) * 100 : 0;
+
+  const savingsGainPercent = Number(portfolioSummary?.totalGainLossPercent) || Number(savingSummary?.overallProgress) || 0;
+
+  // ─── Precise Filter for Recent Transactions ────────────────────────────────
+  const displayedTransactions = (recentTx || []).filter((tx) => {
+    const txDate = new Date(tx.date);
+    const currentDate = new Date();
+
+    if (periodTab === 'today') {
+      return (
+        txDate.getFullYear() === currentDate.getFullYear() &&
+        txDate.getMonth() === currentDate.getMonth() &&
+        txDate.getDate() === currentDate.getDate()
+      );
+    }
+    if (periodTab === 'weekly') {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(currentDate.getDate() - 7);
+      oneWeekAgo.setHours(0, 0, 0, 0);
+      return txDate >= oneWeekAgo;
+    }
+    if (periodTab === 'monthly') {
+      return (
+        txDate.getMonth() + 1 === selectedMonth &&
+        txDate.getFullYear() === selectedYear
+      );
+    }
+    return true;
+  });
 
   return (
-    <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
+    <div className="w-full max-w-7xl mx-auto space-y-7 relative">
+      {/* Mobile Floating Action Button (FAB) */}
+      <Link
+        href="/transactions/new"
+        className="fixed bottom-24 right-5 z-40 lg:hidden w-13 h-13 rounded-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-xl shadow-blue-600/40 flex items-center justify-center transition-all active:scale-95 border-2 border-white dark:border-slate-900"
+        title="Tambah Transaksi Baru"
+      >
+        <Plus className="w-6 h-6" />
+      </Link>
+
       {/* Alert Notifications */}
       <AlertCards />
 
-      {/* Net Worth Card (Primary Bento Item) */}
-      <div className="w-full relative overflow-hidden rounded-[24px] p-6 text-primary-foreground shadow-lg flex flex-col justify-between min-h-[180px] animate-in fade-in slide-in-from-bottom-4 duration-500 bg-primary">
-        <div className="flex items-center justify-between opacity-80 mb-2 z-10">
-          <span className="font-body-md text-sm uppercase tracking-wider font-semibold">Net Worth (Kekayaan Bersih)</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleBalance}
-              type="button"
-              className="hover:text-white/80 transition-colors p-1 rounded-lg focus:outline-none flex items-center justify-center cursor-pointer"
-              title={showBalance ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
-            >
-              <span className="material-symbols-outlined text-[20px]">
-                {showBalance ? 'visibility' : 'visibility_off'}
-              </span>
-            </button>
-            <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
-          </div>
-        </div>
-        <div className="text-2xl sm:text-3xl md:text-[40px] font-bold tracking-tight z-10 truncate">
-          {showBalance ? formatCurrency(netWorth) : 'Rp ••••••'}
-        </div>
-        <div className="flex items-center gap-1 opacity-90 mt-2 z-10">
-          <span className="material-symbols-outlined text-[16px]">
-            {isPositive ? 'trending_up' : 'trending_down'}
-          </span>
-          <span className="font-body-sm text-sm">
-            {isPositive ? 'Kekayaan bersih positif' : 'Kekayaan bersih negatif'}
-          </span>
+      {/* Title & Filter Header Row */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+            Dashboard
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Ringkasan posisi keuangan pribadi, arus kas, tabungan & investasi Anda.
+          </p>
         </div>
 
-        {/* Assets Breakdown Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10 z-10">
-          <div className="space-y-1">
-            <p className="text-xs text-white/70 font-medium">💵 Kas & Dompet</p>
-            <p className="text-sm sm:text-base font-bold text-white">
-              {showBalance ? formatCurrency(totalCash) : 'Rp ••••••'}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs text-white/70 font-medium">🎯 Tabungan (Goals)</p>
-            <p className="text-sm sm:text-base font-bold text-white">
-              {showBalance ? formatCurrency(totalSavings) : 'Rp ••••••'}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs text-white/70 font-medium">📈 Investasi</p>
-            <p className="text-sm sm:text-base font-bold text-white">
-              {showBalance ? formatCurrency(totalInvestments) : 'Rp ••••••'}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs text-white/70 font-medium">🤝 Hutang & Piutang</p>
-            <p className="text-sm sm:text-base font-bold text-white">
-              {showBalance ? `${(totalReceivables - totalPayables) >= 0 ? '+' : ''}${formatCurrency(totalReceivables - totalPayables)}` : 'Rp ••••••'}
-            </p>
+        <div className="flex items-center gap-2.5 relative">
+          <button
+            onClick={toggleBalance}
+            type="button"
+            className="h-10 px-3.5 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            {showBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            <span>{showBalance ? 'Sembunyikan Saldo' : 'Tampilkan Saldo'}</span>
+          </button>
+
+          {/* Filter Periode Action Button & Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
+              className="h-10 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <Calendar className="w-4 h-4" />
+              <span>{MONTH_NAMES[selectedMonth - 1]} {selectedYear}</span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+            </button>
+
+            {showPeriodDropdown && (
+              <div className="absolute right-0 top-12 w-64 p-4 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/80 dark:border-slate-800/80 shadow-xl z-50 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    Pilih Periode
+                  </span>
+                  <button
+                    onClick={() => setShowPeriodDropdown(false)}
+                    className="text-[10px] text-blue-600 dark:text-blue-400 font-bold"
+                  >
+                    Tutup
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase text-slate-400">Tahun</label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="w-full h-9 px-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold outline-none"
+                  >
+                    {[2024, 2025, 2026, 2027].map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase text-slate-400">Bulan</label>
+                  <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto custom-scrollbar pt-1">
+                    {MONTH_NAMES.map((name, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setSelectedMonth(idx + 1);
+                          setShowPeriodDropdown(false);
+                        }}
+                        className={cn(
+                          'px-2 py-1.5 rounded-xl text-[11px] font-semibold transition-all text-center',
+                          selectedMonth === idx + 1
+                            ? 'bg-blue-600 text-white shadow-sm font-bold'
+                            : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+                        )}
+                      >
+                        {name.slice(0, 3)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-        
-        {/* Background ambient decorative shapes */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-        <div className="absolute bottom-0 left-0 w-40 h-40 bg-secondary opacity-20 rounded-full blur-2xl translate-y-1/3 -translate-x-1/3"></div>
       </div>
 
-      {/* Wallets / Accounts Section */}
-      {accounts.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dompet Saya</h3>
-            <Link href="/settings" className="text-xs font-semibold text-primary hover:underline">
-              Kelola
+      {/* Row 1: 4 Top Stat Cards with Dynamic Real Calculation Trends */}
+      <BoltzStatCards
+        totalBalance={totalCash}
+        income={curIncome}
+        expense={curExpense}
+        savings={totalSavings + totalInvestments}
+        showBalance={showBalance}
+        incomeTrend={{ value: incomeTrendPct, label: 'vs bln lalu' }}
+        expenseTrend={{ value: expenseTrendPct, label: 'vs bln lalu' }}
+        savingsTrend={{ value: savingsGainPercent, label: 'pertumbuhan' }}
+      />
+
+      {/* Row 2: Middle Charts (Concentric Arc Category Chart + Double Line Arus Kas Chart) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Card: Category Arc Ring Chart */}
+        <div className="lg:col-span-4 p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+              Statistik Kategori
+            </h3>
+            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+              {MONTH_NAMES[selectedMonth - 1]} {selectedYear}
+            </span>
+          </div>
+
+          <div className="h-48 relative flex items-center justify-center">
+            {pieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: any) => [formatCurrency(Number(value)), 'Nominal']}
+                    contentStyle={{
+                      backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                      borderColor: '#334155',
+                      borderRadius: '12px',
+                      color: '#fff',
+                      fontSize: '12px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-xs text-slate-400">Belum ada data transaksi bulan ini</p>
+            )}
+          </div>
+
+          {/* Category Dot Legend */}
+          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            {pieData.slice(0, 4).map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between text-xs font-semibold">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-slate-600 dark:text-slate-300">{item.name}</span>
+                </div>
+                <span className="text-slate-900 dark:text-white">
+                  {showBalance ? formatCurrency(item.value) : 'Rp ••••••'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Card: Double Smooth Line Chart */}
+        <div className="lg:col-span-8 p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                Ringkasan Arus Kas
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">Pemasukan vs Pengeluaran Harian</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Pemasukan
+              </span>
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Pengeluaran
+              </span>
+            </div>
+          </div>
+
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                <Tooltip
+                  formatter={(value: any) => [formatCurrency(Number(value)), '']}
+                  contentStyle={{
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    borderColor: '#334155',
+                    borderRadius: '12px',
+                    color: '#fff',
+                    fontSize: '12px',
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="Pemasukan"
+                  stroke="#10b981"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#incomeGrad)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="Pengeluaran"
+                  stroke="#3b82f6"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#expenseGrad)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 3: 4 Colorful Wallet Credit Cards Grid */}
+      <BoltzWalletCards accounts={accounts} showBalance={showBalance} />
+
+      {/* Row 4: Financial Summary Cards for Goals, Hutang/Piutang, & Investasi */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Goals Card */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
+                <Target className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                  Target Tabungan
+                </h3>
+                <p className="text-[11px] text-slate-400">Pencapaian Impian Anda</p>
+              </div>
+            </div>
+            <Link href="/goals" className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 hover:underline">
+              <span>Detail</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
-            {accounts.map((acc) => {
-              const sparkPoints = generateSparklinePoints(acc.id, Number(acc.balance) || 0, Number(acc.startingBalance) || 0);
-              const pathData = `M ${sparkPoints.map(p => `${p.x} ${p.y}`).join(' L ')}`;
-              const areaData = `${pathData} L 100 40 L 0 40 Z`;
 
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs font-semibold">
+              <span className="text-slate-500">Terkumpul</span>
+              <span className="text-slate-900 dark:text-white font-bold">
+                {showBalance ? formatCurrency(totalSavings) : 'Rp ••••••'} / {showBalance ? formatCurrency(Number(savingSummary?.totalTarget) || 0) : 'Rp ••••••'}
+              </span>
+            </div>
+            <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-purple-600 to-indigo-500 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(Number(savingSummary?.overallProgress) || 0, 100)}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-right font-bold text-purple-600 dark:text-purple-400">
+              {Number(savingSummary?.overallProgress || 0).toFixed(1)}% Terpenuhi
+            </p>
+          </div>
+
+          {/* Goals Preview List */}
+          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            {savingGoals.slice(0, 2).map((goal) => {
+              const progressPct = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
               return (
-                <GlowCard
-                  key={acc.id}
-                  className="min-w-[180px] sm:min-w-[220px] p-4 flex flex-col justify-between relative overflow-hidden shrink-0"
-                >
-                  <div
-                    className="absolute left-0 top-0 bottom-0 w-1.5 z-10"
-                    style={{ backgroundColor: acc.color || '#3b82f6' }}
-                  />
-                  <div className="pl-1.5 space-y-1 z-10 relative">
-                    <p className="text-xs text-muted-foreground truncate font-medium">{acc.name}</p>
-                    <p className="text-lg font-bold text-foreground truncate">
-                      {showBalance ? formatCurrency(acc.balance) : 'Rp ••••••'}
-                    </p>
+                <div key={goal.id} className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{goal.icon || '🎯'}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{goal.name}</span>
                   </div>
-
-                  {/* Deterministic Sparkline */}
-                  <div className="absolute bottom-0 left-0 right-0 h-10 opacity-60 pointer-events-none z-0">
-                    <svg viewBox="0 0 100 40" className="w-full h-full" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id={`grad-${acc.id}`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={acc.color || '#3b82f6'} stopOpacity="0.15" />
-                          <stop offset="100%" stopColor={acc.color || '#3b82f6'} stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                      <path d={areaData} fill={`url(#grad-${acc.id})`} />
-                      <path d={pathData} fill="none" stroke={acc.color || '#3b82f6'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                </GlowCard>
+                  <span className="text-[11px] font-semibold text-slate-500">
+                    {progressPct.toFixed(0)}%
+                  </span>
+                </div>
               );
             })}
           </div>
         </div>
-      )}
 
-      {/* Quick Actions Bento */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-        <Link href="/transactions/new?type=INCOME" className="group flex flex-col items-center justify-center gap-2 p-4 bg-card/65 backdrop-blur-md border border-border/80 rounded-[20px] shadow-[0px_2px_8px_rgba(26,43,60,0.04)] hover:shadow-[0px_8px_24px_rgba(26,43,60,0.08)] transition-all duration-300 hover:-translate-y-1 active:scale-95">
-          <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <span className="material-symbols-outlined text-[24px]">arrow_downward</span>
-          </div>
-          <span className="font-body-sm text-sm font-semibold text-foreground">Income</span>
-        </Link>
-        <Link href="/transactions/new?type=EXPENSE" className="group flex flex-col items-center justify-center gap-2 p-4 bg-card/65 backdrop-blur-md border border-border/80 rounded-[20px] shadow-[0px_2px_8px_rgba(26,43,60,0.04)] hover:shadow-[0px_8px_24px_rgba(26,43,60,0.08)] transition-all duration-300 hover:-translate-y-1 active:scale-95">
-          <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <span className="material-symbols-outlined text-[24px]">arrow_upward</span>
-          </div>
-          <span className="font-body-sm text-sm font-semibold text-foreground">Expense</span>
-        </Link>
-        <Link href="/transactions" className="group flex flex-col items-center justify-center gap-2 p-4 bg-card/65 backdrop-blur-md border border-border/80 rounded-[20px] shadow-[0px_2px_8px_rgba(26,43,60,0.04)] hover:shadow-[0px_8px_24px_rgba(26,43,60,0.08)] transition-all duration-300 hover:-translate-y-1 active:scale-95">
-          <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <span className="material-symbols-outlined text-[24px]">receipt_long</span>
-          </div>
-          <span className="font-body-sm text-sm font-semibold text-foreground">History</span>
-        </Link>
-        <Link href="/transactions/new" className="group flex flex-col items-center justify-center gap-2 p-4 bg-primary text-primary-foreground rounded-[20px] shadow-[0px_4px_12px_rgba(26,43,60,0.15)] hover:shadow-[0px_8px_24px_rgba(26,43,60,0.2)] transition-all duration-300 hover:-translate-y-1 active:scale-95 relative overflow-hidden">
-          <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center group-hover:rotate-90 transition-transform duration-300">
-            <span className="material-symbols-outlined text-[24px]">add</span>
-          </div>
-          <span className="font-body-sm text-sm font-bold">New</span>
-          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        </Link>
-      </div>
-
-      {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Income Stat */}
-        <div className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:scale-[1.01] hover:border-emerald-500/20 transition-all duration-300 flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3 text-emerald-600">
-              <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
-                <span className="material-symbols-outlined text-[20px]">trending_up</span>
+        {/* Hutang & Piutang Card */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                <HandCoins className="w-5 h-5" />
               </div>
-              <span className="font-body-sm font-semibold">Income</span>
+              <div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                  Hutang & Piutang
+                </h3>
+                <p className="text-[11px] text-slate-400">Kewajiban & Tagihan</p>
+              </div>
+            </div>
+            <Link href="/debts" className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 hover:underline">
+              <span>Detail</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40">
+              <p className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Piutang (Tagih)</p>
+              <p className="text-sm font-extrabold text-slate-900 dark:text-white mt-1">
+                {showBalance ? formatCurrency(totalReceivables) : 'Rp ••••••'}
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40">
+              <p className="text-[10px] font-bold uppercase text-rose-600 dark:text-rose-400">Hutang (Bayar)</p>
+              <p className="text-sm font-extrabold text-slate-900 dark:text-white mt-1">
+                {showBalance ? formatCurrency(totalPayables) : 'Rp ••••••'}
+              </p>
             </div>
           </div>
-          <div className="text-xl sm:text-2xl md:text-3xl font-heading font-bold text-foreground truncate">
-            {showBalance ? formatCurrency(summary?.totalIncome ?? 0) : 'Rp ••••••'}
+
+          <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 dark:border-slate-800">
+            <span className="text-slate-500 font-medium">Posisi Bersih:</span>
+            <span className={cn(
+              'font-bold px-2 py-0.5 rounded-full text-[11px]',
+              totalReceivables - totalPayables >= 0
+                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400'
+                : 'bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400'
+            )}>
+              {showBalance
+                ? `${totalReceivables - totalPayables >= 0 ? '+' : ''}${formatCurrency(totalReceivables - totalPayables)}`
+                : 'Rp ••••••'}
+            </span>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">Total income this month</p>
         </div>
 
-        {/* Expense Stat */}
-        <div className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:scale-[1.01] hover:border-emerald-500/20 transition-all duration-300 flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3 text-red-600">
-              <div className="p-2 rounded-xl bg-red-50 dark:bg-red-500/10">
-                <span className="material-symbols-outlined text-[20px]">trending_down</span>
+        {/* Investasi Card */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                <TrendingUp className="w-5 h-5" />
               </div>
-              <span className="font-body-sm font-semibold">Expense</span>
+              <div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                  Portofolio Investasi
+                </h3>
+                <p className="text-[11px] text-slate-400">Pertumbuhan Aset</p>
+              </div>
             </div>
+            <Link href="/investments" className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 hover:underline">
+              <span>Detail</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <div className="text-xl sm:text-2xl md:text-3xl font-heading font-bold text-foreground truncate">
-            {showBalance ? formatCurrency(summary?.totalExpense ?? 0) : 'Rp ••••••'}
+
+          <div>
+            <p className="text-[10px] font-bold uppercase text-slate-400">Total Nilai Portofolio</p>
+            <h4 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5">
+              {showBalance ? formatCurrency(totalInvestments) : 'Rp ••••••'}
+            </h4>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">Total expense this month</p>
-        </div>
-      </div>
 
-      {/* Month Predictor Widget */}
-      <MonthPredictorWidget />
-
-      {/* Feature Summary Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Saving Goals Widget */}
-        <GlowCard className="p-0 hover:border-primary/20">
-          <Link href="/goals" className="p-6 block w-full h-full flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3 text-indigo-600">
-                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
-                  <span className="material-symbols-outlined text-[20px]">target</span>
-                </div>
-                <span className="font-body-sm font-semibold">Saving Goals</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="text-xl font-heading font-bold text-foreground truncate">
-                  {showBalance ? formatCurrency(savingSummary?.totalSaved ?? 0) : 'Rp ••••••'}
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
-                  Terkumpul dari target {showBalance ? formatCurrency(savingSummary?.totalTarget ?? 0) : 'Rp ••••••'}
-                </p>
-              </div>
-              
-              {/* Semi-circular gauge */}
-              {(() => {
-                const progress = Math.min(savingSummary?.overallProgress ?? 0, 100);
-                const strokeDasharray = 125.6; // Perimeter of radius 40 semi-circle (PI * 40)
-                const strokeDashoffset = strokeDasharray - (strokeDasharray * progress) / 100;
-                return (
-                  <div className="relative w-20 h-10 shrink-0 flex items-center justify-center">
-                    <svg viewBox="0 0 100 50" className="w-full h-full">
-                      <defs>
-                        <linearGradient id="savingsGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#6366f1" />
-                          <stop offset="100%" stopColor="#10b981" />
-                        </linearGradient>
-                      </defs>
-                      <path 
-                        d="M 10 50 A 40 40 0 0 1 90 50" 
-                        fill="none" 
-                        stroke="var(--border)" 
-                        strokeWidth="8" 
-                        strokeLinecap="round" 
-                        opacity="0.15"
-                      />
-                      <path 
-                        d="M 10 50 A 40 40 0 0 1 90 50" 
-                        fill="none" 
-                        stroke="url(#savingsGradient)" 
-                        strokeWidth="8" 
-                        strokeLinecap="round" 
-                        strokeDasharray={strokeDasharray}
-                        strokeDashoffset={strokeDashoffset}
-                        className="transition-[stroke-dashoffset] duration-1000 ease-out"
-                      />
-                    </svg>
-                    <div className="absolute bottom-0 text-[10px] font-bold text-foreground">
-                      {progress}%
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </Link>
-        </GlowCard>
-
-        {/* Debt Widget */}
-        <GlowCard className="p-0 hover:border-primary/20">
-          <Link href="/debts" className="p-6 block w-full h-full flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3 text-amber-600">
-                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10">
-                  <span className="material-symbols-outlined text-[20px]">paid</span>
-                </div>
-                <span className="font-body-sm font-semibold">Hutang & Piutang</span>
-              </div>
-              {debtSummary?.overdueCount && debtSummary.overdueCount > 0 ? (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-600">{debtSummary.overdueCount} Overdue</span>
-              ) : null}
-            </div>
-            <div className={cn("text-xl font-heading font-bold truncate", (debtSummary?.netPosition ?? 0) >= 0 ? "text-emerald-600" : "text-red-600")}>
-              {showBalance ? formatCurrency(debtSummary?.netPosition ?? 0) : 'Rp ••••••'}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Piutang: {showBalance ? formatCurrency(debtSummary?.totalReceivable ?? 0) : 'Rp ••••••'} | Hutang: {showBalance ? formatCurrency(debtSummary?.totalPayable ?? 0) : 'Rp ••••••'}
-            </p>
-          </Link>
-        </GlowCard>
-
-        {/* Investment Widget */}
-        <GlowCard className="p-0 hover:border-primary/20">
-          <Link href="/investments" className="p-6 block w-full h-full flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3 text-violet-600">
-                <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10">
-                  <span className="material-symbols-outlined text-[20px]">trending_up</span>
-                </div>
-                <span className="font-body-sm font-semibold">Investasi</span>
-              </div>
-              <span className={cn(
-                "text-[10px] font-bold px-2 py-0.5 rounded-full",
-                (portfolioSummary?.totalGainLoss ?? 0) >= 0
-                  ? "bg-emerald-500/10 text-emerald-600"
-                  : "bg-red-500/10 text-red-600"
-              )}>
-                {(portfolioSummary?.totalGainLossPercent ?? 0) >= 0 ? '+' : ''}{portfolioSummary?.totalGainLossPercent ?? 0}%
+          <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 dark:border-slate-800">
+            <span className="text-slate-500 font-medium">Estimasi Return:</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>
+                {showBalance ? formatCurrency(Number(portfolioSummary?.totalGainLoss) || 0) : 'Rp ••••••'} ({Number(portfolioSummary?.totalGainLossPercent || 0).toFixed(1)}%)
               </span>
-            </div>
-            <div className="text-xl font-heading font-bold text-foreground truncate">
-              {showBalance ? formatCurrency(portfolioSummary?.totalCurrentValue ?? 0) : 'Rp ••••••'}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Modal: {showBalance ? formatCurrency(portfolioSummary?.totalInvested ?? 0) : 'Rp ••••••'} | Gain: {showBalance ? formatCurrency(portfolioSummary?.totalGainLoss ?? 0) : 'Rp ••••••'}
-            </p>
-          </Link>
-        </GlowCard>
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Cashflow Chart */}
-        <div className="lg:col-span-2 p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:border-emerald-500/10 transition-all duration-300 relative overflow-hidden">
-          <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
-            <h3 className="font-h3 text-xl font-bold text-foreground">
-              {chartView === 'overview' ? 'Cashflow Overview' : 'Prediksi Arus Kas (30 Hari Ke Depan)'}
+      {/* Row 5: Recent Transactions Table with Period Filter Tabs */}
+      <div className="p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+              Transaksi Terkini
             </h3>
-            <div className="flex bg-muted/65 p-1 rounded-xl border border-border/40 text-xs font-semibold">
-              <button
-                onClick={() => setChartView('overview')}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg transition-all cursor-pointer",
-                  chartView === 'overview'
-                    ? "bg-card text-foreground shadow-sm font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Tren Harian
-              </button>
-              <button
-                onClick={() => setChartView('forecast')}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1",
-                  chartView === 'forecast'
-                    ? "bg-card text-foreground shadow-sm font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <span className="material-symbols-outlined text-[14px]">insights</span>
-                Prediksi
-              </button>
-            </div>
+            <p className="text-xs text-slate-400 mt-0.5">Daftar mutasi keuangan terbaru Anda</p>
           </div>
 
-          <div className="relative">
-            {!showBalance && (
-              <div className="absolute inset-0 bg-background/20 backdrop-blur-[10px] z-20 flex flex-col items-center justify-center rounded-[20px] transition-all">
-                <span className="material-symbols-outlined text-muted-foreground text-[32px] mb-2 select-none">visibility_off</span>
-                <p className="text-sm text-muted-foreground font-semibold">Tampilkan saldo untuk melihat tren</p>
-              </div>
-            )}
-            {chartView === 'overview' ? (
-              chartData.length === 0 ? (
-                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
-                  No transactions yet this month
-                </div>
+          {/* Period Filter Tabs */}
+          <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-xs font-semibold">
+            <button
+              onClick={() => setPeriodTab('today')}
+              className={cn(
+                'px-3 py-1.5 rounded-xl transition-all cursor-pointer',
+                periodTab === 'today'
+                  ? 'bg-blue-600 text-white shadow-sm font-bold'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100',
+              )}
+            >
+              Hari Ini
+            </button>
+            <button
+              onClick={() => setPeriodTab('weekly')}
+              className={cn(
+                'px-3 py-1.5 rounded-xl transition-all cursor-pointer',
+                periodTab === 'weekly'
+                  ? 'bg-blue-600 text-white shadow-sm font-bold'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100',
+              )}
+            >
+              Minggu Ini
+            </button>
+            <button
+              onClick={() => setPeriodTab('monthly')}
+              className={cn(
+                'px-3 py-1.5 rounded-xl transition-all cursor-pointer',
+                periodTab === 'monthly'
+                  ? 'bg-blue-600 text-white shadow-sm font-bold'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100',
+              )}
+            >
+              Bulan Ini
+            </button>
+          </div>
+        </div>
+
+        {/* Transactions Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
+                <th className="pb-3">Deskripsi & Kategori</th>
+                <th className="pb-3">Tanggal</th>
+                <th className="pb-3">Nominal</th>
+                <th className="pb-3 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+              {displayedTransactions.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-slate-400 text-xs font-semibold">
+                    Belum ada transaksi pada periode {periodTab === 'today' ? 'Hari Ini' : periodTab === 'weekly' ? 'Minggu Ini' : 'Bulan Ini'}.
+                  </td>
+                </tr>
               ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'var(--card)',
-                        border: 'none',
-                        borderRadius: '12px',
-                        boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        color: 'var(--foreground)'
-                      }}
-                      itemStyle={{ color: 'var(--foreground)' }}
-                      formatter={(value) => formatCurrency(Number(value))}
-                    />
-                    <Area type="monotone" dataKey="Pemasukan" stroke="#10b981" fill="url(#colorIncome)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
-                    <Area type="monotone" dataKey="Pengeluaran" stroke="#ef4444" fill="url(#colorExpense)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )
-            ) : (
-              forecastChartData.length === 0 ? (
-                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
-                  No forecast data available
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart data={forecastChartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'var(--card)',
-                        border: 'none',
-                        borderRadius: '12px',
-                        boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        color: 'var(--foreground)'
-                      }}
-                      itemStyle={{ color: 'var(--foreground)' }}
-                      formatter={(value) => formatCurrency(Number(value))}
-                    />
-                    <Area type="monotone" dataKey="Saldo" stroke="#3b82f6" fill="url(#colorBalance)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )
-            )}
-          </div>
-        </div>
-
-        {/* Expenses Pie */}
-        <div className="p-6 bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] hover:border-emerald-500/10 transition-all duration-300 relative overflow-hidden">
-          <h3 className="font-h3 text-xl font-bold text-foreground mb-6">Top Expenses</h3>
-          <div className="relative">
-            {!showBalance && (
-              <div className="absolute inset-0 bg-background/20 backdrop-blur-[10px] z-20 flex flex-col items-center justify-center rounded-[20px] transition-all">
-                <span className="material-symbols-outlined text-muted-foreground text-[32px] mb-2 select-none">visibility_off</span>
-                <p className="text-sm text-muted-foreground font-semibold text-center px-4">Tampilkan saldo untuk melihat rincian</p>
-              </div>
-            )}
-            {pieData.length === 0 ? (
-              <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
-                No expenses to show
-              </div>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={85}
-                      paddingAngle={4}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {pieData.map((entry, idx) => (
-                        <Cell key={idx} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'var(--card)',
-                        border: 'none',
-                        borderRadius: '12px',
-                        boxShadow: '0px 8px 24px rgba(26,43,60,0.12)',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        color: 'var(--foreground)'
-                      }}
-                      itemStyle={{ color: 'var(--foreground)' }}
-                      formatter={(value) => formatCurrency(Number(value))}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="space-y-3 mt-4">
-                  {pieData.slice(0, 4).map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-foreground font-medium">{item.icon} {item.name}</span>
-                      </div>
-                      <span className="font-bold text-foreground">{showBalance ? formatCurrency(item.value) : 'Rp ••••••'}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Transactions List */}
-      <div className="w-full bg-card/65 backdrop-blur-md border border-border/80 rounded-[24px] shadow-[0px_2px_12px_rgba(26,43,60,0.03)] overflow-hidden">
-        <div className="flex items-center justify-between p-6 pb-4 border-b border-border/50">
-          <h3 className="font-h3 text-xl font-bold text-foreground">Recent Activity</h3>
-          <Link href="/transactions" className="text-sm font-semibold text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
-            See All <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          </Link>
-        </div>
-
-        <div className="p-2">
-          {!recentTx || recentTx.length === 0 ? (
-            <div className="py-12 text-center flex flex-col items-center justify-center">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
-                <span className="material-symbols-outlined text-[32px]">receipt_long</span>
-              </div>
-              <p className="text-foreground font-semibold">No transactions found</p>
-              <p className="text-sm text-muted-foreground mt-1">Your recent activity will appear here</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              {recentTx.map((tx, idx) => (
-                <Link
-                  key={tx.id}
-                  href={`/transactions/${tx.id}`}
-                  style={{ animationDelay: `${idx * 60}ms` }}
-                  className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-[16px] transition-all duration-300 group gap-4 animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
-                >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-sm border border-border/50 group-hover:scale-105 transition-transform shrink-0"
-                      style={{
-                        backgroundColor: tx.category?.color ? `${tx.category.color}15` : 'var(--muted)',
-                      }}
-                    >
-                      {tx.category?.icon || '📦'}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="font-semibold text-foreground text-sm md:text-base truncate">
-                        {tx.description || tx.category?.name || 'Transaction'}
-                      </span>
-                      <span className="text-xs text-muted-foreground mt-0.5 font-medium truncate">
-                        {tx.category?.name} • {formatTransactionDate(tx.date)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span
-                      className={cn(
-                        'text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline-block shrink-0',
-                        tx.type === 'INCOME'
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20'
-                          : 'bg-red-500/10 text-red-600 dark:bg-red-500/20'
-                      )}
-                    >
-                      {tx.type === 'INCOME' ? 'Masuk' : 'Keluar'}
-                    </span>
-                    <div className="flex flex-col items-end text-right">
-                      <span
-                        className={cn(
-                          'font-bold text-sm md:text-base',
-                          tx.type === 'INCOME' ? 'text-emerald-600' : 'text-foreground'
-                        )}
-                      >
-                        {tx.type === 'INCOME' ? '+' : '-'}{showBalance ? formatCurrency(Number(tx.amount)) : 'Rp ••••••'}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+                displayedTransactions.map((tx) => {
+                  const isIncome = tx.type === 'INCOME';
+                  return (
+                    <tr key={tx.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3.5 flex items-center gap-3">
+                        <div className={cn(
+                          'w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0',
+                          isIncome
+                            ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400',
+                        )}>
+                          {isIncome ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-white">{tx.description || tx.category?.name}</p>
+                          <p className="text-[10px] text-slate-400">{tx.category?.name || 'Umum'}</p>
+                        </div>
+                      </td>
+                      <td className="py-3.5 text-slate-500 dark:text-slate-400">
+                        {formatTransactionDate(tx.date)}
+                      </td>
+                      <td className={cn(
+                        'py-3.5 font-bold',
+                        isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
+                      )}>
+                        {isIncome ? '+' : '-'}{showBalance ? formatCurrency(Number(tx.amount)) : 'Rp ••••••'}
+                      </td>
+                      <td className="py-3.5 text-right">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                          Selesai
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

@@ -12,7 +12,7 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://zaynfinance.com';
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: 'Zayn Finance — Aplikasi Manajemen Keuangan Pribadi & Keluarga',
+    default: 'Zayn Finance | Aplikasi Manajemen Keuangan Pribadi & Keluarga',
     template: '%s | Zayn Finance',
   },
   description:
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'Zayn Finance — Aplikasi Manajemen Keuangan Pribadi & Keluarga',
+    title: 'Zayn Finance | Aplikasi Manajemen Keuangan Pribadi & Keluarga',
     description:
       'Kelola keuangan pribadi dan keluarga secara cerdas. Lacak transaksi, impor e-statement bank, analisa anggaran, dan dapatkan rekomendasi AI.',
     url: baseUrl,
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Zayn Finance — Aplikasi Manajemen Keuangan Pribadi',
+    title: 'Zayn Finance | Aplikasi Manajemen Keuangan Pribadi',
     description:
       'Kelola keuangan pribadi dan keluarga secara cerdas. Impor e-statement bank & dapatkan rekomendasi AI.',
     images: [`${baseUrl}/icons/icon-512x512.png`],
