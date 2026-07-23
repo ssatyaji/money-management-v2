@@ -46,6 +46,11 @@ import { transactionsApi, type TransactionFilters } from '@/lib/api/transactions
 import { startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, format } from 'date-fns';
 
 
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
 export default function TransactionsPage() {
   const [filters, setFilters] = useState<TransactionFilters>({
     page: 1,
@@ -54,12 +59,17 @@ export default function TransactionsPage() {
   const [searchInput, setSearchInput] = useState('');
   const [activeType, setActiveType] = useState<string | undefined>();
 
-  // Date range states
+  // Date filter states
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [dateMode, setDateMode] = useState<'month' | 'preset' | 'custom'>('preset');
   const [datePreset, setDatePreset] = useState<string>('all');
   const [customRange, setCustomRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
     to: undefined,
   });
+  const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
 
   // Export states
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
@@ -99,51 +109,76 @@ export default function TransactionsPage() {
     setFilters((prev) => ({ ...prev, page }));
   };
 
-  const handlePresetChange = (preset: string) => {
-    setDatePreset(preset);
+  const handleMonthSelect = (monthIdx: number, year: number) => {
+    setSelectedMonth(monthIdx);
+    setSelectedYear(year);
+    setDateMode('month');
+
+    const start = startOfMonth(new Date(year, monthIdx - 1, 1));
+    const end = endOfMonth(new Date(year, monthIdx - 1, 1));
+
+    setCustomRange({ from: undefined, to: undefined });
+    setFilters((prev) => ({
+      ...prev,
+      startDate: format(start, 'yyyy-MM-dd'),
+      endDate: format(end, 'yyyy-MM-dd'),
+      page: 1,
+    }));
+    setShowPeriodDropdown(false);
+  };
+
+  const handlePresetSelect = (presetId: string) => {
+    setDateMode('preset');
+    setDatePreset(presetId);
     let startDate: string | undefined = undefined;
     let endDate: string | undefined = undefined;
 
-    const now = new Date();
+    const currentDate = new Date();
 
-    if (preset === 'this-month') {
-      const start = startOfMonth(now);
-      const end = endOfMonth(now);
+    if (presetId === 'this-month') {
+      const start = startOfMonth(currentDate);
+      const end = endOfMonth(currentDate);
       startDate = format(start, 'yyyy-MM-dd');
       endDate = format(end, 'yyyy-MM-dd');
-    } else if (preset === 'last-month') {
-      const lastMonth = subMonths(now, 1);
+      setSelectedMonth(currentDate.getMonth() + 1);
+      setSelectedYear(currentDate.getFullYear());
+    } else if (presetId === 'last-month') {
+      const lastMonth = subMonths(currentDate, 1);
       const start = startOfMonth(lastMonth);
       const end = endOfMonth(lastMonth);
       startDate = format(start, 'yyyy-MM-dd');
       endDate = format(end, 'yyyy-MM-dd');
-    } else if (preset === 'last-3-months') {
-      const start = startOfMonth(subMonths(now, 2));
+      setSelectedMonth(lastMonth.getMonth() + 1);
+      setSelectedYear(lastMonth.getFullYear());
+    } else if (presetId === 'last-3-months') {
+      const start = startOfMonth(subMonths(currentDate, 2));
       startDate = format(start, 'yyyy-MM-dd');
-      endDate = format(now, 'yyyy-MM-dd');
-    } else if (preset === 'this-year') {
-      const start = startOfYear(now);
-      const end = endOfYear(now);
+      endDate = format(currentDate, 'yyyy-MM-dd');
+    } else if (presetId === 'this-year') {
+      const start = startOfYear(currentDate);
+      const end = endOfYear(currentDate);
       startDate = format(start, 'yyyy-MM-dd');
       endDate = format(end, 'yyyy-MM-dd');
-    } else if (preset === 'custom') {
-      // Don't update filter yet, let user pick from Calendar
-      return;
+      setSelectedYear(currentDate.getFullYear());
+    } else if (presetId === 'all') {
+      startDate = undefined;
+      endDate = undefined;
     }
 
-    // Reset custom range if not 'custom'
     setCustomRange({ from: undefined, to: undefined });
-
     setFilters((prev) => ({
       ...prev,
       startDate,
       endDate,
       page: 1,
     }));
+    setShowPeriodDropdown(false);
   };
 
-  const handleCustomRangeChange = (range: any) => {
+  const handleCustomRangeSelect = (range: any) => {
     setCustomRange(range || { from: undefined, to: undefined });
+    setDateMode('custom');
+
     if (range?.from) {
       const startDate = format(range.from, 'yyyy-MM-dd');
       const endDate = range.to ? format(range.to, 'yyyy-MM-dd') : startDate;
@@ -161,6 +196,29 @@ export default function TransactionsPage() {
         page: 1,
       }));
     }
+  };
+
+  const getDateFilterLabel = () => {
+    if (dateMode === 'month') {
+      return `${MONTH_NAMES[selectedMonth - 1]} ${selectedYear}`;
+    }
+    if (dateMode === 'preset') {
+      if (datePreset === 'all') return 'Semua Waktu';
+      if (datePreset === 'this-month') return `Bulan Ini (${MONTH_NAMES[selectedMonth - 1]})`;
+      if (datePreset === 'last-month') return 'Bulan Lalu';
+      if (datePreset === 'last-3-months') return '3 Bulan Terakhir';
+      if (datePreset === 'this-year') return `Tahun ${selectedYear}`;
+    }
+    if (dateMode === 'custom') {
+      if (customRange?.from) {
+        if (customRange.to) {
+          return `${format(customRange.from, 'd MMM')} - ${format(customRange.to, 'd MMM yyyy')}`;
+        }
+        return format(customRange.from, 'd MMM yyyy');
+      }
+      return 'Rentang Kustom';
+    }
+    return 'Pilih Periode';
   };
 
   const handleExport = async () => {
@@ -230,96 +288,158 @@ export default function TransactionsPage() {
 
         <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 w-full sm:w-auto shrink-0">
           {/* Date Filter Popover */}
-          <Popover>
+          <Popover open={showPeriodDropdown} onOpenChange={setShowPeriodDropdown}>
             <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "gap-2 h-9 border-border/80 bg-background text-xs font-semibold cursor-pointer shrink-0 transition-all hover:bg-accent/50",
-                  datePreset !== 'all' && "border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
-                )}
+              <button
+                type="button"
+                className="h-9 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer shrink-0"
               >
-                <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                <span>
-                  {datePreset === 'all' && 'Semua Waktu'}
-                  {datePreset === 'this-month' && 'Bulan Ini'}
-                  {datePreset === 'last-month' && 'Bulan Lalu'}
-                  {datePreset === 'last-3-months' && '3 Bulan Terakhir'}
-                  {datePreset === 'this-year' && 'Tahun Ini'}
-                  {datePreset === 'custom' && (
-                    customRange?.from ? (
-                      customRange.to ? (
-                        `${format(customRange.from, 'dd MMM yyyy')} - ${format(customRange.to, 'dd MMM yyyy')}`
-                      ) : (
-                        format(customRange.from, 'dd MMM yyyy')
-                      )
-                    ) : (
-                      'Pilih Tanggal'
-                    )
-                  )}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground opacity-60" />
-              </Button>
+                <CalendarDays className="w-4 h-4" />
+                <span>{getDateFilterLabel()}</span>
+                <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+              </button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-card border border-border rounded-2xl shadow-[0px_10px_30px_rgba(26,43,60,0.12)] z-50 overflow-hidden" align="end">
-              <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-border">
-                {/* Left Panel: Presets List */}
-                <div className="w-full sm:w-44 p-3 bg-muted/15 flex flex-col gap-1 shrink-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1 mb-1 block">
-                    Periode Cepat
-                  </span>
+
+            <PopoverContent className="w-80 p-4 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/80 dark:border-slate-800/80 shadow-2xl z-50 space-y-3" align="start">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                  Pilih Periode
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowPeriodDropdown(false)}
+                  className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline"
+                >
+                  Tutup
+                </button>
+              </div>
+
+              {/* Mode Switcher Tabs */}
+              <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-[11px] font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setDateMode('month')}
+                  className={cn(
+                    "py-1 rounded-lg transition-all text-center cursor-pointer",
+                    dateMode === 'month'
+                      ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm font-bold"
+                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                  )}
+                >
+                  Bulan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDateMode('preset')}
+                  className={cn(
+                    "py-1 rounded-lg transition-all text-center cursor-pointer",
+                    dateMode === 'preset'
+                      ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm font-bold"
+                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                  )}
+                >
+                  Cepat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDateMode('custom')}
+                  className={cn(
+                    "py-1 rounded-lg transition-all text-center cursor-pointer",
+                    dateMode === 'custom'
+                      ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm font-bold"
+                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                  )}
+                >
+                  Kustom
+                </button>
+              </div>
+
+              {/* Tab 1: Bulan & Tahun (Dashboard Style) */}
+              {dateMode === 'month' && (
+                <div className="space-y-3 animate-in fade-in-50 duration-150">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-slate-400">Tahun</label>
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(Number(e.target.value))}
+                      className="w-full h-9 px-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold outline-none cursor-pointer"
+                    >
+                      {[2024, 2025, 2026, 2027].map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-slate-400">Bulan</label>
+                    <div className="grid grid-cols-3 gap-1.5 pt-1">
+                      {MONTH_NAMES.map((name, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleMonthSelect(idx + 1, selectedYear)}
+                          className={cn(
+                            'px-2 py-1.5 rounded-xl text-[11px] font-semibold transition-all text-center cursor-pointer',
+                            selectedMonth === idx + 1 && dateMode === 'month'
+                              ? 'bg-blue-600 text-white shadow-sm font-bold'
+                              : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+                          )}
+                        >
+                          {name.slice(0, 3)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 2: Quick Presets */}
+              {dateMode === 'preset' && (
+                <div className="space-y-1.5 animate-in fade-in-50 duration-150">
                   {[
                     { id: 'all', label: 'Semua Waktu' },
                     { id: 'this-month', label: 'Bulan Ini' },
                     { id: 'last-month', label: 'Bulan Lalu' },
                     { id: 'last-3-months', label: '3 Bulan Terakhir' },
                     { id: 'this-year', label: 'Tahun Ini' },
-                    { id: 'custom', label: 'Rentang Kustom' },
                   ].map((p) => (
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => handlePresetChange(p.id)}
+                      onClick={() => handlePresetSelect(p.id)}
                       className={cn(
-                        "w-full text-left px-3 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer",
-                        datePreset === p.id
-                          ? "bg-primary text-primary-foreground font-semibold shadow-sm"
-                          : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                        "w-full text-left px-3 py-2 text-xs rounded-xl font-semibold transition-all cursor-pointer flex items-center justify-between",
+                        datePreset === p.id && dateMode === 'preset'
+                          ? "bg-blue-600 text-white font-bold shadow-sm"
+                          : "bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                       )}
                     >
-                      {p.label}
+                      <span>{p.label}</span>
+                      {datePreset === p.id && dateMode === 'preset' && (
+                        <span className="text-[10px]">✓</span>
+                      )}
                     </button>
                   ))}
                 </div>
+              )}
 
-                {/* Right Panel: Calendar Visualizer */}
-                <div className="p-3 flex flex-col justify-between items-center bg-card select-none">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-full mb-1 text-center sm:text-left sm:px-2">
-                    {datePreset === 'custom' ? 'Pilih Rentang Tanggal' : 'Visualisasi Periode'}
-                  </span>
-                  <div className="rounded-xl border border-border/40 p-1 bg-background/30">
+              {/* Tab 3: Custom Date Range (Calendar) */}
+              {dateMode === 'custom' && (
+                <div className="space-y-2 animate-in fade-in-50 duration-150 flex flex-col items-center">
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-1 bg-slate-50/50 dark:bg-slate-800/30">
                     <Calendar
                       mode="range"
                       selected={customRange}
-                      onSelect={(range) => {
-                        setDatePreset('custom');
-                        handleCustomRangeChange(range);
-                      }}
+                      onSelect={handleCustomRangeSelect}
                       numberOfMonths={1}
-                      className={cn(
-                        "transition-opacity duration-200",
-                        datePreset !== 'custom' && "pointer-events-none opacity-50"
-                      )}
                     />
                   </div>
-                  {datePreset === 'custom' && (
-                    <p className="text-[10px] text-muted-foreground mt-2 w-full text-center">
-                      * Pilih tanggal mulai &amp; tanggal selesai pada kalender.
-                    </p>
-                  )}
+                  <p className="text-[10px] text-slate-400 text-center">
+                    * Klik tanggal awal &amp; tanggal akhir pada kalender.
+                  </p>
                 </div>
-              </div>
+              )}
             </PopoverContent>
           </Popover>
 

@@ -563,7 +563,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 5: Recent Transactions Table with Period Filter Tabs */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm space-y-5">
+      <div className="p-4 sm:p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm space-y-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
@@ -573,11 +573,11 @@ export default function DashboardPage() {
           </div>
 
           {/* Period Filter Tabs */}
-          <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-xs font-semibold">
+          <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-xs font-semibold w-full sm:w-auto overflow-x-auto justify-between sm:justify-start">
             <button
               onClick={() => setPeriodTab('today')}
               className={cn(
-                'px-3 py-1.5 rounded-xl transition-all cursor-pointer',
+                'px-3 py-1.5 rounded-xl transition-all cursor-pointer flex-1 sm:flex-none text-center',
                 periodTab === 'today'
                   ? 'bg-blue-600 text-white shadow-sm font-bold'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100',
@@ -588,7 +588,7 @@ export default function DashboardPage() {
             <button
               onClick={() => setPeriodTab('weekly')}
               className={cn(
-                'px-3 py-1.5 rounded-xl transition-all cursor-pointer',
+                'px-3 py-1.5 rounded-xl transition-all cursor-pointer flex-1 sm:flex-none text-center',
                 periodTab === 'weekly'
                   ? 'bg-blue-600 text-white shadow-sm font-bold'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100',
@@ -599,7 +599,7 @@ export default function DashboardPage() {
             <button
               onClick={() => setPeriodTab('monthly')}
               className={cn(
-                'px-3 py-1.5 rounded-xl transition-all cursor-pointer',
+                'px-3 py-1.5 rounded-xl transition-all cursor-pointer flex-1 sm:flex-none text-center',
                 periodTab === 'monthly'
                   ? 'bg-blue-600 text-white shadow-sm font-bold'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100',
@@ -610,9 +610,57 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Transactions Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        {/* Mobile View: Spacious List Items */}
+        <div className="space-y-3 md:hidden">
+          {displayedTransactions.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-xs font-semibold">
+              Belum ada transaksi pada periode {periodTab === 'today' ? 'Hari Ini' : periodTab === 'weekly' ? 'Minggu Ini' : 'Bulan Ini'}.
+            </div>
+          ) : (
+            displayedTransactions.map((tx) => {
+              const isIncome = tx.type === 'INCOME';
+              return (
+                <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60">
+                  <div className="flex items-center gap-3 min-w-0 pr-2">
+                    <div className={cn(
+                      'w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0',
+                      isIncome
+                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400',
+                    )}>
+                      {isIncome ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 dark:text-white text-xs truncate">
+                        {tx.description || tx.category?.name}
+                      </p>
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                        <span className="truncate">{tx.category?.name || 'Umum'}</span>
+                        <span>•</span>
+                        <span className="shrink-0">{formatTransactionDate(tx.date)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className={cn(
+                      'font-bold text-xs',
+                      isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
+                    )}>
+                      {isIncome ? '+' : '-'}{showBalance ? formatCurrency(Number(tx.amount)) : 'Rp ••••••'}
+                    </p>
+                    <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                      Selesai
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop View: Full Table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left text-xs min-w-[550px]">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
                 <th className="pb-3">Deskripsi & Kategori</th>
