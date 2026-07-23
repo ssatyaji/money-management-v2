@@ -102,7 +102,7 @@ export function AppHeader({ onMenuToggle }: HeaderProps) {
           {/* Mobile + Tambah Transaksi Action Button */}
           <Link
             href="/transactions/new"
-            className="h-9 px-3 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 flex items-center gap-1 transition-all"
+            className="h-9 px-3 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 items-center gap-1 transition-all hidden sm:flex"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah</span>
