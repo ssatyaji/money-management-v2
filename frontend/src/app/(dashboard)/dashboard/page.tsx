@@ -60,6 +60,13 @@ const MONTH_NAMES = [
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ];
 
+const formatShortCurrency = (val: number) => {
+  if (val >= 1_000_000_000) return `${(val / 1_000_000_000).toFixed(1)}M`;
+  if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(0)}jt`;
+  if (val >= 1_000) return `${(val / 1_000).toFixed(0)}rb`;
+  return `${val}`;
+};
+
 export default function DashboardPage() {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
@@ -372,7 +379,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Donut Chart with Center Total Display */}
-          <div className="h-44 relative flex items-center justify-center">
+          <div className="h-52 relative flex items-center justify-center">
             {pieData.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height="100%">
@@ -381,8 +388,8 @@ export default function DashboardPage() {
                       data={pieData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={75}
+                      innerRadius={58}
+                      outerRadius={82}
                       paddingAngle={3}
                       dataKey="value"
                     >
@@ -478,9 +485,9 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="h-64 w-full">
+          <div className="flex-1 w-full min-h-[360px] pt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 15, right: 15, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
@@ -493,7 +500,7 @@ export default function DashboardPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" width={45} tickFormatter={formatShortCurrency} />
                 <Tooltip
                   formatter={(value: any) => [formatCurrency(Number(value)), '']}
                   contentStyle={{
