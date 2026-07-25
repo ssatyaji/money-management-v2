@@ -158,9 +158,27 @@ export class JagoParser extends BaseStatementParser {
             ? this.parseAmount(amountMatch[3])
             : undefined;
 
+          // Extract time line (e.g. "04:48" or "16:50:44")
+          let finalDate = txnDate;
+          const timeLine = blockLines.find((l) => /^\d{2}:\d{2}(?::\d{2})?$/.test(l.trim()));
+          if (timeLine) {
+            const timeParts = timeLine.trim().split(':').map(Number);
+            const hours = timeParts[0];
+            const minutes = timeParts[1];
+            const seconds = timeParts[2] || 0;
+            finalDate = this.createWibDate(
+              txnDate.getUTCFullYear(),
+              txnDate.getUTCMonth(),
+              txnDate.getUTCDate(),
+              hours,
+              minutes,
+              seconds,
+            );
+          }
+
           // Filter out time line (e.g. "04:48"), ID lines (e.g. "ID# ..."), and header labels
           const cleanDescParts = blockLines.filter((l) => {
-            if (/^\d{2}:\d{2}$/.test(l)) return false;
+            if (/^\d{2}:\d{2}(?::\d{2})?$/.test(l.trim())) return false;
             if (/^ID#/i.test(l)) return false;
             if (
               /^(Date & Time|Source\/Destination|Transaction Details|Notes|Amount|Balance)$/i.test(
@@ -183,7 +201,7 @@ export class JagoParser extends BaseStatementParser {
           if (amount > 0) {
             transactions.push({
               tempId: this.generateTempId(txnIndex++),
-              date: txnDate,
+              date: finalDate,
               description,
               amount,
               type: sign === '-' ? 'EXPENSE' : 'INCOME',

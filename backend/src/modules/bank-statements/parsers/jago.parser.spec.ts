@@ -62,22 +62,31 @@ ID# 260703-WW2H-3RZ3AH
 
     expect(result.transactions.length).toBe(3);
 
-    // Transaction 1
+    // Transaction 1 (01 Jul 2026, 04:48 WIB)
     expect(result.transactions[0].type).toBe('EXPENSE');
     expect(result.transactions[0].amount).toBe(3000);
     expect(result.transactions[0].balance).toBe(7507.28);
     expect(result.transactions[0].description).toContain('GoPay 085711717651');
+    expect(result.transactions[0].date.toISOString()).toBe(
+      new Date(Date.UTC(2026, 6, 1, 4 - 7, 48, 0)).toISOString(),
+    );
 
-    // Transaction 2
+    // Transaction 2 (01 Jul 2026, 06:35 WIB)
     expect(result.transactions[1].type).toBe('INCOME');
     expect(result.transactions[1].amount).toBe(3000);
     expect(result.transactions[1].balance).toBe(10507.28);
     expect(result.transactions[1].description).toContain('Tabungan Dana Darurat');
+    expect(result.transactions[1].date.toISOString()).toBe(
+      new Date(Date.UTC(2026, 6, 1, 6 - 7, 35, 0)).toISOString(),
+    );
 
-    // Transaction 3
+    // Transaction 3 (03 Jul 2026, 14:30 WIB)
     expect(result.transactions[2].type).toBe('INCOME');
     expect(result.transactions[2].amount).toBe(30000);
     expect(result.transactions[2].balance).toBe(30507.28);
     expect(result.transactions[2].description).toContain('FELIX HENDRIAN');
+    expect(result.transactions[2].date.toISOString()).toBe(
+      new Date(Date.UTC(2026, 6, 3, 14 - 7, 30, 0)).toISOString(),
+    );
   });
 });
