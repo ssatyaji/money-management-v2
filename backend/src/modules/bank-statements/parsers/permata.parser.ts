@@ -31,6 +31,20 @@ export class PermataParser extends BaseStatementParser {
       .split('\n')
       .map((l) => l.trim())
       .filter(Boolean);
+
+    // Try Permata ME (Transaction History) format first if detected
+    if (
+      text.includes('Transaction History') ||
+      /\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+\d{4}/i.test(
+        text,
+      )
+    ) {
+      const meResult = this.parsePermataMeFormat(lines, text);
+      if (meResult.transactions.length > 0) {
+        return meResult;
+      }
+    }
+
     const transactions: ParsedTransaction[] = [];
     let statementDate: Date | undefined;
     let accountNumber: string | undefined;
@@ -179,6 +193,103 @@ export class PermataParser extends BaseStatementParser {
     // Fallback: try the old simple/regex pattern if no transactions found
     if (transactions.length === 0) {
       this.parseLegacyFormat(lines, transactions, statementYear);
+    }
+
+    return { transactions, statementDate, accountNumber };
+  }
+
+  private parsePermataMeFormat(lines: string[], text: string): ParsedStatement {
+    const transactions: ParsedTransaction[] = [];
+    let accountNumber: string | undefined;
+    let statementDate: Date | undefined;
+
+    // Account number match: e.g. "0000-0740-0756" or "0740-0756"
+    const accMatch = text.match(/(?:Tabungan\s*\n?\s*)?(\d{4}-\d{4}-\d{4})/);
+    if (accMatch) {
+      accountNumber = accMatch[1].replace(/-/g, '');
+    }
+
+    const monthHeaderRegex =
+      /^(?:January|February|March|April|May|June|July|August|September|October|November|December|Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+\d{4}$/i;
+
+    const periodMatch = text.match(
+      /(?:January|February|March|April|May|June|July|August|September|October|November|December|Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+\d{4}/i,
+    );
+    if (periodMatch) {
+      statementDate = this.parseDate(`1 ${periodMatch[0]}`) || undefined;
+    }
+
+    const dateHeaderRegex =
+      /^(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December|Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(\d{4})$/i;
+
+    let currentDate: Date | null = null;
+    let currentDescLines: string[] = [];
+    let txnIndex = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Skip page footers/headers
+      if (
+        !line ||
+        line.includes('PT Bank Permata, Tbk.') ||
+        line.includes('PermataBank.com') ||
+        line.includes('Halaman/') ||
+        line.includes('Page') ||
+        /^--\s*\d+\s*of\s*\d+\s*--$/.test(line) ||
+        line === 'Transaction History' ||
+        line === 'Tabungan' ||
+        /^\d{4}-\d{4}-\d{4}$/.test(line) ||
+        monthHeaderRegex.test(line)
+      ) {
+        continue;
+      }
+
+      // Check if line is a Date Header (e.g. "25 July 2026")
+      const dateMatch = line.match(dateHeaderRegex);
+      if (dateMatch) {
+        currentDate = this.parseDate(line);
+        currentDescLines = [];
+        continue;
+      }
+
+      // Check if line ends with an amount: e.g., "Rp 19,000,000.00" or "Rp 18,000.00"
+      const amountMatch = line.match(/(?:Rp\s*)?([\d,]+\.\d{2})$/i);
+      if (amountMatch && currentDate) {
+        const amountStr = amountMatch[1];
+        const lineWithoutAmount = line
+          .substring(0, line.lastIndexOf(amountMatch[0]))
+          .trim();
+
+        if (lineWithoutAmount) {
+          currentDescLines.push(lineWithoutAmount);
+        }
+
+        const fullDescription = currentDescLines
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        const amount = this.parseAmount(amountStr);
+
+        if (amount > 0 && fullDescription) {
+          const isIncome =
+            /(?:INCOMING|TRF INCOMING|PB DARI|KREDIT|\bCR\b|SETORAN|BUNGA)/i.test(
+              fullDescription,
+            );
+
+          transactions.push({
+            tempId: this.generateTempId(txnIndex++),
+            date: currentDate,
+            description: fullDescription,
+            amount,
+            type: isIncome ? 'INCOME' : 'EXPENSE',
+          });
+        }
+
+        currentDescLines = [];
+      } else {
+        currentDescLines.push(line);
+      }
     }
 
     return { transactions, statementDate, accountNumber };
