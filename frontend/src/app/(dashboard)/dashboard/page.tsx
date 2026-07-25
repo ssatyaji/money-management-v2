@@ -129,6 +129,8 @@ export default function DashboardPage() {
   const totalReceivables = Number(debtSummary?.totalReceivable) || 0;
   const totalPayables = Number(debtSummary?.totalPayable) || 0;
 
+  const netWorth = totalCash + totalSavings + totalInvestments + totalReceivables - totalPayables;
+
   // ─── Dynamic Month-over-Month (MoM) Calculations ──────────────────────────
   const curIncome = Number(summary?.totalIncome) || 0;
   const prevInc = Number(prevSummary?.totalIncome) || 0;
@@ -278,6 +280,12 @@ export default function DashboardPage() {
         incomeTrend={{ value: incomeTrendPct, label: 'vs bln lalu' }}
         expenseTrend={{ value: expenseTrendPct, label: 'vs bln lalu' }}
         savingsTrend={{ value: savingsGainPercent, label: 'pertumbuhan' }}
+        netWorth={netWorth}
+        totalSavings={totalSavings}
+        totalInvestments={totalInvestments}
+        totalReceivables={totalReceivables}
+        totalPayables={totalPayables}
+        accountsCount={accounts.length}
       />
 
       {/* Row 2: Middle Charts (Concentric Arc Category Chart + Double Line Arus Kas Chart) */}
