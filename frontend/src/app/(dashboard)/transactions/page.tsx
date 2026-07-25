@@ -14,6 +14,7 @@ import {
   Clock,
   CalendarDays,
   ChevronDown,
+  Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +44,7 @@ import { formatCurrency } from '@/lib/utils/currency';
 import { parseSmartDescription } from '@/lib/utils/format-description';
 import { formatTransactionDate, formatGroupHeaderDate } from '@/lib/utils/date';
 import { useTransactions } from '@/hooks/use-transactions';
+import { useAccounts } from '@/hooks/use-accounts';
 import { transactionsApi, type TransactionFilters } from '@/lib/api/transactions.api';
 import { startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, format } from 'date-fns';
 
@@ -80,6 +82,11 @@ export default function TransactionsPage() {
   const [exportYear, setExportYear] = useState(new Date().getFullYear());
   const [isExporting, setIsExporting] = useState(false);
 
+  // Wallet filter & grouping states
+  const { data: accounts = [] } = useAccounts();
+  const [groupByMode, setGroupByMode] = useState<'date' | 'wallet'>('date');
+  const [selectedWalletFilter, setSelectedWalletFilter] = useState<string>('all');
+
   const { data, isLoading } = useTransactions(filters);
   const transactions = data?.data || [];
   const meta = data?.meta;
@@ -96,6 +103,54 @@ export default function TransactionsPage() {
 
   // Sorted date keys in descending order
   const dateKeys = Object.keys(groupedTransactions).sort((a, b) => b.localeCompare(a));
+
+  // Group transactions by wallet (account name)
+  const walletGroupMap = transactions.reduce(
+    (
+      acc: Record<
+        string,
+        {
+          name: string;
+          color?: string;
+          items: typeof transactions;
+          totalIncome: number;
+          totalExpense: number;
+        }
+      >,
+      tx,
+    ) => {
+      const walletName = tx.account?.name || 'Saldo Utama';
+      const color = tx.account?.color || undefined;
+
+      if (!acc[walletName]) {
+        acc[walletName] = {
+          name: walletName,
+          color,
+          items: [],
+          totalIncome: 0,
+          totalExpense: 0,
+        };
+      }
+      acc[walletName].items.push(tx);
+      const amount = Number(tx.amount) || 0;
+      if (tx.type === 'INCOME') acc[walletName].totalIncome += amount;
+      if (tx.type === 'EXPENSE') acc[walletName].totalExpense += amount;
+
+      return acc;
+    },
+    {},
+  );
+
+  const walletKeys = Object.keys(walletGroupMap);
+
+  const handleWalletFilter = (walletId: string) => {
+    setSelectedWalletFilter(walletId);
+    setFilters((prev) => ({
+      ...prev,
+      accountId: walletId === 'all' ? undefined : walletId,
+      page: 1,
+    }));
+  };
 
   const handleSearch = () => {
     setFilters((prev) => ({ ...prev, search: searchInput || undefined, page: 1 }));
@@ -471,6 +526,53 @@ export default function TransactionsPage() {
             <TrendingDown className="w-3 h-3 mr-1" />
             Pengeluaran
           </Button>
+
+          {/* Wallet Filter Select */}
+          <Select value={selectedWalletFilter} onValueChange={handleWalletFilter}>
+            <SelectTrigger className="w-[140px] h-9 text-xs cursor-pointer">
+              <Wallet className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+              <SelectValue placeholder="Semua Dompet" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Dompet</SelectItem>
+              <SelectItem value="main">Saldo Utama</SelectItem>
+              {accounts.map((acc) => (
+                <SelectItem key={acc.id} value={acc.id}>
+                  {acc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Group By Mode Toggle */}
+          <div className="flex items-center rounded-lg border border-border p-0.5 bg-muted/30 ml-auto sm:ml-0">
+            <button
+              type="button"
+              onClick={() => setGroupByMode('date')}
+              className={cn(
+                "flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-all font-medium cursor-pointer",
+                groupByMode === 'date'
+                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span>Tanggal</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setGroupByMode('wallet')}
+              className={cn(
+                "flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-all font-medium cursor-pointer",
+                groupByMode === 'wallet'
+                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Wallet className="w-3.5 h-3.5" />
+              <span>Dompet</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -509,86 +611,189 @@ export default function TransactionsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {dateKeys.map((dateKey) => (
-            <div key={dateKey} className="space-y-2">
-              {/* Group Header */}
-              <div className="flex items-center justify-between px-1 text-xs font-semibold text-muted-foreground select-none">
-                <span>{formatGroupHeaderDate(dateKey)}</span>
-                <span className="text-[10px] bg-muted dark:bg-slate-800 px-2 py-0.5 rounded-full font-medium">
-                  {groupedTransactions[dateKey].length} Transaksi
-                </span>
-              </div>
-              {/* Transactions in Group */}
-              <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border shadow-[0px_2px_8px_rgba(26,43,60,0.02)]">
-                {groupedTransactions[dateKey].map((tx) => {
-                  const timeStr = format(new Date(tx.date), 'HH:mm');
-                  return (
-                    <Link
-                      key={tx.id}
-                      href={`/transactions/${tx.id}`}
-                      className="flex items-center justify-between px-4 py-3.5 hover:bg-accent/50 transition-colors gap-4"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
-                          style={{
-                            backgroundColor: tx.category?.color
-                              ? `${tx.category.color}15`
-                              : undefined,
-                          }}
-                        >
-                          {tx.category?.icon || '📦'}
-                        </div>
-                        {(() => {
-                          const smart = parseSmartDescription(tx.description || tx.category?.name || 'Transaksi');
-                          return (
-                            <div className="min-w-0" title={tx.description || ''}>
-                              <p className="text-sm font-semibold truncate text-foreground">
-                                {smart.title}
-                              </p>
-                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                                  Pukul {timeStr}
-                                </span>
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
-                                  {tx.type === 'TRANSFER' ? 'Transfer' : (smart.subtitle !== 'Transaksi Bank' ? smart.subtitle : (tx.category?.name || 'Umum'))}
-                                </Badge>
-                                {tx.type === 'TRANSFER' ? (
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
+          {/* ── View 1: Grouped By Date ───────────────────────────── */}
+          {groupByMode === 'date' &&
+            dateKeys.map((dateKey) => (
+              <div key={dateKey} className="space-y-2">
+                {/* Group Header */}
+                <div className="flex items-center justify-between px-1 text-xs font-semibold text-muted-foreground select-none">
+                  <span>{formatGroupHeaderDate(dateKey)}</span>
+                  <span className="text-[10px] bg-muted dark:bg-slate-800 px-2 py-0.5 rounded-full font-medium">
+                    {groupedTransactions[dateKey].length} Transaksi
+                  </span>
+                </div>
+                {/* Transactions in Group */}
+                <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border shadow-[0px_2px_8px_rgba(26,43,60,0.02)]">
+                  {groupedTransactions[dateKey].map((tx) => {
+                    const timeStr = format(new Date(tx.date), 'HH:mm');
+                    return (
+                      <Link
+                        key={tx.id}
+                        href={`/transactions/${tx.id}`}
+                        className="flex items-center justify-between px-4 py-3.5 hover:bg-accent/50 transition-colors gap-4"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
+                            style={{
+                              backgroundColor: tx.category?.color
+                                ? `${tx.category.color}15`
+                                : undefined,
+                            }}
+                          >
+                            {tx.category?.icon || '📦'}
+                          </div>
+                          {(() => {
+                            const smart = parseSmartDescription(tx.description || tx.category?.name || 'Transaksi');
+                            return (
+                              <div className="min-w-0" title={tx.description || ''}>
+                                <p className="text-sm font-semibold truncate text-foreground">
+                                  {smart.title}
+                                </p>
+                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                                    Pukul {timeStr}
+                                  </span>
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
+                                    {tx.type === 'TRANSFER' ? 'Transfer' : (smart.subtitle !== 'Transaksi Bank' ? smart.subtitle : (tx.category?.name || 'Umum'))}
+                                  </Badge>
+                                  {tx.type === 'TRANSFER' ? (
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
+                                        {tx.account?.name || 'Saldo Utama'}
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">➔</span>
+                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
+                                        {tx.destinationAccount?.name || 'Saldo Utama'}
+                                      </Badge>
+                                    </div>
+                                  ) : (
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-muted/60 text-muted-foreground border-none whitespace-nowrap">
                                       {tx.account?.name || 'Saldo Utama'}
                                     </Badge>
-                                    <span className="text-xs text-muted-foreground">➔</span>
-                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
-                                      {tx.destinationAccount?.name || 'Saldo Utama'}
-                                    </Badge>
-                                  </div>
-                                ) : (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-muted/60 text-muted-foreground border-none whitespace-nowrap">
-                                    {tx.account?.name || 'Saldo Utama'}
-                                  </Badge>
-                                )}
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
+                            );
+                          })()}
+                        </div>
 
-                      <span
-                        className={cn(
-                          'text-sm font-semibold whitespace-nowrap shrink-0 text-right',
-                          tx.type === 'INCOME' ? 'text-emerald-500' : (tx.type === 'EXPENSE' ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'),
-                        )}
-                      >
-                        {tx.type === 'INCOME' ? '+' : (tx.type === 'EXPENSE' ? '-' : '')}
-                        {formatCurrency(Number(tx.amount))}
-                      </span>
-                    </Link>
-                  );
-                })}
+                        <span
+                          className={cn(
+                            'text-sm font-semibold whitespace-nowrap shrink-0 text-right',
+                            tx.type === 'INCOME' ? 'text-emerald-500' : (tx.type === 'EXPENSE' ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'),
+                          )}
+                        >
+                          {tx.type === 'INCOME' ? '+' : (tx.type === 'EXPENSE' ? '-' : '')}
+                          {formatCurrency(Number(tx.amount))}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+
+          {/* ── View 2: Grouped By Wallet ──────────────────────────── */}
+          {groupByMode === 'wallet' &&
+            walletKeys.map((wKey) => {
+              const group = walletGroupMap[wKey];
+              return (
+                <div key={wKey} className="space-y-2">
+                  {/* Wallet Group Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 py-1 gap-1 select-none">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <Wallet className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-bold text-sm text-foreground">{group.name}</span>
+                      <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
+                        {group.items.length} Transaksi
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs">
+                      {group.totalIncome > 0 && (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                          +{formatCurrency(group.totalIncome)}
+                        </span>
+                      )}
+                      {group.totalExpense > 0 && (
+                        <span className="text-red-600 dark:text-red-400 font-semibold">
+                          -{formatCurrency(group.totalExpense)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Transactions in Wallet Group */}
+                  <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border shadow-[0px_2px_8px_rgba(26,43,60,0.02)]">
+                    {group.items.map((tx) => {
+                      const timeStr = format(new Date(tx.date), 'HH:mm');
+                      const dateStr = formatTransactionDate(tx.date);
+                      return (
+                        <Link
+                          key={tx.id}
+                          href={`/transactions/${tx.id}`}
+                          className="flex items-center justify-between px-4 py-3.5 hover:bg-accent/50 transition-colors gap-4"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
+                              style={{
+                                backgroundColor: tx.category?.color
+                                  ? `${tx.category.color}15`
+                                  : undefined,
+                              }}
+                            >
+                              {tx.category?.icon || '📦'}
+                            </div>
+                            {(() => {
+                              const smart = parseSmartDescription(tx.description || tx.category?.name || 'Transaksi');
+                              return (
+                                <div className="min-w-0" title={tx.description || ''}>
+                                  <p className="text-sm font-semibold truncate text-foreground">
+                                    {smart.title}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                    <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                                      {dateStr}
+                                    </span>
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
+                                      {tx.type === 'TRANSFER' ? 'Transfer' : (smart.subtitle !== 'Transaksi Bank' ? smart.subtitle : (tx.category?.name || 'Umum'))}
+                                    </Badge>
+                                    {tx.type === 'TRANSFER' && (
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
+                                          {tx.account?.name || 'Saldo Utama'}
+                                        </Badge>
+                                        <span className="text-xs text-muted-foreground">➔</span>
+                                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
+                                          {tx.destinationAccount?.name || 'Saldo Utama'}
+                                        </Badge>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+
+                          <span
+                            className={cn(
+                              'text-sm font-semibold whitespace-nowrap shrink-0 text-right',
+                              tx.type === 'INCOME' ? 'text-emerald-500' : (tx.type === 'EXPENSE' ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'),
+                            )}
+                          >
+                            {tx.type === 'INCOME' ? '+' : (tx.type === 'EXPENSE' ? '-' : '')}
+                            {formatCurrency(Number(tx.amount))}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
         </div>
       )}
 
