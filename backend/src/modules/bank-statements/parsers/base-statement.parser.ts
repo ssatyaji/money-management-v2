@@ -86,7 +86,21 @@ export abstract class BaseStatementParser {
   }
 
   /**
-   * Helper: Parse date strings in various formats (constructs Date in UTC).
+   * Helper: Construct Date in WIB (UTC+7) timezone.
+   */
+  protected createWibDate(
+    year: number,
+    monthIndex: number,
+    day: number,
+    hours: number = 12,
+    minutes: number = 0,
+    seconds: number = 0,
+  ): Date {
+    return new Date(Date.UTC(year, monthIndex, day, hours - 7, minutes, seconds));
+  }
+
+  /**
+   * Helper: Parse date strings in various formats (constructs Date in WIB timezone).
    */
   protected parseDate(dateStr: string): Date | null {
     if (!dateStr) return null;
@@ -96,7 +110,7 @@ export abstract class BaseStatementParser {
     // DD/MM/YYYY
     let match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
     if (match) {
-      return new Date(
+      return this.createWibDate(
         parseInt(match[3]),
         parseInt(match[2]) - 1,
         parseInt(match[1]),
@@ -107,7 +121,7 @@ export abstract class BaseStatementParser {
     match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2})$/);
     if (match) {
       const year = parseInt(match[3]) + 2000;
-      return new Date(year, parseInt(match[2]) - 1, parseInt(match[1]));
+      return this.createWibDate(year, parseInt(match[2]) - 1, parseInt(match[1]));
     }
 
     // DD MMM YYYY (e.g., "15 Jan 2026")
@@ -153,14 +167,14 @@ export abstract class BaseStatementParser {
     if (match) {
       const monthNum = monthMap[match[2].toLowerCase()];
       if (monthNum !== undefined) {
-        return new Date(parseInt(match[3]), monthNum, parseInt(match[1]));
+        return this.createWibDate(parseInt(match[3]), monthNum, parseInt(match[1]));
       }
     }
 
     // YYYY-MM-DD (ISO)
     match = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (match) {
-      return new Date(
+      return this.createWibDate(
         parseInt(match[1]),
         parseInt(match[2]) - 1,
         parseInt(match[3]),

@@ -117,7 +117,7 @@ export default function NewTransactionPage() {
     try {
       const [year, month, day] = data.date.split('-').map(Number);
       const [hours, minutes] = (data.time || '00:00').split(':').map(Number);
-      const transactionDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+      const transactionDate = new Date(Date.UTC(year, month - 1, day, hours - 7, minutes, 0, 0));
 
       await createMutation.mutateAsync({
         amount: data.amount,
