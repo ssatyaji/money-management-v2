@@ -22,7 +22,7 @@ export interface ParsedTransaction {
   date: string;
   description: string;
   amount: number;
-  type: 'INCOME' | 'EXPENSE';
+  type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
   balance?: number;
 }
 

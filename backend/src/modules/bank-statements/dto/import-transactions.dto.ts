@@ -47,4 +47,18 @@ export class ImportTransactionsDto {
   @IsOptional()
   @IsObject()
   accountMap?: Record<string, string>;
+
+  @ApiPropertyOptional({
+    description: 'Mapping of tempId to transaction type (INCOME, EXPENSE, TRANSFER)',
+  })
+  @IsOptional()
+  @IsObject()
+  typeMap?: Record<string, 'INCOME' | 'EXPENSE' | 'TRANSFER'>;
+
+  @ApiPropertyOptional({
+    description: 'Mapping of tempId to destinationAccountId for TRANSFER transactions',
+  })
+  @IsOptional()
+  @IsObject()
+  destinationAccountMap?: Record<string, string>;
 }

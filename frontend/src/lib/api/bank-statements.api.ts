@@ -64,6 +64,8 @@ export const bankStatementsApi = {
       categoryMap?: Record<string, string>;
       accountId?: string;
       accountMap?: Record<string, string>;
+      typeMap?: Record<string, 'INCOME' | 'EXPENSE' | 'TRANSFER'>;
+      destinationAccountMap?: Record<string, string>;
     },
   ): Promise<ImportTransactionsResult> => {
     const response = await apiClient.post<ApiResponse<ImportTransactionsResult>>(

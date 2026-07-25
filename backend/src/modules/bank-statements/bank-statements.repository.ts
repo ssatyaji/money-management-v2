@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { BankName, ProcessingStatus, Prisma } from '@prisma/client';
+import { BankName, ProcessingStatus, TransactionType, Prisma } from '@prisma/client';
 
 @Injectable()
 export class BankStatementsRepository {
@@ -78,10 +78,12 @@ export class BankStatementsRepository {
   async createTransactions(
     data: {
       amount: number;
-      type: 'INCOME' | 'EXPENSE';
+      type: TransactionType;
       description: string;
       date: Date;
       categoryId: string;
+      accountId?: string | null;
+      destinationAccountId?: string | null;
       userId: string;
       bankStatementId: string;
       source: 'BANK_IMPORT';
@@ -94,6 +96,8 @@ export class BankStatementsRepository {
         description: txn.description,
         date: txn.date,
         categoryId: txn.categoryId,
+        accountId: txn.accountId || null,
+        destinationAccountId: txn.destinationAccountId || null,
         userId: txn.userId,
         bankStatementId: txn.bankStatementId,
         source: txn.source,
