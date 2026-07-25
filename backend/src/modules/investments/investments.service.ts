@@ -11,6 +11,7 @@ import { InvestmentsRepository } from './investments.repository';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { CreateInvestmentTxDto } from './dto/create-investment-tx.dto';
+import { UpdateInvestmentTxDto } from './dto/update-investment-tx.dto';
 import { InvestmentAsset } from '@prisma/client';
 import { MarketDataService } from './market-data.service';
 
@@ -175,41 +176,97 @@ export class InvestmentsService implements OnApplicationBootstrap {
       assetId,
     });
 
-    // Update asset based on transaction type
+    return this.recalculateAssetMetrics(assetId);
+  }
+
+  async updateTransaction(
+    userId: string,
+    assetId: string,
+    txId: string,
+    dto: UpdateInvestmentTxDto,
+  ): Promise<EnrichedAsset> {
+    await this.findAssetById(userId, assetId);
+    const tx = await this.investmentsRepository.findTransactionById(txId);
+    if (!tx || tx.assetId !== assetId) {
+      throw new NotFoundException('Investment transaction not found');
+    }
+
     const updateData: Record<string, unknown> = {};
+    if (dto.type !== undefined) updateData.type = dto.type;
+    if (dto.units !== undefined) updateData.units = dto.units;
+    if (dto.pricePerUnit !== undefined) updateData.pricePerUnit = dto.pricePerUnit;
+    if (dto.fee !== undefined) updateData.fee = dto.fee;
+    if (dto.note !== undefined) updateData.note = dto.note;
+    if (dto.date !== undefined) updateData.date = new Date(dto.date);
 
-    if (dto.type === 'BUY') {
-      const newTotalUnits = totalUnitsCount + dto.units;
-      // Weighted average buy price
-      const newTotalInvested = Number(rawAsset.totalInvested) + totalAmount;
-      const newAvgBuyPrice = newTotalUnits > 0 ? newTotalInvested / (newTotalUnits * multiplier) : 0;
+    const units = dto.units !== undefined ? dto.units : Number(tx.units);
+    const pricePerUnit = dto.pricePerUnit !== undefined ? dto.pricePerUnit : Number(tx.pricePerUnit);
+    const rawAsset = await this.investmentsRepository.findAssetById(assetId);
+    const multiplier = rawAsset?.assetType === 'STOCK' ? 100 : 1;
+    updateData.totalAmount = units * pricePerUnit * multiplier;
 
-      updateData.totalUnits = newTotalUnits;
-      updateData.avgBuyPrice = Math.round(newAvgBuyPrice * 100) / 100;
-      updateData.totalInvested = newTotalInvested;
-      updateData.currentValue = newTotalUnits * Number(rawAsset.currentPrice) * multiplier;
-    } else if (dto.type === 'SELL') {
-      const newTotalUnits = totalUnitsCount - dto.units;
-      // Reduce totalInvested proportionally
-      const soldRatio = totalUnitsCount > 0 ? dto.units / totalUnitsCount : 0;
-      const newTotalInvested = Number(rawAsset.totalInvested) * (1 - soldRatio);
+    await this.investmentsRepository.updateTransaction(txId, updateData);
+    return this.recalculateAssetMetrics(assetId);
+  }
 
-      updateData.totalUnits = newTotalUnits;
-      updateData.totalInvested = Math.round(newTotalInvested * 100) / 100;
-      updateData.currentValue = newTotalUnits * Number(rawAsset.currentPrice) * multiplier;
-      // avgBuyPrice stays the same
+  async removeTransaction(
+    userId: string,
+    assetId: string,
+    txId: string,
+  ): Promise<EnrichedAsset> {
+    await this.findAssetById(userId, assetId);
+    const tx = await this.investmentsRepository.findTransactionById(txId);
+    if (!tx || tx.assetId !== assetId) {
+      throw new NotFoundException('Investment transaction not found');
     }
-    // DIVIDEND: no change to units or invested amount
 
-    if (Object.keys(updateData).length > 0) {
-      await this.investmentsRepository.updateAsset(assetId, updateData);
-    }
+    await this.investmentsRepository.deleteTransaction(txId);
+    return this.recalculateAssetMetrics(assetId);
+  }
 
-    const updatedAsset = await this.investmentsRepository.findAssetById(assetId);
-    if (!updatedAsset) {
+  async recalculateAssetMetrics(assetId: string): Promise<EnrichedAsset> {
+    const rawAsset = await this.investmentsRepository.findAssetById(assetId);
+    if (!rawAsset) {
       throw new NotFoundException('Investment asset not found');
     }
-    return this.enrichAsset(updatedAsset);
+
+    const txs = (rawAsset.transactions || []).slice().sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+
+    const multiplier = rawAsset.assetType === 'STOCK' ? 100 : 1;
+    let totalUnits = 0;
+    let totalInvested = 0;
+    let avgBuyPrice = 0;
+
+    for (const tx of txs) {
+      const units = Number(tx.units);
+      const price = Number(tx.pricePerUnit);
+      const totalAmt = Number(tx.totalAmount);
+
+      if (tx.type === 'BUY') {
+        totalUnits += units;
+        totalInvested += totalAmt;
+        avgBuyPrice = totalUnits > 0 ? totalInvested / (totalUnits * multiplier) : 0;
+      } else if (tx.type === 'SELL') {
+        const soldRatio = totalUnits > 0 ? units / totalUnits : 0;
+        totalUnits = Math.max(0, totalUnits - units);
+        totalInvested = Math.max(0, totalInvested * (1 - soldRatio));
+      }
+    }
+
+    const currentPrice = Number(rawAsset.currentPrice);
+    const currentValue = totalUnits * currentPrice * multiplier;
+
+    await this.investmentsRepository.updateAsset(assetId, {
+      totalUnits,
+      avgBuyPrice: Math.round(avgBuyPrice * 100) / 100,
+      totalInvested: Math.round(totalInvested * 100) / 100,
+      currentValue: Math.round(currentValue * 100) / 100,
+    });
+
+    const updatedAsset = await this.investmentsRepository.findAssetById(assetId);
+    return this.enrichAsset(updatedAsset!);
   }
 
   @Cron('*/5 * * * *')

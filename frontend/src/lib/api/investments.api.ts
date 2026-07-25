@@ -110,6 +110,25 @@ export const investmentsApi = {
     return response.data.data;
   },
 
+  updateTransaction: async (
+    assetId: string,
+    txId: string,
+    data: Partial<CreateInvestmentTxInput>,
+  ): Promise<InvestmentAsset> => {
+    const response = await apiClient.patch<ApiResponse<InvestmentAsset>>(
+      `/investments/assets/${assetId}/transactions/${txId}`,
+      data,
+    );
+    return response.data.data;
+  },
+
+  deleteTransaction: async (assetId: string, txId: string): Promise<InvestmentAsset> => {
+    const response = await apiClient.delete<ApiResponse<InvestmentAsset>>(
+      `/investments/assets/${assetId}/transactions/${txId}`,
+    );
+    return response.data.data;
+  },
+
   getLivePrice: async (ticker: string, assetType: AssetType): Promise<{ price: number | null }> => {
     const response = await apiClient.get<ApiResponse<{ price: number | null }>>('/investments/price', {
       params: { ticker, assetType },

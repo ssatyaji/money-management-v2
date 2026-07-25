@@ -55,6 +55,24 @@ export class InvestmentsRepository {
     return this.prisma.investmentTransaction.create({ data });
   }
 
+  async findTransactionById(id: string): Promise<InvestmentTransaction | null> {
+    return this.prisma.investmentTransaction.findUnique({ where: { id } });
+  }
+
+  async updateTransaction(
+    id: string,
+    data: Prisma.InvestmentTransactionUncheckedUpdateInput,
+  ): Promise<InvestmentTransaction> {
+    return this.prisma.investmentTransaction.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async deleteTransaction(id: string): Promise<InvestmentTransaction> {
+    return this.prisma.investmentTransaction.delete({ where: { id } });
+  }
+
   async getPortfolioSummary(userId: string) {
     const assets = await this.prisma.investmentAsset.findMany({
       where: { userId },

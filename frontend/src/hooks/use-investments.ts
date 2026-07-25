@@ -69,9 +69,43 @@ export function useAddInvestmentTransaction() {
   return useMutation({
     mutationFn: ({ assetId, data }: { assetId: string; data: CreateInvestmentTxInput }) =>
       investmentsApi.addTransaction(assetId, data),
-    onSuccess: () => {
+    onSuccess: (_, { assetId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.investments.assets });
       queryClient.invalidateQueries({ queryKey: queryKeys.investments.portfolio });
+      queryClient.invalidateQueries({ queryKey: queryKeys.investments.assetDetail(assetId) });
+    },
+  });
+}
+
+export function useUpdateInvestmentTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      assetId,
+      txId,
+      data,
+    }: {
+      assetId: string;
+      txId: string;
+      data: Partial<CreateInvestmentTxInput>;
+    }) => investmentsApi.updateTransaction(assetId, txId, data),
+    onSuccess: (_, { assetId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.investments.assets });
+      queryClient.invalidateQueries({ queryKey: queryKeys.investments.portfolio });
+      queryClient.invalidateQueries({ queryKey: queryKeys.investments.assetDetail(assetId) });
+    },
+  });
+}
+
+export function useDeleteInvestmentTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ assetId, txId }: { assetId: string; txId: string }) =>
+      investmentsApi.deleteTransaction(assetId, txId),
+    onSuccess: (_, { assetId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.investments.assets });
+      queryClient.invalidateQueries({ queryKey: queryKeys.investments.portfolio });
+      queryClient.invalidateQueries({ queryKey: queryKeys.investments.assetDetail(assetId) });
     },
   });
 }
