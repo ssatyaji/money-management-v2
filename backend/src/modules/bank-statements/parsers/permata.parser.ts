@@ -286,14 +286,12 @@ export class PermataParser extends BaseStatementParser {
             const minutes = parseInt(timeMatch[2], 10);
             const seconds = timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
             txnDate = new Date(
-              Date.UTC(
-                currentDate.getUTCFullYear(),
-                currentDate.getUTCMonth(),
-                currentDate.getUTCDate(),
-                hours,
-                minutes,
-                seconds,
-              ),
+              currentDate.getFullYear(),
+              currentDate.getMonth(),
+              currentDate.getDate(),
+              hours,
+              minutes,
+              seconds,
             );
           }
 

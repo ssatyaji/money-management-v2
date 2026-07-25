@@ -97,11 +97,9 @@ export abstract class BaseStatementParser {
     let match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
     if (match) {
       return new Date(
-        Date.UTC(
-          parseInt(match[3]),
-          parseInt(match[2]) - 1,
-          parseInt(match[1]),
-        ),
+        parseInt(match[3]),
+        parseInt(match[2]) - 1,
+        parseInt(match[1]),
       );
     }
 
@@ -109,7 +107,7 @@ export abstract class BaseStatementParser {
     match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2})$/);
     if (match) {
       const year = parseInt(match[3]) + 2000;
-      return new Date(Date.UTC(year, parseInt(match[2]) - 1, parseInt(match[1])));
+      return new Date(year, parseInt(match[2]) - 1, parseInt(match[1]));
     }
 
     // DD MMM YYYY (e.g., "15 Jan 2026")
@@ -155,9 +153,7 @@ export abstract class BaseStatementParser {
     if (match) {
       const monthNum = monthMap[match[2].toLowerCase()];
       if (monthNum !== undefined) {
-        return new Date(
-          Date.UTC(parseInt(match[3]), monthNum, parseInt(match[1])),
-        );
+        return new Date(parseInt(match[3]), monthNum, parseInt(match[1]));
       }
     }
 
@@ -165,11 +161,9 @@ export abstract class BaseStatementParser {
     match = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (match) {
       return new Date(
-        Date.UTC(
-          parseInt(match[1]),
-          parseInt(match[2]) - 1,
-          parseInt(match[3]),
-        ),
+        parseInt(match[1]),
+        parseInt(match[2]) - 1,
+        parseInt(match[3]),
       );
     }
 
