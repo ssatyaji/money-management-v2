@@ -277,9 +277,27 @@ export class PermataParser extends BaseStatementParser {
               fullDescription,
             );
 
+          let txnDate = new Date(currentDate);
+          const timeMatch = fullDescription.match(
+            /\b([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b/,
+          );
+          if (timeMatch) {
+            const hours = parseInt(timeMatch[1], 10);
+            const minutes = parseInt(timeMatch[2], 10);
+            const seconds = timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
+            txnDate = new Date(
+              currentDate.getFullYear(),
+              currentDate.getMonth(),
+              currentDate.getDate(),
+              hours,
+              minutes,
+              seconds,
+            );
+          }
+
           transactions.push({
             tempId: this.generateTempId(txnIndex++),
-            date: currentDate,
+            date: txnDate,
             description: fullDescription,
             amount,
             type: isIncome ? 'INCOME' : 'EXPENSE',
