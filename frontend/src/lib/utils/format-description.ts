@@ -91,9 +91,65 @@ export function parseSmartDescription(rawDescription: string): FormattedDescript
     };
   }
 
-  // 4. QRIS Payment
+  // 4. Bank Jago Transfer Out / Transfer In
+  // e.g. "Transfer out to RICHIE CHOW (Bank Jago)", "Transfer ke QISTHI LARASATI (SeaBank)"
+  const jagoTrfOutMatch = text.match(/Transfer\s+(?:out\s+to|ke)\s+([^(]+?)(?:\s*\(([^)]+)\))?$/i);
+  if (jagoTrfOutMatch && (text.toLowerCase().includes('transfer out') || text.toLowerCase().includes('transfer ke'))) {
+    const name = cleanName(jagoTrfOutMatch[1]);
+    const bank = jagoTrfOutMatch[2] ? cleanBankName(jagoTrfOutMatch[2]) : 'Bank';
+    return {
+      title: name || 'Transfer Keluar',
+      subtitle: `Transfer ke ${bank}`,
+      raw: text,
+    };
+  }
+
+  // e.g. "Transfer in from DYLAN PRANOTO (Bank Mandiri)", "Transfer dari ANDREAS TAMARA (Bank Jago)"
+  const jagoTrfInMatch = text.match(/Transfer\s+(?:in\s+from|dari)\s+([^(]+?)(?:\s*\(([^)]+)\))?$/i);
+  if (jagoTrfInMatch && (text.toLowerCase().includes('transfer in') || text.toLowerCase().includes('transfer dari'))) {
+    const name = cleanName(jagoTrfInMatch[1]);
+    const bank = jagoTrfInMatch[2] ? cleanBankName(jagoTrfInMatch[2]) : 'Bank';
+    return {
+      title: name || 'Transfer Masuk',
+      subtitle: `Transfer Masuk dari ${bank}`,
+      raw: text,
+    };
+  }
+
+  // 5. Bank Jago Pocket Transfer (Money Out / Money In)
+  // e.g. "Money out to Kantong Belanja", "Money in from Utama"
+  const jagoPocketMatch = text.match(/(?:Money\s+(?:out\s+to|in\s+from)|Transfer\s+(?:to|from))\s+([A-Za-z0-9\s]+)/i);
+  if (jagoPocketMatch && (text.toLowerCase().includes('kantong') || text.toLowerCase().includes('money out') || text.toLowerCase().includes('money in'))) {
+    return {
+      title: cleanName(jagoPocketMatch[1]),
+      subtitle: 'Pemindahbukuan Kantong Jago',
+      raw: text,
+    };
+  }
+
+  // 6. Bank Jago Top Up E-Wallet
+  // e.g. "Top up GoPay 081234567890", "Top up OVO 081234567890"
+  const jagoTopUpMatch = text.match(/Top\s+up\s+([A-Za-z0-9\s]+?)(?:\s+\d{8,})?$/i);
+  if (jagoTopUpMatch) {
+    return {
+      title: `Top Up ${cleanName(jagoTopUpMatch[1])}`,
+      subtitle: 'Top Up E-Wallet',
+      raw: text,
+    };
+  }
+
+  // 7. QRIS Payment (Permata & Jago)
   // e.g. "QR PAYMENT 14:45:34 Kopi Calf To GoCeger Bin TANGSEL Rp 18,000.00"
-  // e.g. "QR PAYMENT CPM BERSAMA 19:58:24 INDOMARET JAKARTA UTARAID"
+  // e.g. "QRIS payment to KOPI SOE BINTARO", "Pembayaran QRIS Kopi Calf"
+  const jagoQrMatch = text.match(/(?:QRIS\s+payment\s+to|Pembayaran\s+QRIS)\s+(.+)/i);
+  if (jagoQrMatch) {
+    return {
+      title: cleanName(jagoQrMatch[1]) || 'Pembayaran QRIS',
+      subtitle: 'Pembayaran QRIS',
+      raw: text,
+    };
+  }
+
   const qrMatch = text.match(/QR\s+PAYMENT\s*(?:CPM\s+BERSAMA)?\s*(?:\d{2}:\d{2}:\d{2})?\s*(.+)/i);
   if (qrMatch) {
     let merchant = qrMatch[1]
