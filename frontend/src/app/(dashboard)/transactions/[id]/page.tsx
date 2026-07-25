@@ -10,6 +10,7 @@ import {
   Wallet,
   Tag,
   AlignLeft,
+  Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -107,15 +108,27 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             <p className="text-muted-foreground text-sm">Informasi lengkap transaksi</p>
           </div>
         </div>
-        <Button 
-          variant="destructive" 
-          size="sm" 
-          className="gap-2 rounded-full px-4"
-          onClick={() => setShowDeleteDialog(true)}
-        >
-          <Trash2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Hapus</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href={`/transactions/${id}/edit`}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-full px-4 border-border hover:bg-muted"
+            >
+              <Pencil className="w-4 h-4" />
+              <span className="hidden sm:inline">Edit</span>
+            </Button>
+          </Link>
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            className="gap-2 rounded-full px-4"
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Hapus</span>
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}

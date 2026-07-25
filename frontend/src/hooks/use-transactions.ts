@@ -75,6 +75,7 @@ export function useUpdateTransaction() {
       transactionsApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary });
     },
   });
