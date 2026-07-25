@@ -133,6 +133,15 @@ export class TransactionsController {
     return this.transactionsService.update(userId, id, dto);
   }
 
+  @Delete('bulk')
+  @ApiOperation({ summary: 'Delete multiple transactions' })
+  removeMany(
+    @CurrentUser('id') userId: string,
+    @Body() body: { ids: string[] },
+  ) {
+    return this.transactionsService.removeMany(userId, body.ids);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a transaction' })
   remove(@CurrentUser('id') userId: string, @Param('id') id: string) {

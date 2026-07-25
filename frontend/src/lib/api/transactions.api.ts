@@ -145,4 +145,11 @@ export const transactionsApi = {
     const response = await apiClient.get<ApiResponse<ForecastItem[]>>('/reports/forecast');
     return response.data.data;
   },
+
+  deleteMany: async (ids: string[]): Promise<{ count: number }> => {
+    const response = await apiClient.delete<ApiResponse<{ count: number }>>('/transactions/bulk', {
+      data: { ids },
+    });
+    return response.data.data;
+  },
 };

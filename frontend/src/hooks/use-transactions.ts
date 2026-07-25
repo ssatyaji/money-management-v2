@@ -87,6 +87,19 @@ export function useDeleteTransaction() {
     mutationFn: transactionsApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary });
+    },
+  });
+}
+
+export function useDeleteTransactions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => transactionsApi.deleteMany(ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary });
     },
   });

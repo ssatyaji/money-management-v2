@@ -251,6 +251,20 @@ export class TransactionsService {
     return result;
   }
 
+  async removeMany(userId: string, ids: string[]) {
+    if (!ids || ids.length === 0) return { count: 0 };
+    let count = 0;
+    for (const id of ids) {
+      try {
+        await this.remove(userId, id);
+        count++;
+      } catch {
+        // Ignore single failure, continue deleting rest
+      }
+    }
+    return { count };
+  }
+
   async getSummary(userId: string, month: number, year: number) {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59, 999);

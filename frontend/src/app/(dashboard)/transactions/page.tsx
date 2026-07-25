@@ -15,12 +15,17 @@ import {
   CalendarDays,
   ChevronDown,
   Wallet,
+  Trash2,
+  CheckSquare,
+  Square,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -43,7 +48,7 @@ import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/currency';
 import { parseSmartDescription } from '@/lib/utils/format-description';
 import { formatTransactionDate, formatGroupHeaderDate } from '@/lib/utils/date';
-import { useTransactions } from '@/hooks/use-transactions';
+import { useTransactions, useDeleteTransaction, useDeleteTransactions } from '@/hooks/use-transactions';
 import { useAccounts } from '@/hooks/use-accounts';
 import { transactionsApi, type TransactionFilters } from '@/lib/api/transactions.api';
 import { startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, format } from 'date-fns';
@@ -87,9 +92,50 @@ export default function TransactionsPage() {
   const [groupByMode, setGroupByMode] = useState<'date' | 'wallet'>('date');
   const [selectedWalletFilter, setSelectedWalletFilter] = useState<string>('all');
 
+  // Selection & Bulk Delete states
+  const [selectedTxIds, setSelectedTxIds] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState<boolean>(false);
+  const [singleDeleteId, setSingleDeleteId] = useState<string | null>(null);
+
+  const deleteSingleMutation = useDeleteTransaction();
+  const deleteBulkMutation = useDeleteTransactions();
+
   const { data, isLoading } = useTransactions(filters);
   const transactions = data?.data || [];
   const meta = data?.meta;
+
+  const toggleSelectTx = (id: string) => {
+    setSelectedTxIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedTxIds.length === transactions.length) {
+      setSelectedTxIds([]);
+    } else {
+      setSelectedTxIds(transactions.map((tx) => tx.id));
+    }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    try {
+      if (singleDeleteId) {
+        await deleteSingleMutation.mutateAsync(singleDeleteId);
+        toast.success('Transaksi berhasil dihapus 🗑️');
+        setSingleDeleteId(null);
+      } else if (selectedTxIds.length > 0) {
+        await deleteBulkMutation.mutateAsync(selectedTxIds);
+        toast.success(`${selectedTxIds.length} Transaksi berhasil dihapus 🗑️`);
+        setSelectedTxIds([]);
+        setIsSelectionMode(false);
+      }
+      setShowBulkDeleteDialog(false);
+    } catch {
+      toast.error('Gagal menghapus transaksi');
+    }
+  };
 
   // Group transactions by local date (yyyy-MM-dd)
   const groupedTransactions = transactions.reduce((groups: { [key: string]: typeof transactions }, tx) => {
@@ -573,6 +619,23 @@ export default function TransactionsPage() {
               <span>Dompet</span>
             </button>
           </div>
+
+          {/* Multi Select Toggle Button */}
+          <Button
+            variant={isSelectionMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setIsSelectionMode(!isSelectionMode);
+              if (isSelectionMode) setSelectedTxIds([]);
+            }}
+            className={cn(
+              "text-xs h-9 cursor-pointer ml-auto sm:ml-0",
+              isSelectionMode && "bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+            )}
+          >
+            <CheckSquare className="w-3.5 h-3.5 mr-1" />
+            {isSelectionMode ? 'Selesai Pilih' : 'Pilih Multi'}
+          </Button>
         </div>
       </div>
 
@@ -625,14 +688,40 @@ export default function TransactionsPage() {
                 {/* Transactions in Group */}
                 <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border shadow-[0px_2px_8px_rgba(26,43,60,0.02)]">
                   {groupedTransactions[dateKey].map((tx) => {
+                    const isSelected = selectedTxIds.includes(tx.id);
                     const timeStr = format(new Date(tx.date), 'HH:mm');
+
                     return (
-                      <Link
+                      <div
                         key={tx.id}
-                        href={`/transactions/${tx.id}`}
-                        className="flex items-center justify-between px-4 py-3.5 hover:bg-accent/50 transition-colors gap-4"
+                        onClick={() => {
+                          if (isSelectionMode) toggleSelectTx(tx.id);
+                        }}
+                        className={cn(
+                          'group flex items-center justify-between px-4 py-3.5 transition-colors gap-4 relative select-none',
+                          isSelectionMode ? 'cursor-pointer hover:bg-accent/40' : 'hover:bg-accent/50',
+                          isSelected && 'bg-indigo-500/10 dark:bg-indigo-500/20'
+                        )}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
+                        {/* Checkbox / Selection Indicator */}
+                        {isSelectionMode && (
+                          <div className="shrink-0 mr-1" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectTx(tx.id)}
+                              className="w-4 h-4 rounded border-border text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </div>
+                        )}
+
+                        <Link
+                          href={isSelectionMode ? '#' : `/transactions/${tx.id}`}
+                          onClick={(e) => {
+                            if (isSelectionMode) e.preventDefault();
+                          }}
+                          className="flex items-center gap-3 min-w-0 flex-1"
+                        >
                           <div
                             className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
                             style={{
@@ -676,18 +765,36 @@ export default function TransactionsPage() {
                               </div>
                             );
                           })()}
-                        </div>
+                        </Link>
 
-                        <span
-                          className={cn(
-                            'text-sm font-semibold whitespace-nowrap shrink-0 text-right',
-                            tx.type === 'INCOME' ? 'text-emerald-500' : (tx.type === 'EXPENSE' ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'),
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span
+                            className={cn(
+                              'text-sm font-semibold whitespace-nowrap shrink-0 text-right',
+                              tx.type === 'INCOME' ? 'text-emerald-500' : (tx.type === 'EXPENSE' ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'),
+                            )}
+                          >
+                            {tx.type === 'INCOME' ? '+' : (tx.type === 'EXPENSE' ? '-' : '')}
+                            {formatCurrency(Number(tx.amount))}
+                          </span>
+
+                          {/* Quick Delete Action Icon on Hover (non-selection mode) */}
+                          {!isSelectionMode && (
+                            <button
+                              type="button"
+                              title="Hapus transaksi ini"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSingleDeleteId(tx.id);
+                                setShowBulkDeleteDialog(true);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           )}
-                        >
-                          {tx.type === 'INCOME' ? '+' : (tx.type === 'EXPENSE' ? '-' : '')}
-                          {formatCurrency(Number(tx.amount))}
-                        </span>
-                      </Link>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -728,15 +835,40 @@ export default function TransactionsPage() {
                   {/* Transactions in Wallet Group */}
                   <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border shadow-[0px_2px_8px_rgba(26,43,60,0.02)]">
                     {group.items.map((tx) => {
+                      const isSelected = selectedTxIds.includes(tx.id);
                       const timeStr = format(new Date(tx.date), 'HH:mm');
                       const dateStr = formatTransactionDate(tx.date);
                       return (
-                        <Link
+                        <div
                           key={tx.id}
-                          href={`/transactions/${tx.id}`}
-                          className="flex items-center justify-between px-4 py-3.5 hover:bg-accent/50 transition-colors gap-4"
+                          onClick={() => {
+                            if (isSelectionMode) toggleSelectTx(tx.id);
+                          }}
+                          className={cn(
+                            'group flex items-center justify-between px-4 py-3.5 transition-colors gap-4 relative select-none',
+                            isSelectionMode ? 'cursor-pointer hover:bg-accent/40' : 'hover:bg-accent/50',
+                            isSelected && 'bg-indigo-500/10 dark:bg-indigo-500/20'
+                          )}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
+                          {/* Checkbox / Selection Indicator */}
+                          {isSelectionMode && (
+                            <div className="shrink-0 mr-1" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectTx(tx.id)}
+                                className="w-4 h-4 rounded border-border text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                              />
+                            </div>
+                          )}
+
+                          <Link
+                            href={isSelectionMode ? '#' : `/transactions/${tx.id}`}
+                            onClick={(e) => {
+                              if (isSelectionMode) e.preventDefault();
+                            }}
+                            className="flex items-center gap-3 min-w-0 flex-1"
+                          >
                             <div
                               className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
                               style={{
@@ -776,18 +908,36 @@ export default function TransactionsPage() {
                                 </div>
                               );
                             })()}
-                          </div>
+                          </Link>
 
-                          <span
-                            className={cn(
-                              'text-sm font-semibold whitespace-nowrap shrink-0 text-right',
-                              tx.type === 'INCOME' ? 'text-emerald-500' : (tx.type === 'EXPENSE' ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'),
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span
+                              className={cn(
+                                'text-sm font-semibold whitespace-nowrap shrink-0 text-right',
+                                tx.type === 'INCOME' ? 'text-emerald-500' : (tx.type === 'EXPENSE' ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'),
+                              )}
+                            >
+                              {tx.type === 'INCOME' ? '+' : (tx.type === 'EXPENSE' ? '-' : '')}
+                              {formatCurrency(Number(tx.amount))}
+                            </span>
+
+                            {/* Quick Delete Action Icon on Hover (non-selection mode) */}
+                            {!isSelectionMode && (
+                              <button
+                                type="button"
+                                title="Hapus transaksi ini"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSingleDeleteId(tx.id);
+                                  setShowBulkDeleteDialog(true);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             )}
-                          >
-                            {tx.type === 'INCOME' ? '+' : (tx.type === 'EXPENSE' ? '-' : '')}
-                            {formatCurrency(Number(tx.amount))}
-                          </span>
-                        </Link>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -796,6 +946,66 @@ export default function TransactionsPage() {
             })}
         </div>
       )}
+
+      {/* Floating Bulk Action Bar */}
+      {selectedTxIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-card border border-border px-5 py-3 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <Badge variant="secondary" className="font-bold text-xs bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-3 py-1">
+            {selectedTxIds.length} Terpilih
+          </Badge>
+          <div className="h-4 w-px bg-border" />
+          <Button variant="ghost" size="sm" onClick={handleSelectAll} className="text-xs h-8 cursor-pointer">
+            {selectedTxIds.length === transactions.length ? 'Batal Semua' : 'Pilih Semua'}
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              setSingleDeleteId(null);
+              setShowBulkDeleteDialog(true);
+            }}
+            className="text-xs h-8 gap-1.5 font-bold cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Hapus ({selectedTxIds.length})
+          </Button>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus Transaksi</DialogTitle>
+            <DialogDescription>
+              {singleDeleteId
+                ? 'Apakah Anda yakin ingin menghapus transaksi ini?'
+                : `Apakah Anda yakin ingin menghapus ${selectedTxIds.length} transaksi terpilih? Data yang dihapus tidak dapat dikembalikan.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowBulkDeleteDialog(false);
+                setSingleDeleteId(null);
+              }}
+              disabled={deleteSingleMutation.isPending || deleteBulkMutation.isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmBulkDelete}
+              disabled={deleteSingleMutation.isPending || deleteBulkMutation.isPending}
+            >
+              {(deleteSingleMutation.isPending || deleteBulkMutation.isPending)
+                ? 'Menghapus...'
+                : 'Hapus Transaksi'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Pagination */}
       {meta && meta.totalPages > 1 && (
