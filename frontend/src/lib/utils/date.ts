@@ -49,7 +49,17 @@ export function formatTransactionDateFull(date: string | Date): string {
  * Format date for grouping header in transaction list
  */
 export function formatGroupHeaderDate(date: string | Date): string {
-  const d = typeof date === 'string' ? parseISO(date) : date;
+  let d: Date;
+  if (typeof date === 'string') {
+    if (date.includes('T')) {
+      d = parseISO(date);
+    } else {
+      const [year, month, day] = date.split('-').map(Number);
+      d = new Date(year, month - 1, day);
+    }
+  } else {
+    d = date;
+  }
 
   const formattedDateStr = format(d, 'dd MMMM yyyy', { locale: id });
   if (isToday(d)) return `Hari Ini, ${formattedDateStr}`;

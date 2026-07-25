@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -89,7 +90,7 @@ export default function NewTransactionPage() {
     resolver: zodResolver(transactionSchema),
     defaultValues: {
       type: 'EXPENSE',
-      date: new Date().toISOString().split('T')[0],
+      date: format(new Date(), 'yyyy-MM-dd'),
       time: `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`,
       amount: undefined,
       categoryId: '',
@@ -116,7 +117,7 @@ export default function NewTransactionPage() {
     try {
       const [year, month, day] = data.date.split('-').map(Number);
       const [hours, minutes] = (data.time || '00:00').split(':').map(Number);
-      const transactionDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+      const transactionDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0));
 
       await createMutation.mutateAsync({
         amount: data.amount,

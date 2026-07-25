@@ -84,9 +84,9 @@ export default function TransactionsPage() {
   const transactions = data?.data || [];
   const meta = data?.meta;
 
-  // Group transactions by date (yyyy-MM-dd)
+  // Group transactions by local date (yyyy-MM-dd)
   const groupedTransactions = transactions.reduce((groups: { [key: string]: typeof transactions }, tx) => {
-    const dateKey = tx.date.split('T')[0]; // Get date part only
+    const dateKey = format(new Date(tx.date), 'yyyy-MM-dd');
     if (!groups[dateKey]) {
       groups[dateKey] = [];
     }
