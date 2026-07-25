@@ -225,7 +225,15 @@ export default function AssetDetailPage() {
               <p className="text-sm text-muted-foreground mt-1">{ASSET_TYPE_LABELS[asset.assetType]}</p>
             </div>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex gap-2 w-full sm:w-auto flex-wrap">
+            <Button
+              variant="outline"
+              className="rounded-full gap-1 text-xs flex-1 sm:flex-none justify-center cursor-pointer"
+              onClick={() => router.push(`/investments/${id}/edit`)}
+            >
+              <span className="material-symbols-outlined text-[16px]">edit</span>
+              Edit Aset
+            </Button>
             <Button
               variant="outline"
               className="rounded-full gap-1 text-xs flex-1 sm:flex-none justify-center cursor-pointer"
@@ -234,7 +242,7 @@ export default function AssetDetailPage() {
                 setShowUpdatePrice(true);
               }}
             >
-              <span className="material-symbols-outlined text-[16px]">edit</span>
+              <span className="material-symbols-outlined text-[16px]">sync</span>
               Update Harga
             </Button>
             <Button

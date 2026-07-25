@@ -251,17 +251,30 @@ export default function InvestmentsPage() {
                       {asset.gainLoss >= 0 ? '+' : ''}{formatCurrency(asset.gainLoss)} ({asset.gainLossPercent >= 0 ? '+' : ''}{asset.gainLossPercent}%)
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setDeleteConfirmId(asset.id);
-                    }}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Link href={`/investments/${asset.id}/edit`}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-indigo-600 hover:bg-indigo-500/10 rounded-full cursor-pointer"
+                        title="Edit Aset"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full cursor-pointer"
+                      title="Hapus Aset"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setDeleteConfirmId(asset.id);
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
