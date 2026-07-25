@@ -42,6 +42,8 @@ import {
   HandCoins,
   TrendingUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ArrowRight,
   CheckCircle2,
   Plus,
@@ -65,6 +67,11 @@ export default function DashboardPage() {
 
   const [showBalance, setShowBalance] = useState(false);
   const [periodTab, setPeriodTab] = useState<'today' | 'weekly' | 'monthly'>('monthly');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [periodTab, selectedMonth, selectedYear]);
 
   useEffect(() => {
     const stored = localStorage.getItem('show_balance');
@@ -168,6 +175,13 @@ export default function DashboardPage() {
     }
     return true;
   });
+
+  const PAGE_SIZE = 10;
+  const totalItems = displayedTransactions.length;
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = Math.min(startIndex + PAGE_SIZE, totalItems);
+  const paginatedTransactions = displayedTransactions.slice(startIndex, endIndex);
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-7 relative">
@@ -620,12 +634,12 @@ export default function DashboardPage() {
 
         {/* Mobile View: Spacious List Items */}
         <div className="space-y-3 md:hidden">
-          {displayedTransactions.length === 0 ? (
+          {paginatedTransactions.length === 0 ? (
             <div className="py-8 text-center text-slate-400 text-xs font-semibold">
               Belum ada transaksi pada periode {periodTab === 'today' ? 'Hari Ini' : periodTab === 'weekly' ? 'Minggu Ini' : 'Bulan Ini'}.
             </div>
           ) : (
-            displayedTransactions.map((tx) => {
+            paginatedTransactions.map((tx) => {
               const isIncome = tx.type === 'INCOME';
               return (
                 <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60">
@@ -678,14 +692,14 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-              {displayedTransactions.length === 0 ? (
+              {paginatedTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-slate-400 text-xs font-semibold">
                     Belum ada transaksi pada periode {periodTab === 'today' ? 'Hari Ini' : periodTab === 'weekly' ? 'Minggu Ini' : 'Bulan Ini'}.
                   </td>
                 </tr>
               ) : (
-                displayedTransactions.map((tx) => {
+                paginatedTransactions.map((tx) => {
                   const isIncome = tx.type === 'INCOME';
                   return (
                     <tr key={tx.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
@@ -724,6 +738,41 @@ export default function DashboardPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Bar */}
+        {totalItems > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-500">
+            <div>
+              Menampilkan <span className="font-bold text-slate-800 dark:text-slate-200">{startIndex + 1}</span> - <span className="font-bold text-slate-800 dark:text-slate-200">{endIndex}</span> dari <span className="font-bold text-slate-800 dark:text-slate-200">{totalItems}</span> transaksi
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="h-8 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Sebelumnya</span>
+              </button>
+
+              <span className="px-2 font-bold text-slate-800 dark:text-slate-200 text-xs">
+                {currentPage} / {totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="h-8 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <span>Selanjutnya</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
