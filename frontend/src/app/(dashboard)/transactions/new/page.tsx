@@ -440,46 +440,51 @@ export default function NewTransactionPage() {
             <Controller
               name="time"
               control={control}
-              render={({ field }) => {
-                const [hh, mm] = (field.value || '00:00').split(':');
-                return (
-                  <div className="flex items-center gap-2 px-4 py-2.5">
+              render={({ field }) => (
+                <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                  <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-[18px] text-muted-foreground leading-none shrink-0">schedule</span>
+                    <span className="text-xs font-semibold text-muted-foreground">Waktu:</span>
                     <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={2}
-                      value={hh}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/\D/g, '');
-                        const v = raw === '' ? '00' : String(Math.min(23, parseInt(raw))).padStart(2, '0');
-                        field.onChange(`${v}:${mm}`);
-                      }}
+                      type="time"
+                      value={field.value || '12:00'}
+                      onChange={(e) => field.onChange(e.target.value)}
                       className={cn(
-                        'w-12 bg-transparent text-center font-bold text-base focus:outline-none focus:bg-muted rounded-lg py-0.5 transition-colors',
-                        errors.time ? 'text-destructive' : 'text-foreground'
+                        'bg-muted/80 dark:bg-muted/50 text-foreground font-bold text-sm rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-primary/20 border border-border cursor-pointer transition-colors',
+                        errors.time && 'border-destructive text-destructive'
                       )}
                     />
-                    <span className="text-muted-foreground font-bold text-base select-none">:</span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={2}
-                      value={mm}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/\D/g, '');
-                        const v = raw === '' ? '00' : String(Math.min(59, parseInt(raw))).padStart(2, '0');
-                        field.onChange(`${hh}:${v}`);
-                      }}
-                      className={cn(
-                        'w-12 bg-transparent text-center font-bold text-base focus:outline-none focus:bg-muted rounded-lg py-0.5 transition-colors',
-                        errors.time ? 'text-destructive' : 'text-foreground'
-                      )}
-                    />
-                    <span className="text-xs text-muted-foreground ml-1 select-none">WIB</span>
                   </div>
-                );
-              }}
+                  {/* Preset waktu cepat */}
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const now = new Date();
+                        const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                        field.onChange(nowTime);
+                      }}
+                      className="px-2.5 py-1 rounded-md bg-muted hover:bg-accent text-muted-foreground hover:text-foreground font-medium transition-colors"
+                    >
+                      Sekarang
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => field.onChange('12:30')}
+                      className="px-2.5 py-1 rounded-md bg-muted hover:bg-accent text-muted-foreground hover:text-foreground font-medium transition-colors"
+                    >
+                      12:30
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => field.onChange('19:00')}
+                      className="px-2.5 py-1 rounded-md bg-muted hover:bg-accent text-muted-foreground hover:text-foreground font-medium transition-colors"
+                    >
+                      19:00
+                    </button>
+                  </div>
+                </div>
+              )}
             />
           </div>
 
