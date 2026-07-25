@@ -253,16 +253,50 @@ export class BankStatementsService {
       );
     }
 
+    // Get or create transfer category for transfer transactions
+    let transferCategory = await this.prisma.category.findFirst({
+      where: {
+        type: 'TRANSFER',
+        OR: [{ isDefault: true }, { userId }],
+      },
+    });
+    if (!transferCategory) {
+      transferCategory = await this.prisma.category.create({
+        data: {
+          name: 'Transfer',
+          icon: '🔄',
+          color: '#6366f1',
+          type: 'TRANSFER',
+          isDefault: true,
+        },
+      });
+    }
+
     // Build transaction data
     const transactionData = selectedTxns.map((txn) => {
       const mappedAccountId = dto.accountMap?.[txn.tempId] || dto.accountId;
+      const mappedType = dto.typeMap?.[txn.tempId] || txn.type;
+      const mappedDestAccountId = dto.destinationAccountMap?.[txn.tempId];
+
+      const categoryId =
+        mappedType === 'TRANSFER'
+          ? transferCategory.id
+          : dto.categoryMap?.[txn.tempId] || defaultCategory.id;
+
       return {
         amount: txn.amount,
-        type: txn.type,
+        type: mappedType,
         description: txn.description,
         date: txn.date,
-        categoryId: dto.categoryMap?.[txn.tempId] || defaultCategory.id,
-        accountId: mappedAccountId === 'main' ? null : (mappedAccountId || null),
+        categoryId,
+        accountId:
+          mappedAccountId === 'main' ? null : mappedAccountId || null,
+        destinationAccountId:
+          mappedType === 'TRANSFER' &&
+          mappedDestAccountId &&
+          mappedDestAccountId !== 'main'
+            ? mappedDestAccountId
+            : null,
         userId,
         bankStatementId: id,
         source: 'BANK_IMPORT' as const,

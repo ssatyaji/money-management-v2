@@ -12,8 +12,8 @@ export interface ParsedTransaction {
   description: string;
   /** Transaction amount (always positive) */
   amount: number;
-  /** Whether this is income or expense */
-  type: 'INCOME' | 'EXPENSE';
+  /** Whether this is income, expense, or transfer */
+  type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
   /** Running balance after this transaction (if available) */
   balance?: number;
 }
@@ -86,7 +86,7 @@ export abstract class BaseStatementParser {
   }
 
   /**
-   * Helper: Parse date strings in various formats.
+   * Helper: Parse date strings in various formats (constructs Date in UTC).
    */
   protected parseDate(dateStr: string): Date | null {
     if (!dateStr) return null;
@@ -97,9 +97,11 @@ export abstract class BaseStatementParser {
     let match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
     if (match) {
       return new Date(
-        parseInt(match[3]),
-        parseInt(match[2]) - 1,
-        parseInt(match[1]),
+        Date.UTC(
+          parseInt(match[3]),
+          parseInt(match[2]) - 1,
+          parseInt(match[1]),
+        ),
       );
     }
 
@@ -107,7 +109,7 @@ export abstract class BaseStatementParser {
     match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2})$/);
     if (match) {
       const year = parseInt(match[3]) + 2000;
-      return new Date(year, parseInt(match[2]) - 1, parseInt(match[1]));
+      return new Date(Date.UTC(year, parseInt(match[2]) - 1, parseInt(match[1])));
     }
 
     // DD MMM YYYY (e.g., "15 Jan 2026")
@@ -153,7 +155,9 @@ export abstract class BaseStatementParser {
     if (match) {
       const monthNum = monthMap[match[2].toLowerCase()];
       if (monthNum !== undefined) {
-        return new Date(parseInt(match[3]), monthNum, parseInt(match[1]));
+        return new Date(
+          Date.UTC(parseInt(match[3]), monthNum, parseInt(match[1])),
+        );
       }
     }
 
@@ -161,9 +165,11 @@ export abstract class BaseStatementParser {
     match = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (match) {
       return new Date(
-        parseInt(match[1]),
-        parseInt(match[2]) - 1,
-        parseInt(match[3]),
+        Date.UTC(
+          parseInt(match[1]),
+          parseInt(match[2]) - 1,
+          parseInt(match[3]),
+        ),
       );
     }
 

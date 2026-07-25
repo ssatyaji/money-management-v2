@@ -507,6 +507,8 @@ function ImportStatementTab() {
   const [defaultWallet, setDefaultWallet] = useState('main');
   const [rowCategories, setRowCategories] = useState<Record<string, string>>({});
   const [rowAccounts, setRowAccounts] = useState<Record<string, string>>({});
+  const [rowTypes, setRowTypes] = useState<Record<string, 'INCOME' | 'EXPENSE' | 'TRANSFER'>>({});
+  const [rowDestAccounts, setRowDestAccounts] = useState<Record<string, string>>({});
 
   const uploadMutation = useUploadStatement();
   const importMutation = useImportTransactions();
@@ -514,26 +516,55 @@ function ImportStatementTab() {
   const { data: categories = [] } = useCategories();
   const { data: accounts = [] } = useAccounts();
 
-  // Populate row-level default categories and wallets
+  // Auto-match default wallet when bank selection or accounts list changes
+  useEffect(() => {
+    if (selectedBank && accounts.length > 0) {
+      const bankKeyword = selectedBank.toLowerCase();
+      const matchedAcc = accounts.find((acc) => {
+        const name = acc.name.toLowerCase();
+        return (
+          name.includes(bankKeyword) ||
+          (selectedBank === 'PERMATA' && name.includes('permata')) ||
+          (selectedBank === 'JAGO' && name.includes('jago')) ||
+          (selectedBank === 'SEABANK' && name.includes('seabank')) ||
+          (selectedBank === 'BCA' && name.includes('bca'))
+        );
+      });
+
+      if (matchedAcc) {
+        setDefaultWallet(matchedAcc.id);
+      }
+    }
+  }, [selectedBank, accounts]);
+
+  // Populate row-level default categories, wallets, types, and dest wallets
   useEffect(() => {
     if (parsedTransactions) {
       const initialCats: Record<string, string> = {};
       const initialAccs: Record<string, string> = {};
+      const initialTypes: Record<string, 'INCOME' | 'EXPENSE' | 'TRANSFER'> = {};
 
       const defaultExpCat = categories.find(c => c.isDefault && c.type === 'EXPENSE') || categories.find(c => c.type === 'EXPENSE') || categories[0];
       const defaultIncCat = categories.find(c => c.isDefault && c.type === 'INCOME') || categories.find(c => c.type === 'INCOME') || categories[0];
 
       parsedTransactions.forEach((txn) => {
         initialAccs[txn.tempId] = defaultWallet;
-        initialCats[txn.tempId] = txn.type === 'INCOME' 
+        
+        // Auto detect transfer type if description has transfer keywords
+        const isTransferKeyword = /(?:TRF|TRANSFER|PB KE|PB DARI)/i.test(txn.description);
+        const resolvedType = isTransferKeyword ? 'TRANSFER' : txn.type;
+        initialTypes[txn.tempId] = resolvedType;
+
+        initialCats[txn.tempId] = resolvedType === 'INCOME' 
           ? (defaultIncCat?.id || '') 
           : (defaultExpCat?.id || '');
       });
 
       setRowCategories(prev => ({ ...initialCats, ...prev }));
       setRowAccounts(prev => ({ ...initialAccs, ...prev }));
+      setRowTypes(prev => ({ ...initialTypes, ...prev }));
     }
-  }, [parsedTransactions, categories]);
+  }, [parsedTransactions, categories, defaultWallet]);
 
   // Bulk update row wallets when default wallet is changed
   const handleDefaultWalletChange = (walletId: string) => {
@@ -611,6 +642,8 @@ function ImportStatementTab() {
         transactionIds: Array.from(selectedTxnIds),
         categoryMap: rowCategories,
         accountMap: rowAccounts,
+        typeMap: rowTypes,
+        destinationAccountMap: rowDestAccounts,
       },
       {
         onSuccess: (data) => {
@@ -621,6 +654,8 @@ function ImportStatementTab() {
           setSelectedBank('');
           setRowCategories({});
           setRowAccounts({});
+          setRowTypes({});
+          setRowDestAccounts({});
           if (fileInputRef.current) fileInputRef.current.value = '';
         },
         onError: (error: any) => {
@@ -637,6 +672,8 @@ function ImportStatementTab() {
     setSelectedBank('');
     setRowCategories({});
     setRowAccounts({});
+    setRowTypes({});
+    setRowDestAccounts({});
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -788,54 +825,109 @@ function ImportStatementTab() {
                     </td>
                     <td className="p-3 text-sm max-w-[200px] truncate">{txn.description}</td>
                     <td className="p-3 text-sm text-right font-mono whitespace-nowrap">
-                      <span className={txn.type === 'INCOME' ? 'text-emerald-500' : 'text-red-400'}>
-                        {txn.type === 'INCOME' ? '+' : '-'}{formatCurrency(txn.amount)}
+                      <span className={
+                        (rowTypes[txn.tempId] || txn.type) === 'INCOME'
+                          ? 'text-emerald-500 font-semibold'
+                          : (rowTypes[txn.tempId] || txn.type) === 'TRANSFER'
+                          ? 'text-blue-500 font-semibold'
+                          : 'text-red-400 font-semibold'
+                      }>
+                        {(rowTypes[txn.tempId] || txn.type) === 'INCOME' ? '+' : (rowTypes[txn.tempId] || txn.type) === 'TRANSFER' ? '↔ ' : '-'}{formatCurrency(txn.amount)}
                       </span>
                     </td>
-                    <td className="p-3 text-center">
-                      <Badge
+                    
+                    {/* Editable Type Column */}
+                    <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={rowTypes[txn.tempId] || txn.type}
+                        onChange={(e) => {
+                          const newType = e.target.value as 'INCOME' | 'EXPENSE' | 'TRANSFER';
+                          setRowTypes({ ...rowTypes, [txn.tempId]: newType });
+                        }}
                         className={cn(
-                          'text-xs',
-                          txn.type === 'INCOME'
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : 'bg-red-500/20 text-red-400',
+                          "h-8 rounded-md border text-xs font-semibold px-2 py-0.5 focus:outline-none cursor-pointer",
+                          (rowTypes[txn.tempId] || txn.type) === 'INCOME' && "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                          (rowTypes[txn.tempId] || txn.type) === 'EXPENSE' && "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
+                          (rowTypes[txn.tempId] || txn.type) === 'TRANSFER' && "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
                         )}
                       >
-                        {txn.type === 'INCOME' ? 'Masuk' : 'Keluar'}
-                      </Badge>
+                        <option value="INCOME">Masuk</option>
+                        <option value="EXPENSE">Keluar</option>
+                        <option value="TRANSFER">Transfer</option>
+                      </select>
                     </td>
 
                     {/* Category Column */}
                     <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                      <select
-                        value={rowCategories[txn.tempId] || ''}
-                        onChange={(e) => setRowCategories({ ...rowCategories, [txn.tempId]: e.target.value })}
-                        className="h-8 w-[120px] rounded-md border border-input bg-background px-1 py-0.5 text-xs focus:ring-1 focus:ring-emerald-500"
-                      >
-                        {categories
-                          .filter((c) => c.type === txn.type)
-                          .map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                      </select>
+                      {(rowTypes[txn.tempId] || txn.type) === 'TRANSFER' ? (
+                        <span className="text-xs text-muted-foreground italic">Transfer (Otomatis)</span>
+                      ) : (
+                        <select
+                          value={rowCategories[txn.tempId] || ''}
+                          onChange={(e) => setRowCategories({ ...rowCategories, [txn.tempId]: e.target.value })}
+                          className="h-8 w-[130px] rounded-md border border-input bg-background px-1 py-0.5 text-xs focus:ring-1 focus:ring-emerald-500"
+                        >
+                          {categories
+                            .filter((c) => c.type === (rowTypes[txn.tempId] || txn.type))
+                            .map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </option>
+                            ))}
+                        </select>
+                      )}
                     </td>
 
                     {/* Wallet Column */}
                     <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                      <select
-                        value={rowAccounts[txn.tempId] || 'main'}
-                        onChange={(e) => setRowAccounts({ ...rowAccounts, [txn.tempId]: e.target.value })}
-                        className="h-8 w-[120px] rounded-md border border-input bg-background px-1 py-0.5 text-xs focus:ring-1 focus:ring-emerald-500"
-                      >
-                        <option value="main">Saldo Utama</option>
-                        {accounts.map((acc) => (
-                          <option key={acc.id} value={acc.id}>
-                            {acc.name}
-                          </option>
-                        ))}
-                      </select>
+                      {(rowTypes[txn.tempId] || txn.type) === 'TRANSFER' ? (
+                        <div className="flex flex-col gap-1 w-[140px]">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-muted-foreground w-10">Asal:</span>
+                            <select
+                              value={rowAccounts[txn.tempId] || defaultWallet}
+                              onChange={(e) => setRowAccounts({ ...rowAccounts, [txn.tempId]: e.target.value })}
+                              className="h-7 flex-1 rounded border border-input bg-background px-1 text-[11px] focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="main">Saldo Utama</option>
+                              {accounts.map((acc) => (
+                                <option key={acc.id} value={acc.id}>
+                                  {acc.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-muted-foreground w-10">Tujuan:</span>
+                            <select
+                              value={rowDestAccounts[txn.tempId] || ''}
+                              onChange={(e) => setRowDestAccounts({ ...rowDestAccounts, [txn.tempId]: e.target.value })}
+                              className="h-7 flex-1 rounded border border-input bg-background px-1 text-[11px] focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="">Pilih Tujuan</option>
+                              <option value="main">Saldo Utama</option>
+                              {accounts.map((acc) => (
+                                <option key={acc.id} value={acc.id}>
+                                  {acc.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ) : (
+                        <select
+                          value={rowAccounts[txn.tempId] || defaultWallet}
+                          onChange={(e) => setRowAccounts({ ...rowAccounts, [txn.tempId]: e.target.value })}
+                          className="h-8 w-[130px] rounded-md border border-input bg-background px-1 py-0.5 text-xs focus:ring-1 focus:ring-emerald-500"
+                        >
+                          <option value="main">Saldo Utama</option>
+                          {accounts.map((acc) => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                   </tr>
                 ))}

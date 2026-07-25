@@ -52,22 +52,29 @@ export function useImportTransactions() {
       categoryMap,
       accountId,
       accountMap,
+      typeMap,
+      destinationAccountMap,
     }: {
       statementId: string;
       transactionIds: string[];
       categoryMap?: Record<string, string>;
       accountId?: string;
       accountMap?: Record<string, string>;
+      typeMap?: Record<string, 'INCOME' | 'EXPENSE' | 'TRANSFER'>;
+      destinationAccountMap?: Record<string, string>;
     }) =>
       bankStatementsApi.importTransactions(statementId, {
         transactionIds,
         categoryMap,
         accountId,
         accountMap,
+        typeMap,
+        destinationAccountMap,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bankStatements.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts.all });
     },
   });
 }
