@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/currency';
+import { parseSmartDescription } from '@/lib/utils/format-description';
 import { useUploadReceipt, useOcrReceipts } from '@/hooks/use-ocr';
 import { useCategories, useCreateTransaction } from '@/hooks/use-transactions';
 import { useAccounts } from '@/hooks/use-accounts';
@@ -823,7 +824,17 @@ function ImportStatementTab() {
                         year: 'numeric',
                       })}
                     </td>
-                    <td className="p-3 text-sm max-w-[200px] truncate">{txn.description}</td>
+                    <td className="p-3 text-sm max-w-[280px]" title={txn.description}>
+                      {(() => {
+                        const smart = parseSmartDescription(txn.description);
+                        return (
+                          <div className="flex flex-col">
+                            <span className="font-medium text-foreground truncate">{smart.title}</span>
+                            <span className="text-[11px] text-muted-foreground truncate">{smart.subtitle}</span>
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="p-3 text-sm text-right font-mono whitespace-nowrap">
                       <span className={
                         (rowTypes[txn.tempId] || txn.type) === 'INCOME'

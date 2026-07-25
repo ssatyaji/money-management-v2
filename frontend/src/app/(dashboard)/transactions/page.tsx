@@ -40,6 +40,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/currency';
+import { parseSmartDescription } from '@/lib/utils/format-description';
 import { formatTransactionDate, formatGroupHeaderDate } from '@/lib/utils/date';
 import { useTransactions } from '@/hooks/use-transactions';
 import { transactionsApi, type TransactionFilters } from '@/lib/api/transactions.api';
@@ -538,34 +539,39 @@ export default function TransactionsPage() {
                         >
                           {tx.category?.icon || '📦'}
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {tx.description || tx.category?.name || 'Transaksi'}
-                          </p>
-                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                              Pukul {timeStr}
-                            </span>
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
-                              {tx.type === 'TRANSFER' ? 'Transfer' : tx.category?.name}
-                            </Badge>
-                            {tx.type === 'TRANSFER' ? (
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
-                                  {tx.account?.name || 'Saldo Utama'}
+                        {(() => {
+                          const smart = parseSmartDescription(tx.description || tx.category?.name || 'Transaksi');
+                          return (
+                            <div className="min-w-0" title={tx.description || ''}>
+                              <p className="text-sm font-semibold truncate text-foreground">
+                                {smart.title}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                                  Pukul {timeStr}
+                                </span>
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
+                                  {tx.type === 'TRANSFER' ? 'Transfer' : (smart.subtitle !== 'Transaksi Bank' ? smart.subtitle : (tx.category?.name || 'Umum'))}
                                 </Badge>
-                                <span className="text-xs text-muted-foreground">➔</span>
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
-                                  {tx.destinationAccount?.name || 'Saldo Utama'}
-                                </Badge>
+                                {tx.type === 'TRANSFER' ? (
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
+                                      {tx.account?.name || 'Saldo Utama'}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">➔</span>
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-none whitespace-nowrap">
+                                      {tx.destinationAccount?.name || 'Saldo Utama'}
+                                    </Badge>
+                                  </div>
+                                ) : (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-muted/60 text-muted-foreground border-none whitespace-nowrap">
+                                    {tx.account?.name || 'Saldo Utama'}
+                                  </Badge>
+                                )}
                               </div>
-                            ) : (
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-muted/60 text-muted-foreground border-none whitespace-nowrap">
-                                {tx.account?.name || 'Saldo Utama'}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       <span
