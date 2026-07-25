@@ -29,6 +29,7 @@ import { SkeletonDashboard } from '@/components/ui/skeleton-dashboard';
 import { useSavingGoalSummary, useSavingGoals } from '@/hooks/use-saving-goals';
 import { useDebtSummary } from '@/hooks/use-debts';
 import { usePortfolioSummary } from '@/hooks/use-investments';
+import { useMonthlyReport } from '@/hooks/use-budgets';
 import { AlertCards } from '@/components/dashboard/alert-cards';
 import { BoltzStatCards } from '@/components/dashboard/boltz-stat-cards';
 import { BoltzWalletCards } from '@/components/dashboard/boltz-wallet-cards';
@@ -68,6 +69,7 @@ export default function DashboardPage() {
   const [showBalance, setShowBalance] = useState(false);
   const [periodTab, setPeriodTab] = useState<'today' | 'weekly' | 'monthly'>('monthly');
   const [currentPage, setCurrentPage] = useState(1);
+  const [categoryTab, setCategoryTab] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
 
   useEffect(() => {
     setCurrentPage(1);
@@ -101,6 +103,7 @@ export default function DashboardPage() {
   const { data: savingGoals = [] } = useSavingGoals();
   const { data: debtSummary, isLoading: loadingDebts } = useDebtSummary();
   const { data: portfolioSummary, isLoading: loadingPortfolio } = usePortfolioSummary();
+  const { data: monthlyReport } = useMonthlyReport(selectedMonth, selectedYear);
 
   const isLoading =
     loadingSummary ||
@@ -117,11 +120,26 @@ export default function DashboardPage() {
     return <SkeletonDashboard />;
   }
 
-  const pieData = (breakdown || []).map((item, idx) => ({
-    name: item.category?.name || 'Lainnya',
-    value: Number(item.total) || 0,
-    color: item.category?.color || COLORS[idx % COLORS.length],
-    icon: item.category?.icon || '📦',
+  const rawCategories = (monthlyReport?.categoryBreakdown || breakdown || [])
+    .filter((c: any) => (c.type ? c.type === categoryTab : categoryTab === 'EXPENSE'))
+    .map((c: any) => ({
+      name: c.name || c.category?.name || 'Lainnya',
+      total: Number(c.total) || 0,
+      icon: c.icon || c.category?.icon || (categoryTab === 'EXPENSE' ? '📦' : '💰'),
+      color: c.color || c.category?.color,
+      count: c.count || 0,
+    }))
+    .sort((a: any, b: any) => b.total - a.total);
+
+  const totalCatAmount = rawCategories.reduce((sum: number, c: any) => sum + c.total, 0);
+
+  const pieData = rawCategories.map((item: any, idx: number) => ({
+    name: item.name,
+    value: item.total,
+    color: item.color || COLORS[idx % COLORS.length],
+    icon: item.icon,
+    count: item.count,
+    percentage: totalCatAmount > 0 ? (item.total / totalCatAmount) * 100 : 0,
   }));
 
   const chartData = (dailyTrend || []).map((d) => ({
@@ -302,71 +320,147 @@ export default function DashboardPage() {
         accountsCount={accounts.length}
       />
 
-      {/* Row 2: Middle Charts (Concentric Arc Category Chart + Double Line Arus Kas Chart) */}
+      {/* Row 2: Middle Charts (Detailed Category Statistics + Cashflow Area Chart) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Card: Category Arc Ring Chart */}
-        <div className="lg:col-span-4 p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm flex flex-col justify-between space-y-4">
+        {/* Left Card: Category Arc Ring & Detailed Breakdown */}
+        <div className="lg:col-span-5 p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm flex flex-col justify-between space-y-4">
+          {/* Header */}
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
-              Statistik Kategori
-            </h3>
-            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-              {MONTH_NAMES[selectedMonth - 1]} {selectedYear}
-            </span>
+            <div>
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                Statistik Kategori
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                {MONTH_NAMES[selectedMonth - 1]} {selectedYear}
+              </p>
+            </div>
+            <Link
+              href="/reports/monthly"
+              className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 hover:underline shrink-0"
+            >
+              <span>Laporan Detail</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
-          <div className="h-48 relative flex items-center justify-center">
+          {/* Type Tab Switcher: Pengeluaran vs Pemasukan */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setCategoryTab('EXPENSE')}
+              className={cn(
+                'flex-1 py-1.5 rounded-lg transition-all text-center cursor-pointer',
+                categoryTab === 'EXPENSE'
+                  ? 'bg-rose-500 text-white font-bold shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              )}
+            >
+              Pengeluaran
+            </button>
+            <button
+              type="button"
+              onClick={() => setCategoryTab('INCOME')}
+              className={cn(
+                'flex-1 py-1.5 rounded-lg transition-all text-center cursor-pointer',
+                categoryTab === 'INCOME'
+                  ? 'bg-emerald-600 text-white font-bold shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              )}
+            >
+              Pemasukan
+            </button>
+          </div>
+
+          {/* Donut Chart with Center Total Display */}
+          <div className="h-44 relative flex items-center justify-center">
             {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: any) => [formatCurrency(Number(value)), 'Nominal']}
-                    contentStyle={{
-                      backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                      borderColor: '#334155',
-                      borderRadius: '12px',
-                      color: '#fff',
-                      fontSize: '12px',
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={75}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: any) => [formatCurrency(Number(value)), 'Nominal']}
+                      contentStyle={{
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        borderColor: '#334155',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        fontSize: '12px',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Center text overlay */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    Total {categoryTab === 'EXPENSE' ? 'Pengeluaran' : 'Pemasukan'}
+                  </p>
+                  <p className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">
+                    {showBalance ? formatCurrency(totalCatAmount) : 'Rp ••••••'}
+                  </p>
+                </div>
+              </>
             ) : (
-              <p className="text-xs text-slate-400">Belum ada data transaksi bulan ini</p>
+              <p className="text-xs text-slate-400 text-center">
+                Belum ada transaksi {categoryTab === 'EXPENSE' ? 'pengeluaran' : 'pemasukan'} pada periode ini
+              </p>
             )}
           </div>
 
-          {/* Category Dot Legend */}
-          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-            {pieData.slice(0, 4).map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between text-xs font-semibold">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-slate-600 dark:text-slate-300">{item.name}</span>
+          {/* Detailed Category Progress Breakdown List */}
+          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+            {pieData.length === 0 ? (
+              <p className="text-center text-xs text-slate-400 py-4">Data kategori kosong</p>
+            ) : (
+              pieData.map((item: any, idx: number) => (
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="text-sm">{item.icon}</span>
+                      <span className="text-slate-800 dark:text-slate-200 font-bold truncate">
+                        {item.name}
+                      </span>
+                    </div>
+                    <span className="text-slate-900 dark:text-white font-extrabold shrink-0">
+                      {showBalance ? formatCurrency(item.value) : 'Rp ••••••'}
+                    </span>
+                  </div>
+
+                  {/* Visual Progress Bar */}
+                  <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800/80 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(Math.max(item.percentage, 2), 100)}%`,
+                        backgroundColor: item.color,
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                    <span>{item.percentage.toFixed(1)}% dari total</span>
+                    <span>{item.count > 0 ? `${item.count} transaksi` : ''}</span>
+                  </div>
                 </div>
-                <span className="text-slate-900 dark:text-white">
-                  {showBalance ? formatCurrency(item.value) : 'Rp ••••••'}
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
         {/* Right Card: Double Smooth Line Chart */}
-        <div className="lg:col-span-8 p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm flex flex-col justify-between space-y-4">
+        <div className="lg:col-span-7 p-6 rounded-2xl bg-white dark:bg-[#151c2c] border border-slate-200/70 dark:border-slate-800/80 shadow-sm flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
