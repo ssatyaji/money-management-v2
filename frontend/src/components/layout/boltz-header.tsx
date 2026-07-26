@@ -1,8 +1,9 @@
 'use client';
 
-import { Plus, Bell, CloudSun, Moon, Sun } from 'lucide-react';
+import { Plus, CloudSun, Moon, Sun } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
+import { NotificationPopover } from './notification-popover';
 
 export function BoltzHeader() {
   const { theme, setTheme } = useTheme();
@@ -42,14 +43,8 @@ export function BoltzHeader() {
           {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
         </button>
 
-        {/* Notification Bell */}
-        <button
-          title="Notifikasi"
-          className="relative p-2.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900"></span>
-        </button>
+        {/* Notification Bell Popover */}
+        <NotificationPopover />
       </div>
     </header>
   );
