@@ -21,9 +21,30 @@ export class AlertsRepository {
     metadata?: object;
     expiresAt: Date;
   }) {
-    await this.prisma.alert.deleteMany({
-      where: { userId: data.userId, type: data.type, isRead: false },
+    const existing = await this.prisma.alert.findFirst({
+      where: {
+        userId: data.userId,
+        type: data.type,
+        expiresAt: { gt: new Date() },
+      },
     });
+
+    if (existing) {
+      if (existing.isRead) {
+        return existing;
+      }
+      return this.prisma.alert.update({
+        where: { id: existing.id },
+        data: {
+          title: data.title,
+          message: data.message,
+          severity: data.severity,
+          metadata: data.metadata as any,
+          expiresAt: data.expiresAt,
+        },
+      });
+    }
+
     return this.prisma.alert.create({ data });
   }
 
