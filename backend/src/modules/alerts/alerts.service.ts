@@ -113,7 +113,7 @@ export class AlertsService {
           title: 'Goal di Belakang Target',
           message: `Tabungan "${g.name}" baru ${Math.round(actualPct * 100)}%, seharusnya ${Math.round(expectedPct * 100)}%`,
           severity: 'INFO',
-          metadata: { goalId: g.id, actionUrl: '/saving-goals', actionLabel: 'Setor Tabungan' },
+          metadata: { goalId: g.id, actionUrl: '/goals', actionLabel: 'Setor Tabungan' },
           expiresAt: expire3d,
         });
       }
