@@ -10,8 +10,22 @@ export class AlertsService {
     private readonly prisma: PrismaService,
   ) {}
 
-  getActiveAlerts(userId: string) {
-    return this.repo.findActiveByUser(userId);
+  async getActiveAlerts(userId: string) {
+    try {
+      await this.evaluateAlerts(userId);
+    } catch (e) {
+      this.logger.error(`Error evaluating alerts for user ${userId}`, e);
+    }
+
+    const alerts = await this.repo.findActiveByUser(userId);
+    return alerts.map((a) => {
+      const meta = (a.metadata as Record<string, any>) || {};
+      return {
+        ...a,
+        actionUrl: meta.actionUrl || null,
+        actionLabel: meta.actionLabel || null,
+      };
+    });
   }
 
   markAsRead(userId: string, alertId: string) {
@@ -54,7 +68,7 @@ export class AlertsService {
           title: 'Budget Hampir Habis',
           message: `Budget ${b.category?.name} sudah terpakai ${pct}%`,
           severity: pct >= 100 ? 'DANGER' : 'WARNING',
-          metadata: { budgetId: b.id, pct },
+          metadata: { budgetId: b.id, pct, actionUrl: '/budgets', actionLabel: 'Tinjau Anggaran' },
           expiresAt: expire3d,
         });
       }
@@ -77,7 +91,7 @@ export class AlertsService {
         title: 'Utang Jatuh Tempo',
         message: `${d.type === 'RECEIVABLE' ? 'Piutang' : 'Utang'} ke ${d.personName} jatuh tempo ${days === 0 ? 'hari ini' : `${days} hari lagi`}`,
         severity: 'DANGER',
-        metadata: { debtId: d.id, days },
+        metadata: { debtId: d.id, days, actionUrl: '/debts', actionLabel: 'Kelola Utang' },
         expiresAt: expire1d,
       });
     }
@@ -99,7 +113,7 @@ export class AlertsService {
           title: 'Goal di Belakang Target',
           message: `Tabungan "${g.name}" baru ${Math.round(actualPct * 100)}%, seharusnya ${Math.round(expectedPct * 100)}%`,
           severity: 'INFO',
-          metadata: { goalId: g.id },
+          metadata: { goalId: g.id, actionUrl: '/saving-goals', actionLabel: 'Setor Tabungan' },
           expiresAt: expire3d,
         });
       }
@@ -137,6 +151,7 @@ export class AlertsService {
         title: 'Saldo Kritis',
         message: 'Saldo kamu sangat rendah. Perhatikan pengeluaran bulan ini.',
         severity: 'DANGER',
+        metadata: { actionUrl: '/transactions/new', actionLabel: 'Catat Pemasukan' },
         expiresAt: expire1d,
       });
     }
@@ -168,6 +183,7 @@ export class AlertsService {
         title: 'Streak Surplus! 🎉',
         message: 'Keuanganmu surplus 3 bulan berturut-turut. Pertahankan!',
         severity: 'SUCCESS',
+        metadata: { actionUrl: '/dashboard', actionLabel: 'Lihat Detail' },
         expiresAt: expire7d,
       });
     }
