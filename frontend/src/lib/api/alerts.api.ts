@@ -7,6 +7,8 @@ export interface AlertItem {
   title: string;
   message: string;
   severity: 'INFO' | 'WARNING' | 'DANGER' | 'SUCCESS';
+  actionUrl?: string | null;
+  actionLabel?: string | null;
   isRead: boolean;
   metadata: Record<string, unknown> | null;
   createdAt: string;
