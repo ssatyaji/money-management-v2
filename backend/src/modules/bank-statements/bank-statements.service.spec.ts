@@ -6,6 +6,8 @@ import { ParserFactory } from './parsers/parser.factory';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AccountsService } from '../accounts/accounts.service';
+import { AiPdfFallbackParser } from './services/ai-pdf-fallback-parser.service';
+import { AiTransactionDeduplicator } from './services/ai-transaction-deduplicator.service';
 
 describe('BankStatementsService - IDOR Prevention Tests', () => {
   let service: BankStatementsService;
@@ -46,6 +48,16 @@ describe('BankStatementsService - IDOR Prevention Tests', () => {
       },
     };
 
+    const mockAiPdfFallbackParser = {
+      parseWithFallback: jest.fn().mockResolvedValue([]),
+    };
+
+    const mockAiDeduplicator = {
+      matchDuplicatesAndTransfers: jest
+        .fn()
+        .mockImplementation((_userId, txns) => Promise.resolve(txns)),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BankStatementsService,
@@ -54,6 +66,8 @@ describe('BankStatementsService - IDOR Prevention Tests', () => {
         { provide: ParserFactory, useValue: mockParserFactory },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: AiPdfFallbackParser, useValue: mockAiPdfFallbackParser },
+        { provide: AiTransactionDeduplicator, useValue: mockAiDeduplicator },
       ],
     }).compile();
 

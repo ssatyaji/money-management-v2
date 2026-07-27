@@ -413,11 +413,13 @@ function ScanReceiptTab() {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <option value="main">Saldo Utama</option>
-                  {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.name}
-                    </option>
-                  ))}
+                  {accounts
+                    .filter((acc) => acc.id !== 'main')
+                    .map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name}
+                      </option>
+                    ))}
                 </select>
               </div>
             </div>
@@ -757,9 +759,11 @@ function ImportStatementTab() {
                   className="h-9 w-[150px] rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background"
                 >
                   <option value="main">Saldo Utama</option>
-                  {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>{acc.name}</option>
-                  ))}
+                  {accounts
+                    .filter((acc) => acc.id !== 'main')
+                    .map((acc) => (
+                      <option key={acc.id} value={acc.id}>{acc.name}</option>
+                    ))}
                 </select>
               </div>
             </div>
@@ -901,11 +905,13 @@ function ImportStatementTab() {
                               className="h-7 flex-1 rounded border border-input bg-background px-1 text-[11px] focus:ring-1 focus:ring-blue-500"
                             >
                               <option value="main">Saldo Utama</option>
-                              {accounts.map((acc) => (
-                                <option key={acc.id} value={acc.id}>
-                                  {acc.name}
-                                </option>
-                              ))}
+                              {accounts
+                                .filter((acc) => acc.id !== 'main')
+                                .map((acc) => (
+                                  <option key={acc.id} value={acc.id}>
+                                    {acc.name}
+                                  </option>
+                                ))}
                             </select>
                           </div>
                           <div className="flex items-center gap-1">
@@ -917,11 +923,13 @@ function ImportStatementTab() {
                             >
                               <option value="">Pilih Tujuan</option>
                               <option value="main">Saldo Utama</option>
-                              {accounts.map((acc) => (
-                                <option key={acc.id} value={acc.id}>
-                                  {acc.name}
-                                </option>
-                              ))}
+                              {accounts
+                                .filter((acc) => acc.id !== 'main')
+                                .map((acc) => (
+                                  <option key={acc.id} value={acc.id}>
+                                    {acc.name}
+                                  </option>
+                                ))}
                             </select>
                           </div>
                         </div>
@@ -932,11 +940,13 @@ function ImportStatementTab() {
                           className="h-8 w-[130px] rounded-md border border-input bg-background px-1 py-0.5 text-xs focus:ring-1 focus:ring-emerald-500"
                         >
                           <option value="main">Saldo Utama</option>
-                          {accounts.map((acc) => (
-                            <option key={acc.id} value={acc.id}>
-                              {acc.name}
-                            </option>
-                          ))}
+                          {accounts
+                            .filter((acc) => acc.id !== 'main')
+                            .map((acc) => (
+                              <option key={acc.id} value={acc.id}>
+                                {acc.name}
+                              </option>
+                            ))}
                         </select>
                       )}
                     </td>

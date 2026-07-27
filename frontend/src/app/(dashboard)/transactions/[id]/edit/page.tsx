@@ -301,11 +301,13 @@ export default function EditTransactionPage({ params }: { params: Promise<{ id: 
                 className={cn(inputCls(!!errors.accountId), 'cursor-pointer')}
               >
                 <option value="main">💳 Saldo Utama</option>
-                {accounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
-                    🏦 {acc.name} ({formatCurrency(acc.balance)})
-                  </option>
-                ))}
+                {accounts
+                  .filter((acc) => acc.id !== 'main')
+                  .map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      🏦 {acc.name} ({formatCurrency(acc.balance)})
+                    </option>
+                  ))}
               </select>
             )}
           </FieldWrapper>
@@ -320,11 +322,13 @@ export default function EditTransactionPage({ params }: { params: Promise<{ id: 
                 className={cn(inputCls(!!errors.accountId), 'cursor-pointer')}
               >
                 <option value="main">💳 Saldo Utama</option>
-                {accounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
-                    🏦 {acc.name} ({formatCurrency(acc.balance)})
-                  </option>
-                ))}
+                {accounts
+                  .filter((acc) => acc.id !== 'main')
+                  .map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      🏦 {acc.name} ({formatCurrency(acc.balance)})
+                    </option>
+                  ))}
               </select>
             </FieldWrapper>
 
@@ -335,11 +339,13 @@ export default function EditTransactionPage({ params }: { params: Promise<{ id: 
               >
                 <option value="">-- Pilih Dompet Tujuan --</option>
                 <option value="main">💳 Saldo Utama</option>
-                {accounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
-                    🏦 {acc.name} ({formatCurrency(acc.balance)})
-                  </option>
-                ))}
+                {accounts
+                  .filter((acc) => acc.id !== 'main')
+                  .map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      🏦 {acc.name} ({formatCurrency(acc.balance)})
+                    </option>
+                  ))}
               </select>
             </FieldWrapper>
           </div>
