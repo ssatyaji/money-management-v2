@@ -24,6 +24,12 @@ export interface ParsedTransaction {
   amount: number;
   type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
   balance?: number;
+  isAiParsed?: boolean;
+  isPossibleDuplicate?: boolean;
+  isInterAccountTransfer?: boolean;
+  matchedTransactionId?: string;
+  matchedAccountName?: string;
+  recommendationNote?: string;
 }
 
 export interface UploadStatementResult {
