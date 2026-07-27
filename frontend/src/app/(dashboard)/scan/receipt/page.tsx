@@ -546,6 +546,8 @@ function ImportStatementTab() {
       const initialCats: Record<string, string> = {};
       const initialAccs: Record<string, string> = {};
       const initialTypes: Record<string, 'INCOME' | 'EXPENSE' | 'TRANSFER'> = {};
+      const initialDestAccs: Record<string, string> = {};
+      const selectedIds = new Set<string>();
 
       const defaultExpCat = categories.find(c => c.isDefault && c.type === 'EXPENSE') || categories.find(c => c.type === 'EXPENSE') || categories[0];
       const defaultIncCat = categories.find(c => c.isDefault && c.type === 'INCOME') || categories.find(c => c.type === 'INCOME') || categories[0];
@@ -553,21 +555,40 @@ function ImportStatementTab() {
       parsedTransactions.forEach((txn) => {
         initialAccs[txn.tempId] = defaultWallet;
         
-        // Auto detect transfer type if description has transfer keywords
-        const isTransferKeyword = /(?:TRF|TRANSFER|PB KE|PB DARI)/i.test(txn.description);
-        const resolvedType = isTransferKeyword ? 'TRANSFER' : txn.type;
+        // Auto detect transfer type if flagged by AI or description has transfer keywords
+        const isTransfer = txn.isInterAccountTransfer || /(?:TRF|TRANSFER|PB KE|PB DARI)/i.test(txn.description);
+        const resolvedType = isTransfer ? 'TRANSFER' : txn.type;
         initialTypes[txn.tempId] = resolvedType;
+
+        // Auto match destination account if AI detected matched account name
+        if (isTransfer && txn.matchedAccountName) {
+          const matchedAcc = accounts.find((a) => {
+            const accName = a.name.toLowerCase();
+            const targetName = txn.matchedAccountName!.toLowerCase();
+            return accName.includes(targetName) || targetName.includes(accName);
+          });
+          if (matchedAcc) {
+            initialDestAccs[txn.tempId] = matchedAcc.id;
+          }
+        }
 
         initialCats[txn.tempId] = resolvedType === 'INCOME' 
           ? (defaultIncCat?.id || '') 
           : (defaultExpCat?.id || '');
+
+        // Select for import ONLY IF it is NOT flagged as a duplicate
+        if (!txn.isPossibleDuplicate) {
+          selectedIds.add(txn.tempId);
+        }
       });
 
       setRowCategories(prev => ({ ...initialCats, ...prev }));
       setRowAccounts(prev => ({ ...initialAccs, ...prev }));
       setRowTypes(prev => ({ ...initialTypes, ...prev }));
+      setRowDestAccounts(prev => ({ ...initialDestAccs, ...prev }));
+      setSelectedTxnIds(selectedIds);
     }
-  }, [parsedTransactions, categories, defaultWallet]);
+  }, [parsedTransactions, categories, accounts, defaultWallet]);
 
   // Bulk update row wallets when default wallet is changed
   const handleDefaultWalletChange = (walletId: string) => {
@@ -741,104 +762,160 @@ function ImportStatementTab() {
       )}
 
       {parsedTransactions && parsedTransactions.length > 0 && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="p-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1">
-              <div>
-                <h3 className="font-semibold">Transaksi Ditemukan</h3>
-                <Badge variant="secondary" className="mt-1">{parsedTransactions.length} transaksi</Badge>
+        <div className="space-y-4">
+          {/* AI Smart Detection Alert Banner */}
+          {(() => {
+            const dupes = parsedTransactions.filter((t) => t.isPossibleDuplicate);
+            const transfers = parsedTransactions.filter((t) => t.isInterAccountTransfer);
+            if (dupes.length === 0 && transfers.length === 0) return null;
+
+            return (
+              <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 flex flex-col gap-2">
+                <div className="flex items-center gap-2 font-semibold text-sm">
+                  <span className="material-symbols-outlined text-amber-500">auto_awesome</span>
+                  <span>AI Smart Detection Alert</span>
+                </div>
+                <ul className="text-xs space-y-1 pl-6 list-disc">
+                  {dupes.length > 0 && (
+                    <li>
+                      <strong>{dupes.length} transaksi kemungkinan duplikat</strong> terdeteksi (otomatis di-uncheck untuk mencegah penginputan ganda).
+                    </li>
+                  )}
+                  {transfers.length > 0 && (
+                    <li>
+                      <strong>{transfers.length} transaksi transfer antar rekening</strong> terdeteksi (tipe otomatis disesuaikan ke Transfer).
+                    </li>
+                  )}
+                </ul>
               </div>
+            );
+          })()}
 
-              {/* Default Wallet Select */}
-              <div className="flex items-center gap-2">
-                <Label htmlFor="default-wallet" className="text-xs text-muted-foreground whitespace-nowrap">Dompet Default:</Label>
-                <select
-                  id="default-wallet"
-                  value={defaultWallet}
-                  onChange={(e) => handleDefaultWalletChange(e.target.value)}
-                  className="h-9 w-[150px] rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background"
-                >
-                  <option value="main">Saldo Utama</option>
-                  {accounts
-                    .filter((acc) => acc.id !== 'main')
-                    .map((acc) => (
-                      <option key={acc.id} value={acc.id}>{acc.name}</option>
-                    ))}
-                </select>
-              </div>
-            </div>
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="p-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1">
+                <div>
+                  <h3 className="font-semibold">Transaksi Ditemukan</h3>
+                  <Badge variant="secondary" className="mt-1">{parsedTransactions.length} transaksi</Badge>
+                </div>
 
-            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">
-                {selectedTxnIds.size} dipilih
-              </span>
-              <Button
-                size="sm"
-                onClick={handleImport}
-                disabled={selectedTxnIds.size === 0 || importMutation.isPending}
-                className="bg-emerald-600 hover:bg-emerald-700 shrink-0"
-              >
-                {importMutation.isPending ? (
-                  <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Importing...</>
-                ) : (
-                  <><span className="material-symbols-outlined text-[18px] mr-1">download</span> Import ({selectedTxnIds.size})</>
-                )}
-              </Button>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="p-3 w-10">
-                    <Checkbox
-                      checked={selectedTxnIds.size === parsedTransactions.length && parsedTransactions.length > 0}
-                      onCheckedChange={handleToggleAll}
-                    />
-                  </th>
-                  <th className="p-3 text-left text-xs font-medium text-muted-foreground uppercase">Tanggal</th>
-                  <th className="p-3 text-left text-xs font-medium text-muted-foreground uppercase">Deskripsi</th>
-                  <th className="p-3 text-right text-xs font-medium text-muted-foreground uppercase">Jumlah</th>
-                  <th className="p-3 text-center text-xs font-medium text-muted-foreground uppercase">Tipe</th>
-                  <th className="p-3 text-left text-xs font-medium text-muted-foreground uppercase">Kategori</th>
-                  <th className="p-3 text-left text-xs font-medium text-muted-foreground uppercase">Dompet</th>
-                </tr>
-              </thead>
-              <tbody>
-                {parsedTransactions.map((txn) => (
-                  <tr
-                    key={txn.tempId}
-                    className={cn(
-                      'border-b border-border/50 hover:bg-muted/20 transition-colors cursor-pointer',
-                      selectedTxnIds.has(txn.tempId) && 'bg-emerald-500/5',
-                    )}
-                    onClick={() => handleToggleTxn(txn.tempId)}
+                {/* Default Wallet Select */}
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="default-wallet" className="text-xs text-muted-foreground whitespace-nowrap">Dompet Default:</Label>
+                  <select
+                    id="default-wallet"
+                    value={defaultWallet}
+                    onChange={(e) => handleDefaultWalletChange(e.target.value)}
+                    className="h-9 w-[150px] rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background"
                   >
-                    <td className="p-3">
+                    <option value="main">Saldo Utama</option>
+                    {accounts
+                      .filter((acc) => acc.id !== 'main')
+                      .map((acc) => (
+                        <option key={acc.id} value={acc.id}>{acc.name}</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  {selectedTxnIds.size} dipilih
+                </span>
+                <Button
+                  size="sm"
+                  onClick={handleImport}
+                  disabled={selectedTxnIds.size === 0 || importMutation.isPending}
+                  className="bg-emerald-600 hover:bg-emerald-700 shrink-0"
+                >
+                  {importMutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Importing...</>
+                  ) : (
+                    <><span className="material-symbols-outlined text-[18px] mr-1">download</span> Import ({selectedTxnIds.size})</>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="p-3 w-10">
                       <Checkbox
-                        checked={selectedTxnIds.has(txn.tempId)}
-                        onCheckedChange={() => handleToggleTxn(txn.tempId)}
+                        checked={selectedTxnIds.size === parsedTransactions.length && parsedTransactions.length > 0}
+                        onCheckedChange={handleToggleAll}
                       />
-                    </td>
-                    <td className="p-3 text-sm whitespace-nowrap">
-                      {new Date(txn.date).toLocaleDateString('id-ID', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </td>
-                    <td className="p-3 text-sm max-w-[280px]" title={txn.description}>
-                      {(() => {
-                        const smart = parseSmartDescription(txn.description);
-                        return (
-                          <div className="flex flex-col">
-                            <span className="font-medium text-foreground truncate">{smart.title}</span>
-                            <span className="text-[11px] text-muted-foreground truncate">{smart.subtitle}</span>
-                          </div>
-                        );
-                      })()}
-                    </td>
+                    </th>
+                    <th className="p-3 text-left text-xs font-medium text-muted-foreground uppercase">Tanggal</th>
+                    <th className="p-3 text-left text-xs font-medium text-muted-foreground uppercase">Deskripsi</th>
+                    <th className="p-3 text-right text-xs font-medium text-muted-foreground uppercase">Jumlah</th>
+                    <th className="p-3 text-center text-xs font-medium text-muted-foreground uppercase">Tipe</th>
+                    <th className="p-3 text-left text-xs font-medium text-muted-foreground uppercase">Kategori</th>
+                    <th className="p-3 text-left text-xs font-medium text-muted-foreground uppercase">Dompet</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parsedTransactions.map((txn) => (
+                    <tr
+                      key={txn.tempId}
+                      className={cn(
+                        'border-b border-border/50 hover:bg-muted/20 transition-colors cursor-pointer',
+                        selectedTxnIds.has(txn.tempId) && 'bg-emerald-500/5',
+                        txn.isPossibleDuplicate && 'bg-amber-500/5 dark:bg-amber-500/10',
+                        txn.isInterAccountTransfer && 'bg-blue-500/5 dark:bg-blue-500/10',
+                      )}
+                      onClick={() => handleToggleTxn(txn.tempId)}
+                    >
+                      <td className="p-3">
+                        <Checkbox
+                          checked={selectedTxnIds.has(txn.tempId)}
+                          onCheckedChange={() => handleToggleTxn(txn.tempId)}
+                        />
+                      </td>
+                      <td className="p-3 text-sm whitespace-nowrap">
+                        {new Date(txn.date).toLocaleDateString('id-ID', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </td>
+                      <td className="p-3 text-sm max-w-[280px]" title={txn.description}>
+                        {(() => {
+                          const smart = parseSmartDescription(txn.description);
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-medium text-foreground truncate">{smart.title}</span>
+                              <span className="text-[11px] text-muted-foreground truncate">{smart.subtitle}</span>
+
+                              {/* AI Smart Badges */}
+                              <div className="flex flex-wrap items-center gap-1 mt-1">
+                                {txn.isInterAccountTransfer && (
+                                  <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 text-[10px] py-0 px-1.5 font-normal">
+                                    🔵 Transfer Antar Rekening
+                                  </Badge>
+                                )}
+                                {txn.isPossibleDuplicate && (
+                                  <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] py-0 px-1.5 font-normal">
+                                    🟡 Kemungkinan Duplikat
+                                  </Badge>
+                                )}
+                                {txn.isAiParsed && (
+                                  <Badge className="bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30 text-[10px] py-0 px-1.5 font-normal">
+                                    🤖 AI Parsed
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {txn.recommendationNote && (
+                                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5 block">
+                                  💡 {txn.recommendationNote}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </td>
                     <td className="p-3 text-sm text-right font-mono whitespace-nowrap">
                       <span className={
                         (rowTypes[txn.tempId] || txn.type) === 'INCOME'
@@ -956,7 +1033,8 @@ function ImportStatementTab() {
             </table>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {parsedTransactions && parsedTransactions.length === 0 && (
         <div className="rounded-xl border border-border bg-card p-12 text-center">
