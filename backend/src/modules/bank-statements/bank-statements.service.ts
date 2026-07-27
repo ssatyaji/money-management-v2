@@ -200,28 +200,32 @@ export class BankStatementsService {
       throw new BadRequestException('Bank statement belum selesai diproses');
     }
 
+    let rawTxns: ParsedTransaction[];
+
     // Check cache first
     const cached = this.parsedResultsCache.get(id);
     if (cached) {
-      return cached.transactions;
+      rawTxns = cached.transactions;
+    } else {
+      // Re-parse if not in cache (e.g., after server restart)
+      try {
+        const fileBuffer = fs.readFileSync(record.filePath);
+        const text = await extractPdfText(fileBuffer);
+
+        const parser = this.parserFactory.getParser(record.bankName);
+        const result = await parser.parse(text);
+
+        // Re-cache
+        this.parsedResultsCache.set(id, result);
+        rawTxns = result.transactions;
+      } catch (error) {
+        this.logger.error(`Failed to re-parse statement: ${error.message}`);
+        throw new BadRequestException('Gagal membaca data transaksi dari file');
+      }
     }
 
-    // Re-parse if not in cache (e.g., after server restart)
-    try {
-      const fileBuffer = fs.readFileSync(record.filePath);
-      const text = await extractPdfText(fileBuffer);
-
-      const parser = this.parserFactory.getParser(record.bankName);
-      const result = await parser.parse(text);
-
-      // Re-cache
-      this.parsedResultsCache.set(id, result);
-
-      return result.transactions;
-    } catch (error) {
-      this.logger.error(`Failed to re-parse statement: ${error.message}`);
-      throw new BadRequestException('Gagal membaca data transaksi dari file');
-    }
+    // Always run deduplicator dynamically against live DB state when fetching preview
+    return this.aiDeduplicator.matchDuplicatesAndTransfers(userId, rawTxns);
   }
 
   /**

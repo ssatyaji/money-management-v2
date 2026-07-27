@@ -52,12 +52,29 @@ export class AiTransactionDeduplicator {
         descUpper.includes(kw),
       );
 
-      // 1. Check Inter-Account Transfer Match (opposite type, same amount, ±3 days, transfer keyword)
+      // 1. Check if DB ALREADY has a TRANSFER transaction with matching amount (±3 days)
+      const existingTransfer = existingTxns.find((ex) => {
+        const exAmount = Number(ex.amount);
+        const exDate = new Date(ex.date).getTime();
+        const daysDiff = Math.abs(txDate - exDate) / (1000 * 60 * 60 * 24);
+        return exAmount === txAmount && daysDiff <= 3 && ex.type === 'TRANSFER';
+      });
+
+      if (existingTransfer) {
+        return {
+          ...tx,
+          isPossibleDuplicate: true,
+          matchedTransactionId: existingTransfer.id,
+          matchedAccountName: existingTransfer.account?.name || 'Rekening',
+          recommendationNote: `Transaksi Transfer ini sudah diinput sebelumnya (${existingTransfer.account?.name || 'Rekening'})`,
+        };
+      }
+
+      // 2. Check Inter-Account Transfer Match (opposite type or transfer keyword, same amount, ±3 days)
       const transferMatch = existingTxns.find((ex) => {
         const exAmount = Number(ex.amount);
         const exDate = new Date(ex.date).getTime();
-        const daysDiff =
-          Math.abs(txDate - exDate) / (1000 * 60 * 60 * 24);
+        const daysDiff = Math.abs(txDate - exDate) / (1000 * 60 * 60 * 24);
         const isOppositeType =
           (tx.type === 'EXPENSE' && ex.type === 'INCOME') ||
           (tx.type === 'INCOME' && ex.type === 'EXPENSE');
@@ -65,8 +82,7 @@ export class AiTransactionDeduplicator {
         return (
           exAmount === txAmount &&
           daysDiff <= 3 &&
-          isOppositeType &&
-          hasTransferKeyword
+          (isOppositeType || hasTransferKeyword)
         );
       });
 
@@ -80,12 +96,11 @@ export class AiTransactionDeduplicator {
         };
       }
 
-      // 2. Check Exact Duplicate Match (same type, same amount, ±1 day)
+      // 3. Check Exact Duplicate Match (same type, same amount, ±1 day)
       const dupMatch = existingTxns.find((ex) => {
         const exAmount = Number(ex.amount);
         const exDate = new Date(ex.date).getTime();
-        const daysDiff =
-          Math.abs(txDate - exDate) / (1000 * 60 * 60 * 24);
+        const daysDiff = Math.abs(txDate - exDate) / (1000 * 60 * 60 * 24);
 
         return exAmount === txAmount && daysDiff <= 1 && ex.type === tx.type;
       });
