@@ -21,6 +21,9 @@ import * as fs from 'fs';
 
 import { AccountsService } from '../accounts/accounts.service';
 
+import { AiPdfFallbackParser } from './services/ai-pdf-fallback-parser.service';
+import { AiTransactionDeduplicator } from './services/ai-transaction-deduplicator.service';
+
 /**
  * Extract text from a PDF buffer using pdf-parse v2.
  */
@@ -45,6 +48,8 @@ export class BankStatementsService {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly accountsService: AccountsService,
+    private readonly aiPdfFallbackParser: AiPdfFallbackParser,
+    private readonly aiDeduplicator: AiTransactionDeduplicator,
   ) {
     this.uploadDir = this.configService.get<string>(
       'storage.uploadDir',
@@ -82,11 +87,39 @@ export class BankStatementsService {
     try {
       const text = await extractPdfText(file.buffer);
 
-      // Get the appropriate parser
-      const parser = this.parserFactory.getParser(bankName);
+      let result: ParsedStatement;
+      try {
+        const parser = this.parserFactory.getParser(bankName);
+        result = await parser.parse(text);
 
-      // Parse the text
-      const result = await parser.parse(text);
+        if (!result.transactions || result.transactions.length === 0) {
+          throw new Error('Zero transactions extracted by regex parser');
+        }
+      } catch (regexErr) {
+        this.logger.warn(
+          `Regex parser failed for ${bankName}: ${regexErr instanceof Error ? regexErr.message : String(regexErr)}. Engaging AI Fallback Parser.`,
+        );
+
+        const aiTxns = await this.aiPdfFallbackParser.parseWithFallback(
+          text,
+          bankName,
+        );
+
+        result = {
+          statementDate: new Date(),
+          accountNumber: 'AI-EXTRACTED',
+          accountHolder: 'AI-EXTRACTED',
+          transactions: aiTxns,
+        };
+      }
+
+      // Enrich transactions with AI Deduplication & Cross-Bank Inter-Account Transfer Matcher
+      const enrichedTxns =
+        await this.aiDeduplicator.matchDuplicatesAndTransfers(
+          userId,
+          result.transactions,
+        );
+      result.transactions = enrichedTxns;
 
       // Cache the parsed result
       this.parsedResultsCache.set(record.id, result);

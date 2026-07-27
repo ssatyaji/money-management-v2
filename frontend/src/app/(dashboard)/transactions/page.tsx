@@ -581,7 +581,6 @@ export default function TransactionsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Dompet</SelectItem>
-              <SelectItem value="main">Saldo Utama</SelectItem>
               {accounts.map((acc) => (
                 <SelectItem key={acc.id} value={acc.id}>
                   {acc.name}

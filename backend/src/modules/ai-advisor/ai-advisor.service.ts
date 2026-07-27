@@ -4,6 +4,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { CreateSessionDto } from './dto/create-session.dto';
 
+import { compressFinancialContext } from './utils/headroom-compressor.util';
+
 @Injectable()
 export class AiAdvisorService {
   private readonly logger = new Logger(AiAdvisorService.name);
@@ -42,7 +44,8 @@ export class AiAdvisorService {
       data: { sessionId, role: 'user', content },
     });
 
-    const ctx = await this.buildFinancialContext(userId, session.context, session.contextId);
+    const rawCtx = await this.buildFinancialContext(userId, session.context, session.contextId);
+    const ctx = await compressFinancialContext(rawCtx);
     const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const result = await model.generateContent(`${this.getSystemPrompt(ctx)}\n\nPertanyaan: ${content}`);
     const reply = result.response.text();
@@ -63,7 +66,8 @@ export class AiAdvisorService {
   }
 
   async generateInsightsForUser(userId: string) {
-    const ctx = await this.buildFinancialContext(userId, 'GENERAL', null);
+    const rawCtx = await this.buildFinancialContext(userId, 'GENERAL', null);
+    const ctx = await compressFinancialContext(rawCtx);
     await this.prisma.aiInsight.deleteMany({ where: { userId } });
     const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const prompt = `${this.getSystemPrompt(ctx)}\n\nBerikan TEPAT 3 insight keuangan dalam format JSON array (tanpa markdown):\n[{"title":"max 8 kata","body":"2-3 kalimat actionable","actionLabel":null,"actionUrl":null}]`;
