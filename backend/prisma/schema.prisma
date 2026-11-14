@@ -321,8 +321,8 @@ model RecurringTransaction {
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
 
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId String?
+  account   Account? @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

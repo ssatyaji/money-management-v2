@@ -16,8 +16,8 @@ export interface RecurringTransaction {
   notifyBeforeDays?: number | null;
   categoryId: string;
   category: Category;
-  accountId: string;
-  account: { id: string; name: string; color?: string };
+  accountId?: string | null;
+  account?: { id: string; name: string; color?: string } | null;
 }
 
 export interface CreateRecurringTransactionInput {
@@ -28,7 +28,7 @@ export interface CreateRecurringTransactionInput {
   frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
   startDate: string;
   categoryId: string;
-  accountId: string;
+  accountId?: string | null;
   isActive?: boolean;
   notifyBeforeDays?: number | null;
 }

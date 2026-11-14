@@ -23,6 +23,13 @@ export class RecurringTransactionsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
+  private normalizeAccountId(accountId?: string | null): string | null {
+    if (!accountId || accountId === 'main') {
+      return null;
+    }
+    return accountId;
+  }
+
   async create(userId: string, dto: CreateRecurringTransactionDto) {
     const startDate = new Date(dto.startDate);
     const today = new Date();
@@ -46,7 +53,7 @@ export class RecurringTransactionsService {
       startDate,
       nextDueDate,
       categoryId: dto.categoryId,
-      accountId: dto.accountId,
+      accountId: this.normalizeAccountId(dto.accountId),
       userId,
       isActive: dto.isActive ?? true,
       notifyBeforeDays: dto.notifyBeforeDays,
@@ -81,7 +88,7 @@ export class RecurringTransactionsService {
     if (dto.frequency !== undefined) updateData.frequency = dto.frequency;
     if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
     if (dto.categoryId !== undefined) updateData.categoryId = dto.categoryId;
-    if (dto.accountId !== undefined) updateData.accountId = dto.accountId;
+    if (dto.accountId !== undefined) updateData.accountId = this.normalizeAccountId(dto.accountId);
     if (dto.notifyBeforeDays !== undefined) updateData.notifyBeforeDays = dto.notifyBeforeDays;
 
     if (dto.startDate !== undefined) {
@@ -160,7 +167,7 @@ export class RecurringTransactionsService {
           note: record.note || `Generated automatically from subscription.`,
           date: new Date().toISOString(),
           categoryId: record.categoryId,
-          accountId: record.accountId,
+          accountId: record.accountId ?? undefined,
         });
 
         // Update recurring transaction metadata

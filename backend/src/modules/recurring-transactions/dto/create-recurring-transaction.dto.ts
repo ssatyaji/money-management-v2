@@ -38,10 +38,10 @@ export class CreateRecurringTransactionDto {
   @IsNotEmpty()
   categoryId: string;
 
-  @ApiProperty({ example: 'some-account-uuid' })
+  @ApiProperty({ example: 'some-account-uuid', required: false, nullable: true })
   @IsString()
-  @IsNotEmpty()
-  accountId: string;
+  @IsOptional()
+  accountId?: string | null;
 
   @ApiProperty({ example: true, required: false })
   @IsBoolean()
