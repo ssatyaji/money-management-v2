@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/utils/currency';
+import { formatCurrency, formatNumber } from '@/lib/utils/currency';
 import { formatTransactionDate } from '@/lib/utils/date';
 import { useCategories } from '@/hooks/use-transactions';
 import { useAccounts } from '@/hooks/use-accounts';
@@ -98,7 +98,7 @@ export default function RecurringTransactionsPage() {
       description: '',
       note: '',
       categoryId: '',
-      accountId: 'main',
+      accountId: '',
       isActive: true,
       enableNotification: false,
       notifyBeforeDays: 1,
@@ -130,10 +130,12 @@ export default function RecurringTransactionsPage() {
       });
       toast.success('Tagihan berulang berhasil ditambahkan! 🎉');
       setIsOpen(false);
+      setSelectedType('EXPENSE');
       reset();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(error);
-      toast.error('Gagal menambahkan tagihan berulang');
+      const err = error as { response?: { data?: { error?: { message?: string } } } };
+      toast.error(err.response?.data?.error?.message || 'Gagal menambahkan tagihan berulang');
     }
   };
 
@@ -358,20 +360,36 @@ export default function RecurringTransactionsPage() {
             {/* Amount */}
             <div className="space-y-1">
               <Label htmlFor="amount">Jumlah Nominal (Rp)</Label>
-              <Controller
-                name="amount"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    id="amount"
-                    type="number"
-                    placeholder="0"
-                    className="rounded-xl h-10"
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                    value={field.value || ''}
-                  />
-                )}
-              />
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold pointer-events-none select-none">
+                  Rp
+                </span>
+                <Controller
+                  name="amount"
+                  control={control}
+                  render={({ field: { onChange, value, ...fieldProps } }) => {
+                    const displayValue =
+                      value !== undefined && value !== null && !Number.isNaN(Number(value))
+                        ? formatNumber(Number(value))
+                        : '';
+                    return (
+                      <Input
+                        {...fieldProps}
+                        id="amount"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="0"
+                        className="rounded-xl h-10 pl-10 font-semibold"
+                        value={displayValue}
+                        onChange={(e) => {
+                          const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                          onChange(rawValue ? Number(rawValue) : undefined);
+                        }}
+                      />
+                    );
+                  }}
+                />
+              </div>
               {errors.amount && <p className="text-xs text-destructive mt-0.5">{errors.amount.message}</p>}
             </div>
 
@@ -492,7 +510,9 @@ export default function RecurringTransactionsPage() {
                     max={30}
                     placeholder="1"
                     className="rounded-xl h-9 w-24"
-                    {...register('notifyBeforeDays', { valueAsNumber: true })}
+                    {...register('notifyBeforeDays', {
+                      setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
+                    })}
                   />
                   {errors.notifyBeforeDays && <p className="text-xs text-destructive">{errors.notifyBeforeDays.message}</p>}
                 </div>
